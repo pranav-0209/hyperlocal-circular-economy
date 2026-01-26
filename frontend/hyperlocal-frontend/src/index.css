@@ -1,68 +1,94 @@
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+/* 1. External fonts */
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&family=Epilogue:wght@400;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700&display=swap");
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+/* 2. Tailwind core */
+@import "tailwindcss";
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+/* 3. Tailwind plugins */
+@plugin "@tailwindcss/forms";
+
+/* 4. Theme + custom styles */
+@theme {
+  --color-primary: #31816d;
+  --color-primary-dark: #246152;
+  --color-accent: #d97757;
+  --color-background-light: #f8f7f7;
+  --color-background-dark: #212c2c;
+  --color-charcoal: #111816;
+  --color-muted-green: #5e877d;
+  
+  --radius-default: 0.25rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-full: 9999px;
+  
+  --font-family-display: "Manrope", system-ui, sans-serif;
+  --font-family-heading: "Epilogue", sans-serif;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
+/* Base styles */
 body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
+  font-family: var(--font-family-display);
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+.font-heading {
+  font-family: var(--font-family-heading);
 }
 
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+.font-display {
+  font-family: var(--font-family-display);
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+/* Custom utilities */
+.h-13 {
+  height: 3.25rem;
+}
+
+.sidebar-gradient {
+  background: linear-gradient(135deg, rgba(49, 129, 109, 0.05) 0%, rgba(217, 119, 87, 0.05) 100%);
+}
+
+.form-card-shadow {
+  box-shadow: 0 10px 40px -10px rgba(0,0,0,0.04);
+}
+
+/* Color utilities */
+.bg-primary { background-color: var(--color-primary); }
+.hover\:bg-primary-dark:hover { background-color: var(--color-primary-dark); }
+.text-primary { color: var(--color-primary); }
+.text-accent { color: var(--color-accent); }
+.bg-background-light { background-color: var(--color-background-light); }
+.bg-background-dark { background-color: var(--color-background-dark); }
+.text-charcoal { color: var(--color-charcoal); }
+.text-muted-green { color: var(--color-muted-green); }
+
+/* Material Symbols */
+.material-symbols-outlined {
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Dark mode support */
+.dark .bg-background-light { 
+  background-color: rgb(248 247 247 / 0.1); 
+}
+.dark .text-muted-green\/60 { 
+  color: rgb(94 135 125 / 0.6); 
+}
+
+/* Focus states for form groups */
+.group:focus-within .material-symbols-outlined {
+  color: var(--color-primary);
 }
