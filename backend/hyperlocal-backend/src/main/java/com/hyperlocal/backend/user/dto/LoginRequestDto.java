@@ -1,23 +1,18 @@
-package com.hyperlocal.backend.user;
+package com.hyperlocal.backend.user.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 
 @Getter
 @Setter
-public class RegisterRequestDto {
-
-    @NotBlank
-    private String name;
+public class LoginRequestDto {
 
     @Email
     @NotBlank
     private String email;
 
     @NotBlank
-    @Size(min = 6)
     private String password;
 }

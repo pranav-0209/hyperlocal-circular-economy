@@ -1,7 +1,10 @@
 package com.hyperlocal.backend.user;
 
+import com.hyperlocal.backend.security.JwtService;
+import com.hyperlocal.backend.user.dto.LoginRequestDto;
+import com.hyperlocal.backend.user.dto.LoginResponseDto;
+import com.hyperlocal.backend.user.dto.RegisterRequestDto;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -11,10 +14,11 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
 
     public void registerUser(RegisterRequestDto dto) {
 
-        if(userRepository.existsByEmail(dto.getEmail())) {
+        if (userRepository.existsByEmail(dto.getEmail())) {
             throw new RuntimeException("Email already exists");
         }
 
@@ -27,6 +31,19 @@ public class UserService {
                 .build();
 
         userRepository.save(user);
+    }
+
+    public LoginResponseDto login(LoginRequestDto dto) {
+        User user = userRepository.findByEmail(dto.getEmail())
+                .orElseThrow(() -> new RuntimeException("Invalid email or password"));
+
+        if (!passwordEncoder.matches(dto.getPassword(), user.getPassword())) {
+            throw new RuntimeException("Invalid email or password");
+        }
+
+        String token = jwtService.generateToken(user);
+
+        return new LoginResponseDto(token);
     }
 
 }
