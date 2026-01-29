@@ -19,3 +19,8 @@ node_modules/
 # ===============================
 .idea/
 .vscode/
+
+# --- Documentation ---
+CODE_OPTIMIZATION.md
+COMPONENT_API.md
+.github

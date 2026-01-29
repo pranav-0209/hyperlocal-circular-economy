@@ -1,7 +1,7 @@
 import SidebarBenefits from '../components/ui/SidebarBenefits';
-import RegisterForm from '../components/ui/RegisterForm';
+import LoginForm from '../components/ui/LoginForm';
 
-const RegisterPage = () => (
+const LoginPage = () => (
   <div className="h-screen bg-background-light font-display text-charcoal flex lg:flex-row overflow-hidden">
     {/* Desktop Sidebar - Hidden on mobile */}
     <SidebarBenefits />
@@ -9,10 +9,10 @@ const RegisterPage = () => (
     {/* Main Content */}
     <main className="flex-1 flex items-center justify-center w-full px-4 sm:px-6 overflow-y-auto lg:overflow-y-visible">
       <div className="w-full max-w-md py-12 lg:py-0">
-        <RegisterForm />
+        <LoginForm />
       </div>
     </main>
   </div>
 );
 
-export default RegisterPage;
+export default LoginPage;

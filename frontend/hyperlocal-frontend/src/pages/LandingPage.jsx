@@ -5,10 +5,10 @@ import "../index.css";
 const LandingPage = () => {
   const navigate = useNavigate();
   return (
-    <div className="bg-background-light dark:bg-background-dark text-[#111816] dark:text-white min-h-screen">
+    <div className="bg-background-light text-charcoal min-h-screen">
       {/* Header */}
-      <header className="sticky top-0 z-50 w-full border-b border-[#eaf0ef] dark:border-[#3a4a4a] bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md px-6 lg:px-20 py-4">
-        <div className="max-w-[1200px] mx-auto flex items-center justify-between">
+      <header className="sticky top-0 z-50 w-full border-b border-gray-200 bg-background-light/80 backdrop-blur-md px-4 sm:px-6 lg:px-8 py-5">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="bg-primary p-2 rounded-lg">
               <svg
@@ -23,25 +23,25 @@ const LandingPage = () => {
                 />
               </svg>
             </div>
-            <h2 className="text-xl font-bold tracking-tight">ShareMore</h2>
+            <h2 className="text-xl font-bold tracking-tight text-charcoal">ShareMore</h2>
           </div>
 
           <nav className="hidden md:flex items-center gap-10">
             <a
               href="#how-it-works"
-              className="text-sm font-semibold hover:text-primary transition-colors"
+              className="text-sm font-semibold text-charcoal hover:text-primary transition-colors"
             >
               How it Works
             </a>
             <a
               href="#"
-              className="text-sm font-semibold hover:text-primary transition-colors"
+              className="text-sm font-semibold text-charcoal hover:text-primary transition-colors"
             >
               Browse
             </a>
             <a
               href="#"
-              className="text-sm font-semibold hover:text-primary transition-colors"
+              className="text-sm font-semibold text-charcoal hover:text-primary transition-colors"
             >
               About Us
             </a>
@@ -51,7 +51,7 @@ const LandingPage = () => {
   {/* Join Now */}
   <button 
     onClick={() => navigate('/register')}
-    className="px-5 py-2.5 bg-primary text-white text-sm font-bold rounded-lg hover:brightness-110 transition-all"
+    className="px-6 py-2.5 bg-primary text-white text-sm font-bold rounded-lg hover:brightness-110 transition-all"
   >
     Join Now
   </button>
@@ -59,7 +59,7 @@ const LandingPage = () => {
   {/* Login */}
   <button 
     onClick={() => navigate('/login')}
-    className="hidden sm:block px-5 py-2.5 bg-[#eaf0ef] dark:bg-[#3a4a4a] text-[#111816] dark:text-white text-sm font-bold rounded-lg hover:brightness-95 transition-all"
+    className="hidden sm:block px-6 py-2.5 bg-gray-100 text-charcoal text-sm font-bold rounded-lg hover:bg-gray-200 transition-all"
   >
     Login
   </button>
@@ -69,10 +69,17 @@ const LandingPage = () => {
       </header>
 
       {/* Rest of your component remains exactly the same */}
-      <main className="flex flex-col items-center">
+      <main className="flex flex-col items-center bg-background-light">
         {/* Hero */}
-        <section className="w-full max-w-[1280px] px-6 lg:px-10 py-10 lg:py-16">
-          <div className="relative overflow-hidden rounded-2xl lg:rounded-[2rem] min-h-[500px] lg:min-h-[600px] flex items-center justify-center p-8 lg:p-16">
+        <section className="w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-12 lg:py-20 mx-auto">
+          <div className="relative overflow-hidden rounded-2xl lg:rounded-3xl flex items-center justify-center p-8 lg:p-16" style={{ minHeight: '500px' }}>
+            <style>{`
+              @media (min-width: 1024px) {
+                .hero-section {
+                  min-height: 600px;
+                }
+              }
+            `}</style>
             <div
               className="absolute inset-0 z-0 bg-cover bg-center"
               style={{
@@ -81,20 +88,20 @@ const LandingPage = () => {
               }}
             />
             <div className="relative z-10 max-w-3xl text-center space-y-8">
-              <h1 className="text-white text-5xl lg:text-7xl font-black leading-[1.1] tracking-tight">
+              <h1 className="text-white text-5xl lg:text-6xl font-black leading-tight tracking-tight">
                 Share More, Own Less. <br className="hidden lg:block" />
-                <span className="text-primary/90">Build Your Community.</span>
+                <span className="text-primary/95">Build Your Community.</span>
               </h1>
               <p className="text-white/90 text-lg lg:text-xl font-medium max-w-2xl mx-auto leading-relaxed">
                 Join the movement for local sustainability. Rent or share items
                 with neighbors you trust. Reduce waste, save money, and meet
                 your neighbors.
               </p>
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-                <button className="w-full sm:w-auto px-8 py-4 bg-primary text-white text-lg font-bold rounded-xl shadow-xl shadow-primary/20 hover:scale-[1.02] transition-transform">
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-6">
+                <button className="w-full sm:w-auto px-8 py-4 bg-primary text-white text-base font-bold rounded-xl shadow-lg shadow-primary/20 hover:scale-105 transition-transform">
                   Get Started Today
                 </button>
-                <button className="w-full sm:w-auto px-8 py-4 bg-white text-[#111816] text-lg font-bold rounded-xl hover:bg-gray-100 transition-colors">
+                <button className="w-full sm:w-auto px-8 py-4 bg-white text-charcoal text-base font-bold rounded-xl hover:bg-gray-100 transition-colors">
                   Browse Marketplace
                 </button>
               </div>
@@ -103,7 +110,7 @@ const LandingPage = () => {
         </section>
 
         {/* Stats */}
-        <section className="w-full max-w-[1200px] px-6 grid grid-cols-2 lg:grid-cols-4 gap-8 py-10 border-b border-[#eaf0ef] dark:border-[#3a4a4a]">
+        <section className="w-full max-w-7xl px-4 sm:px-6 lg:px-8 mx-auto grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 py-12 lg:py-16 border-b border-gray-200">
           {[
             { label: "Active Members", value: "15k+" },
             { label: "CO2 Prevented", value: "40t" },
@@ -111,8 +118,8 @@ const LandingPage = () => {
             { label: "Trust Rating", value: "98%" },
           ].map((item) => (
             <div key={item.label} className="text-center">
-              <p className="text-primary text-3xl font-black">{item.value}</p>
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+              <p className="text-primary text-2xl sm:text-3xl font-black">{item.value}</p>
+              <p className="text-xs sm:text-sm font-medium text-muted-green mt-2">
                 {item.label}
               </p>
             </div>
@@ -122,18 +129,18 @@ const LandingPage = () => {
         {/* How it works */}
         <section
           id="how-it-works"
-          className="w-full max-w-[1200px] px-6 py-20"
+          className="w-full max-w-7xl px-4 sm:px-6 lg:px-8 mx-auto py-16 lg:py-24"
         >
-          <div className="flex flex-col items-center text-center mb-16 space-y-4">
-            <h2 className="text-3xl lg:text-4xl font-bold tracking-tight">
+          <div className="flex flex-col items-center text-charcoal text-center mb-16 space-y-4">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight">
               Simple, Secure, Sustainable.
             </h2>
-            <p className="text-gray-600 dark:text-gray-400 max-w-xl">
+            <p className="max-w-2xl text-base sm:text-lg text-muted-green">
               Five easy steps to start sharing within your neighborhood.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-6 lg:gap-8">
             {[
               {
                 icon: "person_add",
@@ -171,8 +178,8 @@ const LandingPage = () => {
                   </span>
                 </div>
                 <div>
-                  <h3 className="font-bold text-lg">{step.title}</h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                  <h3 className="font-bold text-lg text-charcoal">{step.title}</h3>
+                  <p className="text-sm text-muted-green">
                     {step.text}
                   </p>
                 </div>
@@ -182,37 +189,37 @@ const LandingPage = () => {
         </section>
 
         {/* Features */}
-        <section className="w-full bg-[#f1f5f4] dark:bg-[#1a2525] py-24 px-6">
-          <div className="max-w-[1200px] mx-auto">
-            <div className="mb-12">
-              <span className="text-primary font-bold text-sm tracking-widest uppercase">
+        <section className="w-full bg-primary/5 py-16 lg:py-24 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="mb-12 sm:mb-16">
+              <span className="text-primary font-bold text-xs tracking-widest uppercase">
                 Smart Platform
               </span>
-              <h2 className="text-3xl lg:text-4xl font-bold mt-2">
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl text-charcoal font-bold mt-3">
                 Engineered for Trust
               </h2>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Trust score */}
-              <div className="md:col-span-2 bg-white dark:bg-background-dark p-8 rounded-3xl flex flex-col justify-between border border-transparent hover:border-primary/20 transition-all shadow-sm">
+              <div className="lg:col-span-2 bg-white p-6 sm:p-8 rounded-2xl lg:rounded-3xl flex flex-col justify-between border border-transparent hover:border-primary/20 transition-all shadow-sm">
                 <div className="space-y-4">
                   <div className="w-12 h-12 rounded-xl bg-primary text-white flex items-center justify-center">
                     <span className="material-symbols-outlined">
                       shield_with_heart
                     </span>
                   </div>
-                  <h3 className="text-2xl font-bold">
+                  <h3 className="text-xl sm:text-2xl text-charcoal font-bold">
                     Comprehensive Trust Score
                   </h3>
-                  <p className="text-gray-600 dark:text-gray-400 max-w-md">
+                  <p className="text-muted-green max-w-md leading-relaxed">
                     Our proprietary algorithm calculates reliability based on
                     transaction history, verified ID, and peer reviews,
                     ensuring you only deal with responsible neighbors.
                   </p>
                 </div>
 
-                <div className="mt-8 pt-8 border-t border-gray-100 dark:border-gray-800 flex items-center gap-4">
+                <div className="mt-8 pt-8 border-t border-gray-100 flex items-center gap-4">
                   <div className="flex -space-x-3">
                     <div className="w-10 h-10 rounded-full border-2 border-white bg-gray-200 overflow-hidden">
                       <img
@@ -227,20 +234,20 @@ const LandingPage = () => {
                       />
                     </div>
                   </div>
-                  <span className="text-sm font-semibold text-gray-500">
+                  <span className="text-sm font-semibold text-muted-green">
                     Trusted by 15,000+ users
                   </span>
                 </div>
               </div>
 
               {/* AI pricing */}
-              <div className="bg-primary p-8 rounded-3xl text-white flex flex-col justify-between shadow-lg shadow-primary/10">
+              <div className="bg-primary p-6 sm:p-8 rounded-2xl lg:rounded-3xl text-white flex flex-col justify-between shadow-lg shadow-primary/20">
                 <div className="space-y-4">
                   <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
                     <span className="material-symbols-outlined">smart_toy</span>
                   </div>
-                  <h3 className="text-2xl font-bold">AI Dynamic Pricing</h3>
-                  <p className="text-white/80">
+                  <h3 className="text-xl sm:text-2xl font-bold">AI Dynamic Pricing</h3>
+                  <p className="text-white/80 leading-relaxed">
                     Never guess what to charge. Our AI suggests fair rental
                     prices based on item value, demand, and local market
                     trends.
@@ -255,13 +262,13 @@ const LandingPage = () => {
               </div>
 
               {/* Smart categorization */}
-              <div className="md:col-span-3 bg-white dark:bg-background-dark p-8 rounded-3xl border border-transparent hover:border-primary/20 transition-all shadow-sm grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+              <div className="lg:col-span-3 bg-white p-6 sm:p-8 rounded-2xl lg:rounded-3xl border border-transparent hover:border-primary/20 transition-all shadow-sm grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
                 <div className="space-y-4">
                   <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
                     <span className="material-symbols-outlined">category</span>
                   </div>
-                  <h3 className="text-2xl font-bold">AI Smart Categorization</h3>
-                  <p className="text-gray-600 dark:text-gray-400">
+                  <h3 className="text-xl sm:text-2xl text-charcoal font-bold">AI Smart Categorization</h3>
+                  <p className="text-muted-green leading-relaxed">
                     Upload a photo and let our AI do the rest. It automatically
                     titles, categorizes, and tags your items for maximum
                     discoverability in your neighborhood.
@@ -276,12 +283,12 @@ const LandingPage = () => {
                   ].map((f) => (
                     <div
                       key={f.label}
-                      className="bg-background-light dark:bg-gray-800 p-4 rounded-xl flex items-center gap-3"
+                      className="bg-gray-50 p-4 rounded-xl flex items-center gap-3"
                     >
                       <span className="material-symbols-outlined text-primary">
                         {f.icon}
                       </span>
-                      <span className="text-sm font-bold">{f.label}</span>
+                      <span className="text-sm font-bold text-charcoal">{f.label}</span>
                     </div>
                   ))}
                 </div>
@@ -291,26 +298,26 @@ const LandingPage = () => {
         </section>
 
         {/* CTA */}
-        <section className="w-full max-w-[1200px] px-6 py-24 text-center">
-          <div className="bg-background-dark text-white rounded-[2rem] p-10 lg:p-20 relative overflow-hidden">
+        <section className="w-full bg-primary/5 px-4 sm:px-6 lg:px-8 py-16 lg:py-24">
+          <div className="max-w-7xl mx-auto bg-charcoal text-white rounded-2xl lg:rounded-3xl p-8 sm:p-12 lg:p-16 relative overflow-hidden">
             <div className="absolute top-0 right-0 p-10 opacity-10">
               <span className="material-symbols-outlined text-[10rem]">eco</span>
             </div>
             <div className="relative z-10 max-w-2xl mx-auto space-y-8">
-              <h2 className="text-4xl lg:text-5xl font-bold">
+              <h2 className="text-4xl sm:text-5xl lg:text-5xl font-bold">
                 Ready to start sharing?
               </h2>
-              <p className="text-white/70 text-lg">
+              <p className="text-white/70 text-base sm:text-lg">
                 Join your local community today and help create a more
                 sustainable future, one shared item at a time.
               </p>
-              <form className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
+              <form className="flex flex-col sm:flex-row gap-3 max-w-md">
                 <input
                   type="email"
                   placeholder="Enter your email"
-                  className="flex-1 px-5 py-4 rounded-xl bg-white/10 border border-white/20 focus:ring-2 focus:ring-primary outline-none text-white"
+                  className="flex-1 px-5 py-4 rounded-lg bg-white/10 border border-white/20 focus:ring-2 focus:ring-primary outline-none text-white placeholder:text-white/50"
                 />
-                <button className="px-8 py-4 bg-primary rounded-xl font-bold hover:brightness-110 transition-all">
+                <button type="button" className="px-8 py-4 bg-primary rounded-lg font-bold hover:brightness-110 transition-all">
                   Get Started
                 </button>
               </form>
@@ -320,8 +327,8 @@ const LandingPage = () => {
       </main>
 
       {/* Footer */}
-      <footer className="w-full bg-white dark:bg-[#1a2525] border-t border-[#eaf0ef] dark:border-[#3a4a4a] pt-16 pb-8 px-6 lg:px-20">
-        <div className="max-w-[1200px] mx-auto grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+      <footer className="w-full bg-gray-50 pt-16 pb-8 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-12 mb-12 lg:mb-16">
           <div className="space-y-6">
             <div className="flex items-center gap-3">
               <div className="bg-primary p-2 rounded-lg">
@@ -337,9 +344,9 @@ const LandingPage = () => {
                   />
                 </svg>
               </div>
-              <h2 className="text-xl font-bold tracking-tight">ShareMore</h2>
+              <h2 className="text-lg font-bold tracking-tight text-charcoal">ShareMore</h2>
             </div>
-            <p className="text-sm text-gray-500 leading-relaxed">
+            <p className="text-sm text-muted-green leading-relaxed">
               Making community sharing safe, easy, and sustainable. Join the
               circular economy today.
             </p>
@@ -348,9 +355,9 @@ const LandingPage = () => {
                 <a
                   key={icon}
                   href="#"
-                  className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center hover:text-primary transition-colors"
+                  className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center text-charcoal hover:text-primary hover:border-primary transition-colors"
                 >
-                  <span className="material-symbols-outlined text-lg">
+                  <span className="material-symbols-outlined text-base">
                     {icon}
                   </span>
                 </a>
@@ -378,8 +385,8 @@ const LandingPage = () => {
             },
           ].map((col) => (
             <div key={col.title} className="space-y-6">
-              <h4 className="font-bold">{col.title}</h4>
-              <ul className="space-y-4 text-sm text-gray-500">
+              <h4 className="font-bold text-charcoal">{col.title}</h4>
+              <ul className="space-y-3 text-sm text-muted-green">
                 {col.links.map((l) => (
                   <li key={l}>
                     <a href="#" className="hover:text-primary transition-colors">
@@ -392,16 +399,8 @@ const LandingPage = () => {
           ))}
         </div>
 
-        <div className="max-w-[1200px] mx-auto pt-8 border-t border-gray-100 dark:border-gray-800 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-gray-400">
+        <div className="max-w-7xl mx-auto pt-8 border-t border-gray-200 flex flex-col sm:flex-row justify-center text-xs text-muted-green">
           <p>© 2024 ShareMore Inc. All rights reserved.</p>
-          <div className="flex gap-6">
-            <a href="#" className="hover:text-primary">
-              Cookie Settings
-            </a>
-            <a href="#" className="hover:text-primary">
-              Accessibility
-            </a>
-          </div>
         </div>
       </footer>
     </div>
