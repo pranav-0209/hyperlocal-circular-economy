@@ -1,0 +1,161 @@
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import HomeNavbar from '../components/ui/HomeNavbar';
+
+/**
+ * HomePage (/home)
+ * 
+ * Post-login landing page for all authenticated users.
+ * Shows verification status and community action cards.
+ */
+export default function HomePage() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  if (!user) {
+    return <div>Loading...</div>;
+  }
+
+  // If user is verified and has communities, redirect to dashboard
+  if (user.isVerified && user.communities && user.communities.length > 0) {
+    navigate('/dashboard');
+    return null;
+  }
+
+  const handleStartVerification = () => {
+    navigate('/verify/profile');
+  };
+
+  const handleJoinCommunity = () => {
+    if (!user.isVerified) {
+      navigate('/verify/profile');
+      return;
+    }
+    navigate('/community/select');
+  };
+
+  const handleCreateCommunity = () => {
+    if (!user.isVerified) {
+      navigate('/verify/profile');
+      return;
+    }
+    navigate('/community/select');
+  };
+
+  return (
+    <div className="min-h-screen bg-primary/5">
+      <HomeNavbar hideNavLinks={!user.isVerified} />
+
+      {/* Main Content */}
+      <main className="pt-24 pb-16 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto">
+        {/* Welcome Section */}
+        <section className="mb-10">
+          <h1 className="text-3xl sm:text-4xl font-bold text-charcoal mb-3 leading-tight">
+            Welcome! Complete your profile to start sharing
+          </h1>
+          <p className="text-base text-muted-green max-w-2xl">
+            ShareMore is built on verified connections. Finish setting up your account to unlock
+            your local neighborhood and join the conversation.
+          </p>
+        </section>
+
+        {/* Verification Status Card */}
+        <section className="mb-10 bg-white rounded-2xl p-6 sm:p-8 border border-gray-200 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-6">
+            {/* Icon */}
+            <div className="shrink-0">
+              <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+                <span className="material-symbols-outlined text-3xl text-primary">verified_user</span>
+              </div>
+            </div>
+            
+            {/* Content */}
+            <div className="grow">
+              <h3 className="font-bold text-lg text-charcoal mb-1">Identity Verification</h3>
+              <p className="text-sm text-muted-green mb-4">
+                Verification required before joining communities
+              </p>
+              
+              {/* Progress Bar */}
+              <div className="flex items-center gap-4 mb-2">
+                <span className="text-xs font-medium text-muted-green">
+                  Step {user.profileCompletion < 50 ? '1' : user.profileCompletion < 75 ? '2' : '3'} of 3 completed
+                </span>
+                <span className="text-xs font-bold text-primary">{user.profileCompletion}%</span>
+              </div>
+              <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-primary rounded-full transition-all duration-500"
+                  style={{ width: `${user.profileCompletion}%` }}
+                />
+              </div>
+              <p className="text-xs text-muted-green mt-2">
+                Next: {user.profileCompletion < 50 ? 'Upload Proof of Address' : user.profileCompletion < 75 ? 'Submit Documents' : 'Awaiting Review'}
+              </p>
+            </div>
+            
+            {/* Action Button */}
+            <div className="shrink-0 sm:ml-4">
+              <button
+                onClick={handleStartVerification}
+                className="w-full sm:w-auto px-6 py-3 bg-primary text-white font-bold rounded-lg hover:brightness-110 transition-all flex items-center justify-center gap-2"
+              >
+                Start Verification
+                <span className="material-symbols-outlined text-lg">arrow_forward</span>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {/* Action Cards */}
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+          {/* Join Community Card */}
+          <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm text-center">
+            <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+              <span className="material-symbols-outlined text-3xl text-gray-400">groups</span>
+            </div>
+            <h3 className="font-bold text-lg text-charcoal mb-2">Join Community</h3>
+            <p className="text-sm text-muted-green mb-6">
+              Browse local neighborhoods and connect with people near you.
+            </p>
+            <button
+              onClick={handleJoinCommunity}
+              disabled={!user.isVerified}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-muted-green rounded-full text-sm font-medium cursor-not-allowed"
+            >
+              <span className="material-symbols-outlined text-sm">lock</span>
+              LOCKED
+            </button>
+          </div>
+
+          {/* Create Community Card */}
+          <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm text-center">
+            <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+              <span className="material-symbols-outlined text-3xl text-gray-400">add_home</span>
+            </div>
+            <h3 className="font-bold text-lg text-charcoal mb-2">Create Community</h3>
+            <p className="text-sm text-muted-green mb-11">
+              Start a new sharing circle for your apartment or street.
+            </p>
+            <button
+              onClick={handleCreateCommunity}
+              disabled={!user.isVerified}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-muted-green rounded-full text-sm font-medium cursor-not-allowed"
+            >
+              <span className="material-symbols-outlined text-sm">lock</span>
+              LOCKED
+            </button>
+          </div>
+        </section>
+
+        {/* Help Link */}
+        <div className="text-center">
+          <button className="inline-flex items-center gap-2 text-sm text-muted-green hover:text-primary transition-colors">
+            <span className="material-symbols-outlined text-lg">help</span>
+            Why is verification required?
+          </button>
+        </div>
+      </main>
+    </div>
+  );
+}

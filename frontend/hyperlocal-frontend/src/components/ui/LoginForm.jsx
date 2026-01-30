@@ -5,9 +5,11 @@ import FormCheckbox from './FormCheckbox';
 import ErrorAlert from './ErrorAlert';
 import SubmitButton from './SubmitButton';
 import { useForm } from '../../hooks/useForm';
+import { useAuth } from '../../context/AuthContext';
 
 const LoginForm = () => {
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const validateForm = (data) => {
     const newErrors = {};
@@ -21,7 +23,52 @@ const LoginForm = () => {
     // TODO: Replace with actual API call
     await new Promise(resolve => setTimeout(resolve, 1500));
     console.log('Login:', data);
-    navigate('/dashboard');
+    
+    // For testing: Use email to determine user type
+    // - Use "verified@test.com" for verified user with community (goes to dashboard)
+    // - Any other email for new unverified user (goes to home/verification flow)
+    
+    const isVerifiedUser = data.email.toLowerCase().includes('verified');
+    
+    if (isVerifiedUser) {
+      // VERIFIED USER - Has completed verification and joined a community
+      login({
+        id: 'verified-user-123',
+        email: data.email,
+        isVerified: true,
+        profileCompletion: 100,
+        role: 'USER',
+        hasSubmittedDocuments: true,
+        communities: [
+          { id: 'comm-1', name: 'North Maplewood', memberCount: 234, role: 'member' }
+        ],
+        profile: {
+          name: 'Alex Johnson',
+          phone: '+1 555-0123',
+          address: '123 Maple Street, Brooklyn, NY',
+          bio: 'Love sharing tools and gardening equipment with neighbors!'
+        }
+      });
+      navigate('/dashboard');
+    } else {
+      // NEW/UNVERIFIED USER - Needs to complete verification
+      login({
+        id: 'new-user-' + Date.now(),
+        email: data.email,
+        isVerified: false,
+        profileCompletion: 20,
+        role: 'USER',
+        hasSubmittedDocuments: false,
+        communities: [],
+        profile: {
+          name: '',
+          phone: '',
+          address: '',
+          bio: ''
+        }
+      });
+      navigate('/home');
+    }
   };
 
   const form = useForm(
@@ -37,6 +84,13 @@ const LoginForm = () => {
         <h1 className="font-heading text-3xl font-bold mb-2 text-charcoal">Welcome back</h1>
         <p className="text-muted-green text-sm">
           New to ShareMore? <a className="text-primary font-bold hover:underline" href="/register">Create an account</a>
+        </p>
+      </div>
+
+      {/* Test Mode Notice */}
+      <div className="mb-6 p-4 bg-primary/5 border border-primary/20 rounded-lg">
+        <p className="text-xs text-muted-green">
+          <strong className="text-charcoal">Test Mode:</strong> Use <code className="bg-white px-1 rounded">verified@test.com</code> for verified user (→ Dashboard), or any other email for new user (→ Verification flow)
         </p>
       </div>
 

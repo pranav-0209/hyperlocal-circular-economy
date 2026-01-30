@@ -4,9 +4,13 @@ import FormCheckbox from './FormCheckbox';
 import ErrorAlert from './ErrorAlert';
 import SubmitButton from './SubmitButton';
 import { useForm } from '../../hooks/useForm';
+import { useAuth } from '../../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const RegisterForm = () => {
   const [success, setSuccess] = useState(false);
+  const { login } = useAuth();
+  const navigate = useNavigate();
 
   const validateForm = (data) => {
     const newErrors = {};
@@ -24,8 +28,26 @@ const RegisterForm = () => {
     // TODO: Replace with actual API call
     await new Promise(resolve => setTimeout(resolve, 1500));
     console.log('Register:', data);
+    
+    // NEW USER - Needs to complete verification flow
+    login({
+      id: 'new-user-' + Date.now(),
+      email: data.email,
+      isVerified: false,
+      profileCompletion: 20,
+      role: 'USER',
+      hasSubmittedDocuments: false,
+      communities: [],
+      profile: {
+        name: data.fullName,
+        phone: data.phone || '',
+        address: '',
+        bio: ''
+      }
+    });
+    
     setSuccess(true);
-    setTimeout(() => window.location.href = '/dashboard', 2000);
+    setTimeout(() => navigate('/home'), 2000);
   };
 
   const form = useForm(
