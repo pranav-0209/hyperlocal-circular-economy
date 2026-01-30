@@ -1,9 +1,11 @@
 package com.hyperlocal.backend.user;
 
+import com.hyperlocal.backend.exception.CustomExceptions;
 import com.hyperlocal.backend.security.JwtService;
 import com.hyperlocal.backend.user.dto.LoginRequestDto;
 import com.hyperlocal.backend.user.dto.LoginResponseDto;
 import com.hyperlocal.backend.user.dto.RegisterRequestDto;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -16,10 +18,11 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
 
+    @Transactional
     public void registerUser(RegisterRequestDto dto) {
 
         if (userRepository.existsByEmail(dto.getEmail())) {
-            throw new RuntimeException("Email already exists");
+            throw new CustomExceptions.EmailAlreadyExistsException();
         }
 
         User user = User.builder()
@@ -35,10 +38,10 @@ public class UserService {
 
     public LoginResponseDto login(LoginRequestDto dto) {
         User user = userRepository.findByEmail(dto.getEmail())
-                .orElseThrow(() -> new RuntimeException("Invalid email or password"));
+                .orElseThrow(CustomExceptions.InvalidCredentialsException::new);
 
         if (!passwordEncoder.matches(dto.getPassword(), user.getPassword())) {
-            throw new RuntimeException("Invalid email or password");
+            throw new CustomExceptions.InvalidCredentialsException();
         }
 
         String token = jwtService.generateToken(user);
