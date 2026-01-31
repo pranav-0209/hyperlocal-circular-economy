@@ -1,8 +1,6 @@
 package com.hyperlocal.backend.user.dto;
 
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -20,4 +18,8 @@ public class RegisterRequestDto {
     @NotBlank
     @Size(min = 6)
     private String password;
+
+    @NotNull(message = "You must agree to terms")
+    @AssertTrue(message = "You must agree to terms and conditions")
+    private Boolean agreeToTerms;
 }
