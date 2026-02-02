@@ -45,11 +45,11 @@ export function AuthProvider({ children }) {
     }));
   };
 
-  const markDocumentsSubmitted = () => {
+  const markDocumentsSubmitted = (percentageFromBackend) => {
     setUser((prev) => ({
       ...prev,
       hasSubmittedDocuments: true,
-      profileCompletion: Math.max(prev.profileCompletion, 75),
+      profileCompletion: percentageFromBackend || 75,
     }));
   };
 

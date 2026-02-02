@@ -5,6 +5,7 @@ import React from 'react';
  */
 const FormCheckbox = ({
   id,
+  name,
   checked,
   onChange,
   label,
@@ -20,6 +21,7 @@ const FormCheckbox = ({
             error ? 'border-2 border-red-500 accent-red-500' : 'border-2 border-gray-300 accent-primary'
           }`}
           id={id}
+          name={name || id}
           type="checkbox"
           checked={checked}
           onChange={onChange}

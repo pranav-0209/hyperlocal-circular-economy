@@ -6,6 +6,7 @@ import ErrorAlert from './ErrorAlert';
 import SubmitButton from './SubmitButton';
 import { useForm } from '../../hooks/useForm';
 import { useAuth } from '../../context/AuthContext';
+import { loginUser, saveAuthData } from '../../services/authService';
 
 const LoginForm = () => {
   const navigate = useNavigate();
@@ -20,54 +21,56 @@ const LoginForm = () => {
   };
 
   const handleLogin = async (data) => {
-    // TODO: Replace with actual API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    console.log('Login:', data);
-    
-    // For testing: Use email to determine user type
-    // - Use "verified@test.com" for verified user with community (goes to dashboard)
-    // - Any other email for new unverified user (goes to home/verification flow)
-    
-    const isVerifiedUser = data.email.toLowerCase().includes('verified');
-    
-    if (isVerifiedUser) {
-      // VERIFIED USER - Has completed verification and joined a community
-      login({
-        id: 'verified-user-123',
+    try {
+      // Call the real API
+      const response = await loginUser({
         email: data.email,
-        isVerified: true,
-        profileCompletion: 100,
-        role: 'USER',
-        hasSubmittedDocuments: true,
-        communities: [
-          { id: 'comm-1', name: 'North Maplewood', memberCount: 234, role: 'member' }
-        ],
-        profile: {
-          name: 'Alex Johnson',
-          phone: '+1 555-0123',
-          address: '123 Maple Street, Brooklyn, NY',
-          bio: 'Love sharing tools and gardening equipment with neighbors!'
-        }
+        password: data.password,
       });
-      navigate('/dashboard');
-    } else {
-      // NEW/UNVERIFIED USER - Needs to complete verification
+
+      console.log('Login successful:', response);
+
+      // Save token to localStorage
+      saveAuthData(response.token, null);
+
+      // Set user in context from backend response
       login({
-        id: 'new-user-' + Date.now(),
-        email: data.email,
-        isVerified: false,
-        profileCompletion: 20,
-        role: 'USER',
-        hasSubmittedDocuments: false,
+        id: response.userId,
+        email: response.email,
+        name: response.name,
+        role: response.role,
+        isVerified: response.profileCompleted && response.pendingSteps?.length === 0,
+        profileCompletion: response.profileCompletionPercentage,
+        currentStep: response.currentStep,
+        pendingSteps: response.pendingSteps || [],
+        hasSubmittedDocuments: !response.pendingSteps?.includes('DOCUMENTS'),
         communities: [],
         profile: {
-          name: '',
+          name: response.name,
           phone: '',
           address: '',
           bio: ''
         }
       });
-      navigate('/home');
+
+      // Navigate based on user's current step
+      if (response.profileCompleted && response.pendingSteps?.length === 0) {
+        // Fully verified user - go to dashboard
+        navigate('/dashboard');
+      } else if (response.currentStep) {
+        // User has pending verification steps
+        const stepRoutes = {
+          'PROFILE': '/verify/profile',
+          'DOCUMENTS': '/verify/documents',
+          'PENDING': '/verify/pending',
+        };
+        navigate(stepRoutes[response.currentStep] || '/home');
+      } else {
+        // Default to home
+        navigate('/home');
+      }
+    } catch (error) {
+      throw error;
     }
   };
 
@@ -84,13 +87,6 @@ const LoginForm = () => {
         <h1 className="font-heading text-3xl font-bold mb-2 text-charcoal">Welcome back</h1>
         <p className="text-muted-green text-sm">
           New to ShareMore? <a className="text-primary font-bold hover:underline" href="/register">Create an account</a>
-        </p>
-      </div>
-
-      {/* Test Mode Notice */}
-      <div className="mb-6 p-4 bg-primary/5 border border-primary/20 rounded-lg">
-        <p className="text-xs text-muted-green">
-          <strong className="text-charcoal">Test Mode:</strong> Use <code className="bg-white px-1 rounded">verified@test.com</code> for verified user (→ Dashboard), or any other email for new user (→ Verification flow)
         </p>
       </div>
 
@@ -118,9 +114,6 @@ const LoginForm = () => {
             <label className="block text-xs font-bold uppercase tracking-wider text-muted-green">
               Password
             </label>
-            <a href="/forgot-password" className="text-primary font-bold hover:underline text-xs">
-              Forgot password?
-            </a>
           </div>
           <FormInput
             name="password"

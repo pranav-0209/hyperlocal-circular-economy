@@ -400,7 +400,7 @@ const LandingPage = () => {
         </div>
 
         <div className="max-w-7xl mx-auto pt-8 border-t border-gray-200 flex flex-col sm:flex-row justify-center text-xs text-muted-green">
-          <p>© 2024 ShareMore Inc. All rights reserved.</p>
+          <p>© 2026 ShareMore Inc. All rights reserved.</p>
         </div>
       </footer>
     </div>

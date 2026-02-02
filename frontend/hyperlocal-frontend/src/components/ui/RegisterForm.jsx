@@ -6,6 +6,7 @@ import SubmitButton from './SubmitButton';
 import { useForm } from '../../hooks/useForm';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { registerUser } from '../../services/authService';
 
 const RegisterForm = () => {
   const [success, setSuccess] = useState(false);
@@ -18,36 +19,30 @@ const RegisterForm = () => {
     if (!data.email.trim()) newErrors.email = 'Email is required';
     else if (!/^\S+@\S+\.\S+$/.test(data.email)) newErrors.email = 'Invalid email';
     if (!data.password) newErrors.password = 'Password is required';
-    else if (data.password.length < 8) newErrors.password = 'Password must be at least 8 characters';
+    else if (data.password.length < 6) newErrors.password = 'Password must be at least 6 characters';
     if (data.password !== data.confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
     if (!data.agreed) newErrors.agreed = 'You must agree to terms';
     return newErrors;
   };
 
   const handleRegister = async (data) => {
-    // TODO: Replace with actual API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    console.log('Register:', data);
-    
-    // NEW USER - Needs to complete verification flow
-    login({
-      id: 'new-user-' + Date.now(),
-      email: data.email,
-      isVerified: false,
-      profileCompletion: 20,
-      role: 'USER',
-      hasSubmittedDocuments: false,
-      communities: [],
-      profile: {
+    try {
+      // Call the real API
+      const response = await registerUser({
         name: data.fullName,
-        phone: data.phone || '',
-        address: '',
-        bio: ''
-      }
-    });
-    
-    setSuccess(true);
-    setTimeout(() => navigate('/home'), 2000);
+        email: data.email,
+        password: data.password,
+        agreeToTerms: data.agreed,
+      });
+
+      console.log('Registration successful:', response);
+
+      setSuccess(true);
+      setTimeout(() => navigate('/login'), 2000);
+    } catch (error) {
+      // Error is already formatted by the API interceptor
+      throw error;
+    }
   };
 
   const form = useForm(
@@ -56,8 +51,6 @@ const RegisterForm = () => {
       email: '',
       password: '',
       confirmPassword: '',
-      phone: '',
-      communityCode: '',
       agreed: false,
     },
     handleRegister,
@@ -107,7 +100,7 @@ const RegisterForm = () => {
           icon="person"
           value={form.formData.fullName}
           onChange={form.handleChange}
-          placeholder="John Doe"
+          placeholder="e.g. Priya Sharma"
           error={form.errors.fullName}
           ariaLabel="Full name"
         />
@@ -120,7 +113,7 @@ const RegisterForm = () => {
           icon="mail"
           value={form.formData.email}
           onChange={form.handleChange}
-          placeholder="john@example.com"
+          placeholder="e.g. priya@gmail.com"
           error={form.errors.email}
           ariaLabel="Email address"
         />
@@ -151,33 +144,10 @@ const RegisterForm = () => {
           />
         </div>
 
-        {/* Phone & Area Code - Two Column on desktop */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <FormInput
-            label="Phone"
-            name="phone"
-            type="tel"
-            icon="call"
-            value={form.formData.phone}
-            onChange={form.handleChange}
-            placeholder="+1 (555) 000-0000"
-            ariaLabel="Phone number"
-          />
-          <FormInput
-            label="Area Code"
-            name="communityCode"
-            type="text"
-            icon="map"
-            value={form.formData.communityCode}
-            onChange={form.handleChange}
-            placeholder="e.g. 10001"
-            ariaLabel="Area code"
-          />
-        </div>
-
         {/* Terms Checkbox */}
         <FormCheckbox
           id="terms"
+          name="agreed"
           checked={form.formData.agreed}
           onChange={form.handleChange}
           label={
