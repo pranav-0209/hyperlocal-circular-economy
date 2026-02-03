@@ -41,7 +41,7 @@ public class User {
 
     private String phone;
 
-    private String city;
+    private String address;
 
     @Column(length = 500)
     private String aboutMe;

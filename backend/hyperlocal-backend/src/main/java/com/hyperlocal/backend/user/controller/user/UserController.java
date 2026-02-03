@@ -1,13 +1,11 @@
-package com.hyperlocal.backend.user;
+package com.hyperlocal.backend.user.controller;
 
-import com.hyperlocal.backend.user.dto.LoginRequestDto;
-import com.hyperlocal.backend.user.dto.LoginResponseDto;
-import com.hyperlocal.backend.user.dto.RegisterRequestDto;
-import com.hyperlocal.backend.user.dto.RegisterResponseDto;
+import com.hyperlocal.backend.user.dto.*;
 import com.hyperlocal.backend.user.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -32,6 +30,12 @@ public class UserController {
     @GetMapping("/secure")
     public ResponseEntity<String> secure() {
         return ResponseEntity.ok("You are authenticated");
+    }
+
+    @PutMapping(value = "/profile", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ProfileUpdateResponse> updateProfile(
+            @Valid @ModelAttribute ProfileUpdateRequest request) {
+        return ResponseEntity.ok(userService.updateProfile(request));
     }
 
 }
