@@ -1,4 +1,4 @@
-package com.hyperlocal.backend.exception;
+package com.hyperlocal.backend.common.exception;
 
 public class CustomExceptions {
 

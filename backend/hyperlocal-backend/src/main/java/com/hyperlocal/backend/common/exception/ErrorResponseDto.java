@@ -1,4 +1,4 @@
-package com.hyperlocal.backend.exception;
+package com.hyperlocal.backend.common.exception;
 
 import java.time.LocalDateTime;
 

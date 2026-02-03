@@ -1,4 +1,4 @@
-package com.hyperlocal.backend.user.controller;
+package com.hyperlocal.backend.user.controller.user;
 
 import com.hyperlocal.backend.user.dto.*;
 import com.hyperlocal.backend.user.service.UserService;
@@ -10,22 +10,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/auth")
+@RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
 public class UserController {
 
     private final UserService userService;
-
-    @PostMapping("/register")
-    public ResponseEntity<RegisterResponseDto> register(@Valid @RequestBody RegisterRequestDto dto) {
-        RegisterResponseDto response = userService.registerUser(dto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
-
-    @PostMapping("/login")
-    public ResponseEntity<LoginResponseDto> login(@Valid @RequestBody LoginRequestDto dto) {
-        return ResponseEntity.ok(userService.login(dto));
-    }
 
     @GetMapping("/secure")
     public ResponseEntity<String> secure() {

@@ -1,18 +1,19 @@
 package com.hyperlocal.backend.user.service;
 
-import com.hyperlocal.backend.exception.CustomExceptions;
+import com.hyperlocal.backend.common.exception.CustomExceptions;
+import com.hyperlocal.backend.common.storage.FileStorageService;
 import com.hyperlocal.backend.security.JwtService;
-import com.hyperlocal.backend.user.Role;
-import com.hyperlocal.backend.user.User;
+import com.hyperlocal.backend.user.dto.*;
+import com.hyperlocal.backend.user.enums.Role;
+import com.hyperlocal.backend.user.entity.User;
 import com.hyperlocal.backend.user.UserRepository;
-import com.hyperlocal.backend.user.dto.LoginRequestDto;
-import com.hyperlocal.backend.user.dto.LoginResponseDto;
-import com.hyperlocal.backend.user.dto.RegisterRequestDto;
-import com.hyperlocal.backend.user.dto.RegisterResponseDto;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.io.IOException;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +23,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final ProfileCompletionService profileCompletionService;
+    private final FileStorageService fileStorageService;
 
     @Transactional
     public RegisterResponseDto registerUser(RegisterRequestDto dto) {
@@ -43,7 +45,7 @@ public class UserService {
         return new RegisterResponseDto(
                 savedUser.getId(),
                 savedUser.getEmail(),
-                "Registration successful.Please login to continue"
+                "Registration successful. Please login to continue"
         );
     }
 
@@ -69,5 +71,45 @@ public class UserService {
                 .pendingSteps(profileCompletionService.getPendingSteps(user))
                 .build();
     }
+
+    @Transactional
+    public ProfileUpdateResponse updateProfile(ProfileUpdateRequest request) {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(CustomExceptions.InvalidCredentialsException::new);
+
+        if (request.getPhone() != null) {
+            user.setPhone(request.getPhone());
+        }
+        if (request.getAddress() != null) {
+            user.setAddress(request.getAddress());
+        }
+        if (request.getBio() != null) {
+            user.setAboutMe(request.getBio());
+        }
+        if (request.getProfilePhoto() != null && !request.getProfilePhoto().isEmpty()) {
+            try {
+                String photoUrl = fileStorageService.storeProfilePhoto(request.getProfilePhoto(), user.getId());
+                user.setProfilePhotoUrl(photoUrl);
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to upload profile photo", e);
+            }
+        }
+
+        int percentage = profileCompletionService.calculatePercentage(user);
+        user.setProfileCompletionPercentage(percentage);
+
+        String currentStep = profileCompletionService.getCurrentStep(user);
+
+        userRepository.save(user);
+
+        return new ProfileUpdateResponse(
+                "Profile updated successfully",
+                percentage,
+                currentStep,
+                profileCompletionService.getPendingSteps(user)
+        );
+    }
+
 
 }

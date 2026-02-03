@@ -1,4 +1,4 @@
-package com.hyperlocal.backend.exception;
+package com.hyperlocal.backend.common.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;

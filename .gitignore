@@ -23,4 +23,13 @@ node_modules/
 # --- Documentation ---
 CODE_OPTIMIZATION.md
 COMPONENT_API.md
+POST_LOGIN_FLOW.md
+POST_LOGIN_SETUP.md
+CONDITIONAL_RENDERING_PATTERNS.md
 .github
+
+# Uploaded files
+uploads/
+profile-photos/
+src/main/resources/uploads/
+src/main/resources/static/uploads/

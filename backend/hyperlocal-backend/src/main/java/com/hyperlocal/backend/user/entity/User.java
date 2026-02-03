@@ -1,8 +1,9 @@
-package com.hyperlocal.backend.user;
+package com.hyperlocal.backend.user.entity;
 
+import com.hyperlocal.backend.user.enums.ProfileStep;
+import com.hyperlocal.backend.user.enums.Role;
 import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 

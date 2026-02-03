@@ -1,9 +1,8 @@
 package com.hyperlocal.backend.security;
 
-import com.hyperlocal.backend.user.User;
+import com.hyperlocal.backend.user.entity.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;

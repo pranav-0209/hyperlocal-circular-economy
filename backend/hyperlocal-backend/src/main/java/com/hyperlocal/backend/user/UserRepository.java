@@ -1,5 +1,6 @@
 package com.hyperlocal.backend.user;
 
+import com.hyperlocal.backend.user.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
