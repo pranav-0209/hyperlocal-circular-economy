@@ -2,7 +2,8 @@ package com.hyperlocal.backend.common.exception;
 
 public class CustomExceptions {
 
-    private CustomExceptions() {}
+    private CustomExceptions() {
+    }
 
     public static class EmailAlreadyExistsException extends RuntimeException {
         public EmailAlreadyExistsException() {
@@ -32,5 +33,15 @@ public class CustomExceptions {
         public UserNotVerifiedException() {
             super("User is not verified by admin");
         }
+    }
+
+    public static class FileUploadException extends RuntimeException {
+        public FileUploadException() { super("Failed to upload file"); }
+
+        public FileUploadException(Throwable cause) { super("Failed to upload file", cause); }
+    }
+
+    public static class UnauthorizedAccessException extends RuntimeException {
+        public UnauthorizedAccessException() { super("User is not authenticated"); }
     }
 }

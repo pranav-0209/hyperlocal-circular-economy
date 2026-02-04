@@ -55,12 +55,23 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.FORBIDDEN, ex.getMessage(), request.getRequestURI());
     }
 
-
     // Fallback for Database constraints
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponseDto> handleDbViolation(DataIntegrityViolationException ex,
                                                               HttpServletRequest request) {
         return buildResponse(HttpStatus.CONFLICT, "Database constraint violation", request.getRequestURI());
+    }
+
+    @ExceptionHandler(CustomExceptions.FileUploadException.class)
+    public ResponseEntity<ErrorResponseDto> handleFileUpload(CustomExceptions.FileUploadException ex,
+                                                             HttpServletRequest request) {
+        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler(CustomExceptions.UnauthorizedAccessException.class)
+    public ResponseEntity<ErrorResponseDto> handleUnauthorized(CustomExceptions.UnauthorizedAccessException ex,
+                                                               HttpServletRequest request) {
+        return buildResponse(HttpStatus.UNAUTHORIZED, ex.getMessage(), request.getRequestURI());
     }
 
     // Generic Fallback

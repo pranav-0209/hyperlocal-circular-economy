@@ -4,6 +4,7 @@ import com.hyperlocal.backend.common.exception.CustomExceptions;
 import com.hyperlocal.backend.common.storage.FileStorageService;
 import com.hyperlocal.backend.security.JwtService;
 import com.hyperlocal.backend.user.dto.*;
+import com.hyperlocal.backend.user.enums.ProfileStep;
 import com.hyperlocal.backend.user.enums.Role;
 import com.hyperlocal.backend.user.entity.User;
 import com.hyperlocal.backend.user.UserRepository;
@@ -74,7 +75,7 @@ public class UserService {
 
     @Transactional
     public ProfileUpdateResponse updateProfile(ProfileUpdateRequest request) {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        String email = extractAuthenticatedEmail();
         User user = userRepository.findByEmail(email)
                 .orElseThrow(CustomExceptions.InvalidCredentialsException::new);
 
@@ -92,7 +93,7 @@ public class UserService {
                 String photoUrl = fileStorageService.storeProfilePhoto(request.getProfilePhoto(), user.getId());
                 user.setProfilePhotoUrl(photoUrl);
             } catch (IOException e) {
-                throw new RuntimeException("Failed to upload profile photo", e);
+                throw new CustomExceptions.FileUploadException(e);
             }
         }
 
@@ -100,6 +101,7 @@ public class UserService {
         user.setProfileCompletionPercentage(percentage);
 
         String currentStep = profileCompletionService.getCurrentStep(user);
+        user.setCurrentStep(ProfileStep.valueOf(currentStep));
 
         userRepository.save(user);
 
@@ -111,5 +113,14 @@ public class UserService {
         );
     }
 
+    private String extractAuthenticatedEmail() {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
 
+        if (authentication == null || authentication.getName() == null ||
+                "anonymousUser".equals(authentication.getName())) {
+            throw new CustomExceptions.UnauthorizedAccessException();
+        }
+
+        return authentication.getName();
+    }
 }
