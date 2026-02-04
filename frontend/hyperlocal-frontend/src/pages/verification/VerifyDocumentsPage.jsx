@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import VerificationLayout from '../../components/ui/VerificationLayout';
 import DocumentUpload from '../../components/ui/DocumentUpload';
 import SubmitButton from '../../components/ui/SubmitButton';
+import { uploadDocuments } from '../../services/authService';
 
 /**
  * VerifyDocumentsPage (/verify/documents)
@@ -14,7 +15,7 @@ import SubmitButton from '../../components/ui/SubmitButton';
  */
 export default function VerifyDocumentsPage() {
   const navigate = useNavigate();
-  const { markDocumentsSubmitted } = useAuth();
+  const { updateUser } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [documents, setDocuments] = useState({
     governmentId: null,
@@ -60,14 +61,30 @@ export default function VerifyDocumentsPage() {
 
     setIsLoading(true);
 
-    // Simulate API call to upload documents
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    try {
+      // Prepare FormData for file upload
+      const formData = new FormData();
+      formData.append('governmentId', documents.governmentId);
+      formData.append('addressProof', documents.addressProof);
 
-    // Mark documents as submitted
-    markDocumentsSubmitted();
+      // Call backend API to upload documents
+      const response = await uploadDocuments(formData);
 
-    // Navigate to pending review page
-    navigate('/verify/pending');
+      // Sync profile completion and currentStep from backend response
+      updateUser({
+        profileCompletion: response.profileCompletionPercentage,
+        currentStep: response.currentStep,
+        pendingSteps: response.pendingSteps || [],
+        hasSubmittedDocuments: true,
+      });
+
+      // Navigate to pending review page
+      navigate('/verify/pending');
+    } catch (error) {
+      setErrors({ submit: error.message || 'Failed to upload documents' });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

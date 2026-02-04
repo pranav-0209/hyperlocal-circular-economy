@@ -35,11 +35,15 @@ export const loginUser = async (credentials) => {
 
 /**
  * Update user profile details
- * @param {Object} profileData - { phone, address, bio, profilePhoto }
- * @returns {Promise<{ profileCompletionPercentage, currentStep, pendingSteps, message }>}
+ * @param {FormData} formData - Contains phone, address, bio, profilePhoto (file)
+ * @returns {Promise<{ message, profileCompletionPercentage, currentStep, pendingSteps }>}
  */
-export const updateProfile = async (profileData) => {
-  const response = await api.put('/api/v1/user/profile', profileData);
+export const updateProfile = async (formData) => {
+  const response = await api.put('/api/v1/users/profile', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
   return response.data;
 };
 

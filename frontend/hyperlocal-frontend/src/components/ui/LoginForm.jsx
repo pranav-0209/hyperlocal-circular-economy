@@ -39,11 +39,11 @@ const LoginForm = () => {
         email: response.email,
         name: response.name,
         role: response.role,
-        isVerified: response.profileCompleted && response.pendingSteps?.length === 0,
+        isVerified: response.currentStep === 'COMPLETE',
         profileCompletion: response.profileCompletionPercentage,
         currentStep: response.currentStep,
         pendingSteps: response.pendingSteps || [],
-        hasSubmittedDocuments: !response.pendingSteps?.includes('DOCUMENTS'),
+        hasSubmittedDocuments: !response.pendingSteps?.includes('UPLOAD_DOCUMENTS'),
         communities: [],
         profile: {
           name: response.name,
@@ -54,19 +54,12 @@ const LoginForm = () => {
       });
 
       // Navigate based on user's current step
-      if (response.profileCompleted && response.pendingSteps?.length === 0) {
+      if (response.currentStep === 'COMPLETE') {
         // Fully verified user - go to dashboard
         navigate('/dashboard');
-      } else if (response.currentStep) {
-        // User has pending verification steps
-        const stepRoutes = {
-          'PROFILE': '/verify/profile',
-          'DOCUMENTS': '/verify/documents',
-          'PENDING': '/verify/pending',
-        };
-        navigate(stepRoutes[response.currentStep] || '/home');
       } else {
-        // Default to home
+        // All other users go to home page first
+        // They can then click to continue verification from there
         navigate('/home');
       }
     } catch (error) {

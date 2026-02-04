@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute, VerificationRequiredRoute, AdminRoute } from './components/ProtectedRoute';
+import SuperAdminProtectedRoute from './components/SuperAdminProtectedRoute';
 
 // Public pages
 import LandingPage from './pages/LandingPage';
@@ -21,6 +22,14 @@ import CommunitySelectPage from './pages/CommunitySelectPage';
 
 // Admin pages
 import AdminDashboard from './pages/AdminDashboard';
+
+// Super Admin pages
+import SuperAdminLogin from './pages/superadmin/SuperAdminLogin';
+import SuperAdminDashboard from './pages/superadmin/SuperAdminDashboard';
+import SuperAdminVerifications from './pages/superadmin/SuperAdminVerifications';
+import SuperAdminVerificationDetail from './pages/superadmin/SuperAdminVerificationDetail';
+import SuperAdminUsers from './pages/superadmin/SuperAdminUsers';
+import SuperAdminCommunities from './pages/superadmin/SuperAdminCommunities';
 
 function App() {
   return (
@@ -95,6 +104,49 @@ function App() {
               <AdminRoute>
                 <AdminDashboard />
               </AdminRoute>
+            }
+          />
+
+          {/* Super Admin Routes */}
+          <Route path="/superadmin/login" element={<SuperAdminLogin />} />
+          <Route
+            path="/superadmin"
+            element={
+              <SuperAdminProtectedRoute>
+                <SuperAdminDashboard />
+              </SuperAdminProtectedRoute>
+            }
+          />
+          <Route
+            path="/superadmin/verifications"
+            element={
+              <SuperAdminProtectedRoute>
+                <SuperAdminVerifications />
+              </SuperAdminProtectedRoute>
+            }
+          />
+          <Route
+            path="/superadmin/verifications/:id"
+            element={
+              <SuperAdminProtectedRoute>
+                <SuperAdminVerificationDetail />
+              </SuperAdminProtectedRoute>
+            }
+          />
+          <Route
+            path="/superadmin/users"
+            element={
+              <SuperAdminProtectedRoute>
+                <SuperAdminUsers />
+              </SuperAdminProtectedRoute>
+            }
+          />
+          <Route
+            path="/superadmin/communities"
+            element={
+              <SuperAdminProtectedRoute>
+                <SuperAdminCommunities />
+              </SuperAdminProtectedRoute>
             }
           />
 

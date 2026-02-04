@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import VerificationLayout from '../../components/ui/VerificationLayout';
 import FormInput from '../../components/ui/FormInput';
 import SubmitButton from '../../components/ui/SubmitButton';
+import { updateProfile } from '../../services/authService';
 
 /**
  * VerifyProfilePage (/verify/profile)
@@ -16,12 +17,12 @@ import SubmitButton from '../../components/ui/SubmitButton';
  */
 export default function VerifyProfilePage() {
   const navigate = useNavigate();
-  const { updateProfileCompletion } = useAuth();
+  const { user, updateUser } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
-  const [profilePhoto, setProfilePhoto] = useState(null);
+  const [profilePhotoFile, setProfilePhotoFile] = useState(null); // Actual file for upload
+  const [profilePhotoPreview, setProfilePhotoPreview] = useState(null); // Preview URL
   const [formData, setFormData] = useState({
-    fullName: '',
     phoneNumber: '',
     address: '',
     bio: '',
@@ -38,12 +39,11 @@ export default function VerifyProfilePage() {
         setErrors((prev) => ({ ...prev, photo: 'Please upload an image file' }));
         return;
       }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfilePhoto(reader.result);
-        setErrors((prev) => ({ ...prev, photo: '' }));
-      };
-      reader.readAsDataURL(file);
+      // Store actual file for upload
+      setProfilePhotoFile(file);
+      // Create preview URL
+      setProfilePhotoPreview(URL.createObjectURL(file));
+      setErrors((prev) => ({ ...prev, photo: '' }));
     }
   };
 
@@ -64,10 +64,6 @@ export default function VerifyProfilePage() {
 
   const validateForm = () => {
     const newErrors = {};
-
-    if (!formData.fullName.trim()) {
-      newErrors.fullName = 'Full name is required';
-    }
 
     if (!formData.phoneNumber.trim()) {
       newErrors.phoneNumber = 'Phone number is required';
@@ -99,14 +95,35 @@ export default function VerifyProfilePage() {
 
     setIsLoading(true);
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      // Prepare FormData for multipart upload
+      const formDataToSend = new FormData();
+      formDataToSend.append('phone', formData.phoneNumber);
+      formDataToSend.append('address', formData.address);
+      formDataToSend.append('bio', formData.bio);
+      if (profilePhotoFile) {
+        formDataToSend.append('profilePhoto', profilePhotoFile);
+      }
 
-    // Update profile completion
-    updateProfileCompletion(40);
+      // Call backend API to update profile
+      const response = await updateProfile(formDataToSend);
 
-    // Navigate to document upload
-    navigate('/verify/documents');
+      console.log('Profile update response:', response);
+
+      // Sync profile completion and currentStep from backend response
+      updateUser({
+        profileCompletion: response.profileCompletionPercentage,
+        currentStep: response.currentStep,
+        pendingSteps: response.pendingSteps || [],
+      });
+
+      // Navigate to document upload
+      navigate('/verify/documents');
+    } catch (error) {
+      setErrors({ submit: error.message || 'Failed to update profile' });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -123,9 +140,9 @@ export default function VerifyProfilePage() {
             <div className="flex items-start gap-6">
               <div className="shrink-0">
                 <div className="w-24 h-24 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 overflow-hidden">
-                  {profilePhoto ? (
+                  {profilePhotoPreview ? (
                     <img
-                      src={profilePhoto}
+                      src={profilePhotoPreview}
                       alt="Profile"
                       className="w-full h-full object-cover"
                     />
@@ -152,7 +169,7 @@ export default function VerifyProfilePage() {
                   htmlFor="profilePhoto"
                   className="text-primary hover:text-primary/80 font-medium text-sm cursor-pointer"
                 >
-                  {profilePhoto ? 'Change Photo' : 'Upload Photo'}
+                  {profilePhotoPreview ? 'Change Photo' : 'Upload Photo'}
                 </label>
                 {errors.photo && (
                   <p className="text-red-500 text-xs mt-1">{errors.photo}</p>
@@ -162,15 +179,27 @@ export default function VerifyProfilePage() {
           </div>
 
           {/* Form Fields */}
-          <FormInput
-            label="Full Legal Name"
-            name="fullName"
-            value={formData.fullName}
-            onChange={handleChange}
-            placeholder="e.g. Priya Sharma"
-            error={errors.fullName}
-            icon="person"
-          />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormInput
+              label="Full Legal Name"
+              name="fullName"
+              value={user?.name || user?.profile?.name || ''}
+              onChange={() => {}}
+              placeholder="e.g. Priya Sharma"
+              icon="person"
+              disabled={true}
+            />
+            <FormInput
+              label="Email Address"
+              name="email"
+              type="email"
+              value={user?.email || ''}
+              onChange={() => {}}
+              placeholder="e.g. priya@gmail.com"
+              icon="mail"
+              disabled={true}
+            />
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormInput
@@ -185,7 +214,7 @@ export default function VerifyProfilePage() {
             />
 
             <FormInput
-              label="City / Area"
+              label="Address"
               name="address"
               value={formData.address}
               onChange={handleChange}

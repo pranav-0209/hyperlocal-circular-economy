@@ -22,8 +22,30 @@ export default function HomePage() {
     return null;
   }
 
+  // Determine the next verification step based on currentStep or profileCompletion
+  const getNextVerificationRoute = () => {
+    // If backend provides currentStep, use that
+    if (user.currentStep) {
+      const stepRoutes = {
+        'PROFILE': '/verify/profile',
+        'DOCUMENT_VERIFICATION': '/verify/documents',
+        'REVIEW': '/verify/pending',
+        'COMPLETE': '/dashboard',
+      };
+      return stepRoutes[user.currentStep] || '/verify/profile';
+    }
+    
+    // Fallback: derive from profileCompletion percentage
+    if (user.profileCompletion >= 75) return '/verify/pending';
+    if (user.profileCompletion >= 50) return '/verify/documents';
+    return '/verify/profile';
+  };
+
+  // Button text changes based on progress
+  const verificationButtonText = user.profileCompletion > 25 ? 'Continue Verification' : 'Start Verification';
+
   const handleStartVerification = () => {
-    navigate('/verify/profile');
+    navigate(getNextVerificationRoute());
   };
 
   const handleJoinCommunity = () => {
@@ -100,7 +122,7 @@ export default function HomePage() {
                 onClick={handleStartVerification}
                 className="w-full sm:w-auto px-6 py-3 bg-primary text-white font-bold rounded-lg hover:brightness-110 transition-all flex items-center justify-center gap-2"
               >
-                Start Verification
+                {verificationButtonText}
                 <span className="material-symbols-outlined text-lg">arrow_forward</span>
               </button>
             </div>
