@@ -113,6 +113,44 @@ public class UserService {
         );
     }
 
+    @Transactional
+    public DocumentUploadResponse uploadDocuments(DocumentUploadRequest request) {
+        String email = extractAuthenticatedEmail();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(CustomExceptions.InvalidCredentialsException::new);
+
+        if (request.getGovernmentId() == null || request.getGovernmentId().isEmpty()) {
+            throw new IllegalArgumentException("Government ID is required");
+        }
+
+        try {
+            String govIdUrl = fileStorageService.storeDocument(request.getGovernmentId(), user.getId(), "gov_id");
+            user.setGovernmentIdUrl(govIdUrl);
+
+            if (request.getAddressProof() != null && !request.getAddressProof().isEmpty()) {
+                String addressProofUrl = fileStorageService.storeDocument(request.getAddressProof(), user.getId(), "address_proof");
+                user.setAddressProofUrl(addressProofUrl);
+            }
+        } catch (IOException e) {
+            throw new CustomExceptions.FileUploadException(e);
+        }
+
+        int percentage = profileCompletionService.calculatePercentage(user);
+        user.setProfileCompletionPercentage(percentage);
+
+        String currentStep = profileCompletionService.getCurrentStep(user);
+        user.setCurrentStep(ProfileStep.valueOf(currentStep));
+
+        userRepository.save(user);
+
+        return new DocumentUploadResponse(
+                "Documents uploaded",
+                percentage,
+                currentStep,
+                profileCompletionService.getPendingSteps(user)
+        );
+    }
+
     private String extractAuthenticatedEmail() {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
 

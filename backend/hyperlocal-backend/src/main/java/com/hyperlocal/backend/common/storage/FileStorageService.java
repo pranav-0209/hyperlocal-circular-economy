@@ -1,4 +1,5 @@
 package com.hyperlocal.backend.common.storage;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -26,6 +27,19 @@ public class FileStorageService {
         Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
 
         return "/uploads/profiles/" + fileName;
+    }
+
+    public String storeDocument(MultipartFile file, Long userId, String documentType) throws IOException {
+        Path uploadPath = Paths.get(uploadDir, "documents");
+        Files.createDirectories(uploadPath);
+
+        String extension = getExtension(file.getOriginalFilename());
+        String fileName = documentType + "_" + userId + "_" + System.currentTimeMillis() + extension;
+        Path filePath = uploadPath.resolve(fileName);
+
+        Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+
+        return "/uploads/documents/" + fileName;
     }
 
     private String getExtension(String fileName) {

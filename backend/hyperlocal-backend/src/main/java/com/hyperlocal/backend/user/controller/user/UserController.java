@@ -27,4 +27,9 @@ public class UserController {
         return ResponseEntity.ok(userService.updateProfile(request));
     }
 
+    @PostMapping(value = "/documents", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<DocumentUploadResponse> uploadDocuments(
+            @ModelAttribute DocumentUploadRequest request) {
+        return ResponseEntity.ok(userService.uploadDocuments(request));
+    }
 }
