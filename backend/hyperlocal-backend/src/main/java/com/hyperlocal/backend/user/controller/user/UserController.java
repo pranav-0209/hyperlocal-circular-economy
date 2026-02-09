@@ -29,7 +29,7 @@ public class UserController {
 
     @PostMapping(value = "/documents", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<DocumentUploadResponse> uploadDocuments(
-            @ModelAttribute DocumentUploadRequest request) {
+            @Valid @ModelAttribute DocumentUploadRequest request) {
         return ResponseEntity.ok(userService.uploadDocuments(request));
     }
 }

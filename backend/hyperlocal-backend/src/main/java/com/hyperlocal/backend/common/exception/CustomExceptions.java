@@ -44,4 +44,33 @@ public class CustomExceptions {
     public static class UnauthorizedAccessException extends RuntimeException {
         public UnauthorizedAccessException() { super("User is not authenticated"); }
     }
+
+    public static class InvalidFileTypeException extends RuntimeException {
+        public InvalidFileTypeException(String message) { super(message); }
+        public InvalidFileTypeException() { super("Invalid file type"); }
+    }
+
+    public static class EmptyFileException extends RuntimeException {
+        public EmptyFileException() { super("File cannot be empty"); }
+    }
+
+    public static class DocumentRequiredException extends RuntimeException {
+        public DocumentRequiredException(String documentType) {
+            super(documentType + " is required");
+        }
+    }
+
+    public static class VerificationException extends RuntimeException {
+        public VerificationException(String message) { super(message); }
+    }
+
+    public static class InvalidVerificationStateException extends RuntimeException {
+        public InvalidVerificationStateException(String message) { super(message); }
+    }
+
+    public static class RejectionReasonRequiredException extends RuntimeException {
+        public RejectionReasonRequiredException() {
+            super("Rejection reason is required when rejecting documents");
+        }
+    }
 }

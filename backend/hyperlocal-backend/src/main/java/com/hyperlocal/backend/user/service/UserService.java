@@ -7,7 +7,7 @@ import com.hyperlocal.backend.user.dto.*;
 import com.hyperlocal.backend.user.enums.ProfileStep;
 import com.hyperlocal.backend.user.enums.Role;
 import com.hyperlocal.backend.user.entity.User;
-import com.hyperlocal.backend.user.UserRepository;
+import com.hyperlocal.backend.user.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -117,16 +117,19 @@ public class UserService {
     public DocumentUploadResponse uploadDocuments(DocumentUploadRequest request) {
         String email = extractAuthenticatedEmail();
         User user = userRepository.findByEmail(email)
-                .orElseThrow(CustomExceptions.InvalidCredentialsException::new);
+                .orElseThrow(CustomExceptions.UserNotFoundException::new);
 
+        // Validate government ID is present and not empty
         if (request.getGovernmentId() == null || request.getGovernmentId().isEmpty()) {
-            throw new IllegalArgumentException("Government ID is required");
+            throw new CustomExceptions.DocumentRequiredException("Government ID");
         }
 
         try {
+            // Store government ID (required)
             String govIdUrl = fileStorageService.storeDocument(request.getGovernmentId(), user.getId(), "gov_id");
             user.setGovernmentIdUrl(govIdUrl);
 
+            // Store address proof if provided (optional)
             if (request.getAddressProof() != null && !request.getAddressProof().isEmpty()) {
                 String addressProofUrl = fileStorageService.storeDocument(request.getAddressProof(), user.getId(), "address_proof");
                 user.setAddressProofUrl(addressProofUrl);
@@ -135,6 +138,7 @@ public class UserService {
             throw new CustomExceptions.FileUploadException(e);
         }
 
+        // Update profile completion
         int percentage = profileCompletionService.calculatePercentage(user);
         user.setProfileCompletionPercentage(percentage);
 
@@ -144,7 +148,7 @@ public class UserService {
         userRepository.save(user);
 
         return new DocumentUploadResponse(
-                "Documents uploaded",
+                "Documents uploaded successfully",
                 percentage,
                 currentStep,
                 profileCompletionService.getPendingSteps(user)
