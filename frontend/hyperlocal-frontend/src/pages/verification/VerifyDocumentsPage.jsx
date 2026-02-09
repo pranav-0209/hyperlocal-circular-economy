@@ -43,9 +43,7 @@ export default function VerifyDocumentsPage() {
       newErrors.governmentId = 'Government ID is required';
     }
 
-    if (!documents.addressProof) {
-      newErrors.addressProof = 'Address proof is required';
-    }
+    // addressProof is optional
 
     return newErrors;
   };
@@ -65,10 +63,13 @@ export default function VerifyDocumentsPage() {
       // Prepare FormData for file upload
       const formData = new FormData();
       formData.append('governmentId', documents.governmentId);
-      formData.append('addressProof', documents.addressProof);
+      if (documents.addressProof) {
+        formData.append('addressProof', documents.addressProof);
+      }
 
       // Call backend API to upload documents
       const response = await uploadDocuments(formData);
+      console.log('Documents upload response:', response);
 
       // Sync profile completion and currentStep from backend response
       updateUser({
@@ -109,7 +110,7 @@ export default function VerifyDocumentsPage() {
 
           {/* Address Proof Upload */}
           <DocumentUpload
-            title="Address Proof"
+            title="Address Proof (Optional)"
             description="Utility Bill, Bank Statement (Max 5MB)"
             acceptedFormats="image/*, .pdf"
             onFileSelected={(file) => handleFileUpload('addressProof', file)}

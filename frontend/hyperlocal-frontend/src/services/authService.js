@@ -49,11 +49,11 @@ export const updateProfile = async (formData) => {
 
 /**
  * Upload verification documents
- * @param {FormData} formData - Contains governmentId and addressProof files
- * @returns {Promise<{ profileCompletionPercentage, currentStep, pendingSteps, message }>}
+ * @param {FormData} formData - Contains governmentId and addressProof (optional) files
+ * @returns {Promise<{ message, profileCompletionPercentage, currentStep, pendingSteps }>}
  */
 export const uploadDocuments = async (formData) => {
-  const response = await api.post('/api/v1/user/documents', formData, {
+  const response = await api.post('/api/v1/users/documents', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
@@ -87,6 +87,54 @@ export const getCurrentUser = () => {
   return user ? JSON.parse(user) : null;
 };
 
+// =====================
+// SUPER ADMIN APIs
+// =====================
+
+/**
+ * Super Admin Login
+ * @param {Object} credentials - { email, password }
+ * @returns {Promise<{ token, id, email, name, role }>}
+ */
+export const adminLogin = async (credentials) => {
+  const response = await api.post('/api/v1/admin/auth/login', {
+    email: credentials.email,
+    password: credentials.password,
+  });
+  return response.data;
+};
+
+/**
+ * Save admin auth data to local storage
+ * @param {string} token
+ * @param {Object} admin
+ */
+export const saveAdminAuthData = (token, admin) => {
+  if (token) {
+    localStorage.setItem('adminToken', token);
+  }
+  if (admin) {
+    localStorage.setItem('adminUser', JSON.stringify(admin));
+  }
+};
+
+/**
+ * Logout admin - clear admin local storage
+ */
+export const logoutAdmin = () => {
+  localStorage.removeItem('adminToken');
+  localStorage.removeItem('adminUser');
+};
+
+/**
+ * Get current admin from local storage
+ * @returns {Object|null}
+ */
+export const getCurrentAdmin = () => {
+  const admin = localStorage.getItem('adminUser');
+  return admin ? JSON.parse(admin) : null;
+};
+
 /**
  * Save auth data to local storage
  * @param {string} token 
@@ -110,4 +158,9 @@ export default {
   logoutUser,
   getCurrentUser,
   saveAuthData,
+  // Admin APIs
+  adminLogin,
+  saveAdminAuthData,
+  logoutAdmin,
+  getCurrentAdmin,
 };
