@@ -1,7 +1,8 @@
 package com.hyperlocal.backend.admin.controller;
 
 import com.hyperlocal.backend.admin.dto.UserFilterDto;
-import com.hyperlocal.backend.admin.dto.UserResponseDto;
+import com.hyperlocal.backend.admin.dto.UserListDto;
+import com.hyperlocal.backend.admin.dto.UserDetailDto;
 import com.hyperlocal.backend.admin.dto.VerificationRequestDto;
 import com.hyperlocal.backend.admin.dto.VerificationResponseDto;
 import com.hyperlocal.backend.admin.service.SuperAdminService;
@@ -23,8 +24,12 @@ public class SuperAdminController {
 
     private final SuperAdminService superAdminService;
 
+    /**
+     * Get all users with lightweight response
+     * GET /api/v1/admin/users
+     */
     @GetMapping("/users")
-    public ResponseEntity<PagedResponseDto<UserResponseDto>> getAllUsers(
+    public ResponseEntity<PagedResponseDto<UserListDto>> getAllUsers(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
@@ -43,6 +48,21 @@ public class SuperAdminController {
         filter.setCurrentStep(currentStep);
 
         return ResponseEntity.ok(superAdminService.getAllUsers(page, size, sortBy, sortDir, filter));
+    }
+
+    /**
+     * Get detailed user information by ID
+     * GET /api/v1/admin/users/{userId}
+     *
+     * @param userId The ID of the user to retrieve
+     * @return UserDetailDto with complete user information including document URLs
+     *
+     * @throws CustomExceptions.UserNotFoundException if user is not found
+     */
+    @GetMapping("/users/{userId}")
+    public ResponseEntity<UserDetailDto> getUserById(@PathVariable Long userId) {
+        UserDetailDto userDetail = superAdminService.getUserById(userId);
+        return ResponseEntity.ok(userDetail);
     }
 
     /**

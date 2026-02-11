@@ -55,7 +55,7 @@ public class User {
 
     @Builder.Default
     @Column(name = "profile_completion_percentage")
-    private Integer profileCompletionPercentage = 20;
+    private Integer profileCompletionPercentage = 25;
 
     @Enumerated(EnumType.STRING)
     @Builder.Default
@@ -74,7 +74,7 @@ public class User {
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
         if (this.profileCompletionPercentage == null) {
-            this.profileCompletionPercentage = 20;
+            this.profileCompletionPercentage = 25;
         }
         if (this.currentStep == null) {
             this.currentStep = ProfileStep.PROFILE;

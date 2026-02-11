@@ -1,7 +1,8 @@
 package com.hyperlocal.backend.admin.service;
 
 import com.hyperlocal.backend.admin.dto.UserFilterDto;
-import com.hyperlocal.backend.admin.dto.UserResponseDto;
+import com.hyperlocal.backend.admin.dto.UserListDto;
+import com.hyperlocal.backend.admin.dto.UserDetailDto;
 import com.hyperlocal.backend.admin.dto.VerificationRequestDto;
 import com.hyperlocal.backend.admin.dto.VerificationResponseDto;
 import com.hyperlocal.backend.common.dto.PagedResponseDto;
@@ -11,6 +12,7 @@ import com.hyperlocal.backend.user.enums.ProfileStep;
 import com.hyperlocal.backend.user.repository.UserRepository;
 import com.hyperlocal.backend.user.repository.UserSpecification;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -24,7 +26,13 @@ public class SuperAdminService {
 
     private final UserRepository userRepository;
 
-    public PagedResponseDto<UserResponseDto> getAllUsers(
+    @Value("${server.port:8080}")
+    private String serverPort;
+
+    /**
+     * Get all users with lightweight response (for list view)
+     */
+    public PagedResponseDto<UserListDto> getAllUsers(
             int page,
             int size,
             String sortBy,
@@ -42,10 +50,21 @@ public class SuperAdminService {
                 pageable
         );
 
-        // Convert User entities to UserResponseDto (excludes password)
-        Page<UserResponseDto> dtoPage = userPage.map(UserResponseDto::from);
+        // Convert User entities to lightweight UserListDto
+        Page<UserListDto> dtoPage = userPage.map(UserListDto::from);
 
         return PagedResponseDto.from(dtoPage);
+    }
+
+    /**
+     * Get detailed user information by ID (including document URLs)
+     */
+    public UserDetailDto getUserById(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(CustomExceptions.UserNotFoundException::new);
+
+        String baseUrl = "http://localhost:" + serverPort;
+        return UserDetailDto.from(user, baseUrl);
     }
 
     /**

@@ -65,8 +65,7 @@ public class ProfileCompletionService {
     }
 
     private boolean hasDocumentsUploaded(User user) {
-        return user.getGovernmentIdUrl() != null
-                && user.getAddressProofUrl() != null;
+        return user.getGovernmentIdUrl() != null;
     }
 
     private boolean isVerified(User user) {

@@ -41,6 +41,13 @@ public class UserService {
                 .verified(false)
                 .build();
 
+        // Set initial profile completion percentage and step
+        int percentage = profileCompletionService.calculatePercentage(user);
+        user.setProfileCompletionPercentage(percentage);
+
+        String currentStep = profileCompletionService.getCurrentStep(user);
+        user.setCurrentStep(ProfileStep.valueOf(currentStep));
+
         User savedUser = userRepository.save(user);
 
         return new RegisterResponseDto(
