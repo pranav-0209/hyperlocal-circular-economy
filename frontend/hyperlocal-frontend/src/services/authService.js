@@ -136,6 +136,68 @@ export const getCurrentAdmin = () => {
 };
 
 /**
+ * Get all users with pagination and filtering
+ * @param {Object} params - { page, size, sortBy, sortDir, email, name, role, verified, currentStep }
+ * @returns {Promise<{ content, pageNumber, pageSize, totalElements, totalPages, last }>}
+ */
+export const getAllUsers = async (params = {}) => {
+  // Use admin token for this request
+  const adminToken = localStorage.getItem('adminToken');
+  const response = await api.get('/api/v1/admin/users', {
+    params: {
+      page: params.page || 0,
+      size: params.size || 10,
+      sortBy: params.sortBy || 'createdAt',
+      sortDir: params.sortDir || 'desc',
+      ...(params.email && { email: params.email }),
+      ...(params.name && { name: params.name }),
+      ...(params.role && { role: params.role }),
+      ...(params.verified !== undefined && { verified: params.verified }),
+      ...(params.currentStep && { currentStep: params.currentStep }),
+    },
+    headers: {
+      Authorization: `Bearer ${adminToken}`,
+    },
+  });
+  return response.data;
+};
+
+/**
+ * Get user details by ID for verification review
+ * @param {number} userId - User's ID
+ * @returns {Promise<Object>}
+ */
+export const getUserById = async (userId) => {
+  const adminToken = localStorage.getItem('adminToken');
+  const response = await api.get(`/api/v1/admin/users/${userId}`, {
+    headers: {
+      Authorization: `Bearer ${adminToken}`,
+    },
+  });
+  return response.data;
+};
+
+/**
+ * Verify user (approve or reject)
+ * @param {number} userId - User's ID
+ * @param {Object} data - { approved: boolean, rejectionReason?: string }
+ * @returns {Promise<Object>}
+ */
+export const verifyUser = async (userId, data) => {
+  const adminToken = localStorage.getItem('adminToken');
+  const response = await api.post(
+    `/api/v1/admin/users/${userId}/verify`,
+    data,
+    {
+      headers: {
+        Authorization: `Bearer ${adminToken}`,
+      },
+    }
+  );
+  return response.data;
+};
+
+/**
  * Save auth data to local storage
  * @param {string} token 
  * @param {Object} user 
@@ -163,4 +225,7 @@ export default {
   saveAdminAuthData,
   logoutAdmin,
   getCurrentAdmin,
+  getAllUsers,
+  getUserById,
+  verifyUser,
 };

@@ -1,104 +1,131 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import SuperAdminLayout from '../../components/superadmin/SuperAdminLayout';
-import StatusBadge from '../../components/superadmin/StatusBadge';
 import DataTable from '../../components/superadmin/DataTable';
+import { getAllUsers } from '../../services/authService';
 
 /**
  * SuperAdminUsers Page (/superadmin/users)
- * List of all users with management actions
+ * List of verified users who have completed the verification process
+ * Only shows users with currentStep = COMPLETE
  */
 export default function SuperAdminUsers() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
-  const [filter, setFilter] = useState('all');
-
-  // Mock data - In real app, fetch from backend
-  const users = [
-    {
-      id: 1,
-      name: 'Priya Sharma',
-      email: 'priya.sharma@email.com',
-      phone: '+91 98765 43210',
-      community: 'Koramangala',
-      status: 'verified',
-      role: 'user',
-      joinedAt: 'Jan 28, 2026',
-    },
-    {
-      id: 2,
-      name: 'Rahul Kumar',
-      email: 'rahul.kumar@email.com',
-      phone: '+91 87654 32109',
-      community: 'HSR Layout',
-      status: 'pending',
-      role: 'user',
-      joinedAt: 'Jan 27, 2026',
-    },
-    {
-      id: 3,
-      name: 'Sneha Reddy',
-      email: 'sneha.reddy@email.com',
-      phone: '+91 76543 21098',
-      community: 'Indiranagar',
-      status: 'verified',
-      role: 'admin',
-      joinedAt: 'Jan 20, 2026',
-    },
-    {
-      id: 4,
-      name: 'Amit Patel',
-      email: 'amit.patel@email.com',
-      phone: '+91 65432 10987',
-      community: 'Whitefield',
-      status: 'verified',
-      role: 'user',
-      joinedAt: 'Jan 15, 2026',
-    },
-    {
-      id: 5,
-      name: 'Kavya Nair',
-      email: 'kavya.nair@email.com',
-      phone: '+91 54321 09876',
-      community: 'JP Nagar',
-      status: 'suspended',
-      role: 'user',
-      joinedAt: 'Jan 10, 2026',
-    },
-    {
-      id: 6,
-      name: 'Vikram Singh',
-      email: 'vikram.singh@email.com',
-      phone: '+91 43210 98765',
-      community: 'Koramangala',
-      status: 'verified',
-      role: 'admin',
-      joinedAt: 'Jan 5, 2026',
-    },
-  ];
-
-  const filteredUsers = users.filter((user) => {
-    const matchesSearch =
-      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.community.toLowerCase().includes(searchQuery.toLowerCase());
-
-    const matchesFilter = filter === 'all' || user.status === filter || user.role === filter;
-
-    return matchesSearch && matchesFilter;
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [pagination, setPagination] = useState({
+    pageNumber: 0,
+    pageSize: 10,
+    totalElements: 0,
+    totalPages: 0,
+  });
+  const [stats, setStats] = useState({
+    total: 0,
+    verified: 0,
+    admins: 0,
+    suspended: 0,
   });
 
-  const handleMakeAdmin = (user) => {
-    if (confirm(`Make ${user.name} a Community Admin?`)) {
-      alert(`${user.name} is now a Community Admin!`);
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      if (pagination.pageNumber !== 0) {
+        setPagination((prev) => ({ ...prev, pageNumber: 0 }));
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Fetch users with React Query
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['verified-users', pagination.pageNumber, debouncedSearch],
+    queryFn: async () => {
+      const params = {
+        page: pagination.pageNumber,
+        size: pagination.pageSize,
+        sortBy: 'createdAt',
+        sortDir: 'desc',
+        currentStep: 'COMPLETE',
+        verified: true,
+      };
+
+      if (debouncedSearch.trim()) {
+        params.name = debouncedSearch.trim();
+      }
+
+      const response = await getAllUsers(params);
+      console.log('Verified Users response:', response);
+      return response;
+    },
+    onSuccess: (response) => {
+      setPagination({
+        pageNumber: response.page,
+        pageSize: response.size,
+        totalElements: response.totalElements,
+        totalPages: response.totalPages,
+      });
+    },
+  });
+
+  // Process data
+  const users = data?.content.map((user) => ({
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    phone: user.phone || 'N/A',
+    community: user.community || 'Not Assigned',
+    role: user.role === 'ROLE_ADMIN' ? 'Community Admin' : 'User',
+    joinedAt: new Date(user.createdAt).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    }),
+    verifiedAt: new Date(user.updatedAt).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    }),
+  })) || [];
+
+  // Calculate stats directly from data (not from users to avoid infinite loop)
+  useEffect(() => {
+    if (data) {
+      const adminCount = data.content.filter((u) => u.role === 'ROLE_ADMIN').length;
+      setStats({
+        total: data.totalElements,
+        verified: data.totalElements,
+        admins: adminCount,
+        suspended: 0,
+      });
     }
+  }, [data]);
+
+  const handlePageChange = (newPage) => {
+    setPagination((prev) => ({ ...prev, pageNumber: newPage }));
   };
 
-  const handleSuspend = (user) => {
-    if (confirm(`Suspend ${user.name}'s account?`)) {
-      alert(`${user.name}'s account has been suspended.`);
-    }
+  const handleRefresh = () => {
+    refetch();
   };
+
+  if (error) {
+    return (
+      <SuperAdminLayout title="Users Management">
+        <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+          <span className="material-symbols-outlined text-4xl text-red-600">error</span>
+          <p className="text-red-800 mt-2">Failed to load users</p>
+          <button
+            onClick={handleRefresh}
+            className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+          >
+            Retry
+          </button>
+        </div>
+      </SuperAdminLayout>
+    );
+  }
 
   const columns = [
     {
@@ -123,83 +150,58 @@ export default function SuperAdminUsers() {
       label: 'Role',
       render: (row) => (
         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-          row.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'
+          row.role === 'Community Admin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
         }`}>
-          {row.role === 'admin' ? 'Community Admin' : 'User'}
+          {row.role}
         </span>
       ),
     },
-    {
-      key: 'status',
-      label: 'Status',
-      render: (row) => <StatusBadge status={row.status} />,
-    },
     { key: 'joinedAt', label: 'Joined' },
-    {
-      key: 'actions',
-      label: 'Actions',
-      render: (row) => (
-        <div className="flex items-center gap-2">
-          {row.role !== 'admin' && row.status === 'verified' && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleMakeAdmin(row);
-              }}
-              className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-              title="Make Admin"
-            >
-              <span className="material-symbols-outlined text-xl">admin_panel_settings</span>
-            </button>
-          )}
-          {row.status !== 'suspended' && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleSuspend(row);
-              }}
-              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-              title="Suspend User"
-            >
-              <span className="material-symbols-outlined text-xl">block</span>
-            </button>
-          )}
-        </div>
-      ),
-    },
+    { key: 'verifiedAt', label: 'Verified On' },
   ];
 
   return (
     <SuperAdminLayout title="Users Management">
       {/* Stats Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-2xl font-bold text-gray-900">{users.length}</p>
-          <p className="text-sm text-gray-500">Total Users</p>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+              <span className="material-symbols-outlined text-green-600">verified_user</span>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-green-700">{pagination.totalElements}</p>
+              <p className="text-sm text-green-600">Verified Users</p>
+            </div>
+          </div>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-2xl font-bold text-green-600">
-            {users.filter((u) => u.status === 'verified').length}
-          </p>
-          <p className="text-sm text-gray-500">Verified</p>
+        <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+              <span className="material-symbols-outlined text-purple-600">admin_panel_settings</span>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-purple-700">{stats.admins}</p>
+              <p className="text-sm text-purple-600">Community Admins</p>
+            </div>
+          </div>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-2xl font-bold text-purple-600">
-            {users.filter((u) => u.role === 'admin').length}
-          </p>
-          <p className="text-sm text-gray-500">Community Admins</p>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
-          <p className="text-2xl font-bold text-red-600">
-            {users.filter((u) => u.status === 'suspended').length}
-          </p>
-          <p className="text-sm text-gray-500">Suspended</p>
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+              <span className="material-symbols-outlined text-blue-600">groups</span>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-blue-700">{pagination.totalElements - stats.admins}</p>
+              <p className="text-sm text-blue-600">Regular Users</p>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Search and Filters */}
+      {/* Search Bar */}
       <div className="bg-white rounded-xl border border-gray-200 p-4 mb-6">
-        <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex flex-col sm:flex-row gap-4 items-center">
           {/* Search */}
           <div className="relative flex-1">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-gray-400">
@@ -214,31 +216,67 @@ export default function SuperAdminUsers() {
             />
           </div>
 
-          {/* Filter */}
-          <div className="flex gap-2 flex-wrap">
-            {['all', 'verified', 'pending', 'suspended', 'admin'].map((status) => (
-              <button
-                key={status}
-                onClick={() => setFilter(status)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  filter === status
-                    ? 'bg-primary text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                {status === 'admin' ? 'Admins' : status.charAt(0).toUpperCase() + status.slice(1)}
-              </button>
-            ))}
-          </div>
+          {/* Refresh Button */}
+          <button
+            onClick={handleRefresh}
+            className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors flex items-center gap-2"
+          >
+            <span className="material-symbols-outlined">refresh</span>
+            Refresh
+          </button>
         </div>
+        <p className="text-sm text-gray-500 mt-2">
+          📋 Showing only users who have completed verification successfully
+        </p>
       </div>
 
       {/* Table */}
-      <DataTable
-        columns={columns}
-        data={filteredUsers}
-        emptyMessage="No users found matching your criteria"
-      />
+      {isLoading ? (
+        <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+          <span className="material-symbols-outlined animate-spin text-4xl text-primary">progress_activity</span>
+          <p className="text-gray-500 mt-4">Loading users...</p>
+        </div>
+      ) : (
+        <>
+          <DataTable
+            columns={columns}
+            data={users}
+            emptyMessage="🎉 No verified users yet. They will appear here once you approve their verification requests."
+          />
+
+          {/* Pagination */}
+          {pagination.totalPages > 1 && (
+            <div className="mt-6 flex items-center justify-between bg-white rounded-xl border border-gray-200 p-4">
+              <div className="text-sm text-gray-600">
+                Showing {pagination.pageNumber * pagination.pageSize + 1} to{' '}
+                {Math.min((pagination.pageNumber + 1) * pagination.pageSize, pagination.totalElements)} of{' '}
+                {pagination.totalElements} users
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handlePageChange(pagination.pageNumber - 1)}
+                  disabled={pagination.pageNumber === 0}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                <div className="flex items-center gap-2 px-4">
+                  <span className="text-sm text-gray-600">
+                    Page {pagination.pageNumber + 1} of {pagination.totalPages}
+                  </span>
+                </div>
+                <button
+                  onClick={() => handlePageChange(pagination.pageNumber + 1)}
+                  disabled={pagination.pageNumber >= pagination.totalPages - 1}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
     </SuperAdminLayout>
   );
 }
