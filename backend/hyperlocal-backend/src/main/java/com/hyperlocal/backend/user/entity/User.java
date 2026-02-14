@@ -2,6 +2,7 @@ package com.hyperlocal.backend.user.entity;
 
 import com.hyperlocal.backend.user.enums.ProfileStep;
 import com.hyperlocal.backend.user.enums.Role;
+import com.hyperlocal.backend.user.enums.VerificationStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -36,9 +37,10 @@ public class User {
     @Column(nullable = false)
     private Role role;
 
+    @Enumerated(EnumType.STRING)
     @Builder.Default
     @Column(nullable = false)
-    private boolean verified = false;
+    private VerificationStatus verificationStatus = VerificationStatus.NOT_VERIFIED;
 
     private String phone;
 
@@ -52,6 +54,9 @@ public class User {
     private String governmentIdUrl;
 
     private String addressProofUrl;
+
+    @Column(length = 500)
+    private String rejectionReason;
 
     @Builder.Default
     @Column(name = "profile_completion_percentage")
@@ -78,6 +83,9 @@ public class User {
         }
         if (this.currentStep == null) {
             this.currentStep = ProfileStep.PROFILE;
+        }
+        if (this.verificationStatus == null) {
+            this.verificationStatus = VerificationStatus.NOT_VERIFIED;
         }
     }
 

@@ -22,4 +22,6 @@ public class LoginResponseDto {
     private int profileCompletionPercentage;
     private String currentStep; // PROFILE, VERIFICATION, REVIEW, COMPLETE
     private List<String> pendingSteps;
+    private String status;
+    private String rejectionReason;
 }

@@ -9,6 +9,7 @@ import com.hyperlocal.backend.admin.service.SuperAdminService;
 import com.hyperlocal.backend.common.dto.PagedResponseDto;
 import com.hyperlocal.backend.user.enums.ProfileStep;
 import com.hyperlocal.backend.user.enums.Role;
+import com.hyperlocal.backend.user.enums.VerificationStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -37,14 +38,14 @@ public class SuperAdminController {
             @RequestParam(required = false) String email,
             @RequestParam(required = false) String name,
             @RequestParam(required = false) Role role,
-            @RequestParam(required = false) Boolean verified,
+            @RequestParam(required = false) VerificationStatus verificationStatus,
             @RequestParam(required = false) ProfileStep currentStep
     ) {
         UserFilterDto filter = new UserFilterDto();
         filter.setEmail(email);
         filter.setName(name);
         filter.setRole(role);
-        filter.setVerified(verified);
+        filter.setVerificationStatus(verificationStatus);
         filter.setCurrentStep(currentStep);
 
         return ResponseEntity.ok(superAdminService.getAllUsers(page, size, sortBy, sortDir, filter));

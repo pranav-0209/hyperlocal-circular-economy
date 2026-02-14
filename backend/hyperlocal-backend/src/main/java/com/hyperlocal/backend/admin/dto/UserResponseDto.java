@@ -3,6 +3,7 @@ package com.hyperlocal.backend.admin.dto;
 import com.hyperlocal.backend.user.entity.User;
 import com.hyperlocal.backend.user.enums.ProfileStep;
 import com.hyperlocal.backend.user.enums.Role;
+import com.hyperlocal.backend.user.enums.VerificationStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -20,7 +21,7 @@ public class UserResponseDto {
     private String name;
     private String email;
     private Role role;
-    private boolean verified;
+    private VerificationStatus verificationStatus;
     private String phone;
     private String address;
     private String aboutMe;
@@ -40,7 +41,7 @@ public class UserResponseDto {
                 .name(user.getName())
                 .email(user.getEmail())
                 .role(user.getRole())
-                .verified(user.isVerified())
+                .verificationStatus(user.getVerificationStatus())
                 .phone(user.getPhone())
                 .address(user.getAddress())
                 .aboutMe(user.getAboutMe())

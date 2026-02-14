@@ -6,6 +6,7 @@ import com.hyperlocal.backend.security.JwtService;
 import com.hyperlocal.backend.user.dto.*;
 import com.hyperlocal.backend.user.enums.ProfileStep;
 import com.hyperlocal.backend.user.enums.Role;
+import com.hyperlocal.backend.user.enums.VerificationStatus;
 import com.hyperlocal.backend.user.entity.User;
 import com.hyperlocal.backend.user.repository.UserRepository;
 import jakarta.transaction.Transactional;
@@ -38,7 +39,7 @@ public class UserService {
                 .email(dto.getEmail())
                 .password(passwordEncoder.encode(dto.getPassword()))
                 .role(Role.ROLE_USER)
-                .verified(false)
+                .verificationStatus(VerificationStatus.NOT_VERIFIED)
                 .build();
 
         // Set initial profile completion percentage and step
@@ -77,6 +78,8 @@ public class UserService {
                 .profileCompletionPercentage(profileCompletionService.calculatePercentage(user))
                 .currentStep(profileCompletionService.getCurrentStep(user))
                 .pendingSteps(profileCompletionService.getPendingSteps(user))
+                .status(user.getVerificationStatus().name())
+                .rejectionReason(user.getRejectionReason())
                 .build();
     }
 
@@ -160,6 +163,35 @@ public class UserService {
                 currentStep,
                 profileCompletionService.getPendingSteps(user)
         );
+    }
+
+    public VerificationStatusDto getVerificationStatus() {
+        String email = extractAuthenticatedEmail();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(CustomExceptions.UserNotFoundException::new);
+
+        // Determine status message based on verification status
+        String statusMessage;
+        switch (user.getVerificationStatus()) {
+            case VERIFIED:
+                statusMessage = "Your account has been verified successfully!";
+                break;
+            case REJECTED:
+                statusMessage = "Your documents were rejected. Please upload new documents.";
+                break;
+            case NOT_VERIFIED:
+            default:
+                statusMessage = "Your documents are currently being reviewed by our admin team.";
+                break;
+        }
+
+        return VerificationStatusDto.builder()
+                .status(user.getVerificationStatus())
+                .profileCompletionPercentage(user.getProfileCompletionPercentage())
+                .statusMessage(statusMessage)
+                .rejectionReason(user.getRejectionReason())
+                .verifiedAt(user.getVerificationStatus() == VerificationStatus.VERIFIED ? user.getUpdatedAt() : null)
+                .build();
     }
 
     private String extractAuthenticatedEmail() {

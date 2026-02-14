@@ -4,6 +4,7 @@ import com.hyperlocal.backend.admin.dto.UserFilterDto;
 import com.hyperlocal.backend.user.entity.User;
 import com.hyperlocal.backend.user.enums.ProfileStep;
 import com.hyperlocal.backend.user.enums.Role;
+import com.hyperlocal.backend.user.enums.VerificationStatus;
 import org.springframework.data.jpa.domain.Specification;
 
 public class UserSpecification {
@@ -13,7 +14,7 @@ public class UserSpecification {
                 .where(hasEmail(filter.getEmail()))
                 .and(hasName(filter.getName()))
                 .and(hasRole(filter.getRole()))
-                .and(isVerified(filter.getVerified()))
+                .and(hasVerificationStatus(filter.getVerificationStatus()))
                 .and(hasCurrentStep(filter.getCurrentStep()));
     }
 
@@ -32,9 +33,9 @@ public class UserSpecification {
             role == null ? null : cb.equal(root.get("role"), role);
     }
 
-    private static Specification<User> isVerified(Boolean verified) {
+    private static Specification<User> hasVerificationStatus(VerificationStatus verificationStatus) {
         return (root, query, cb) ->
-            verified == null ? null : cb.equal(root.get("verified"), verified);
+            verificationStatus == null ? null : cb.equal(root.get("verificationStatus"), verificationStatus);
     }
 
     private static Specification<User> hasCurrentStep(ProfileStep step) {

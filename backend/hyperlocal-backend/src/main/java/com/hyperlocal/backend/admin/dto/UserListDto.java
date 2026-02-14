@@ -3,6 +3,7 @@ package com.hyperlocal.backend.admin.dto;
 import com.hyperlocal.backend.user.entity.User;
 import com.hyperlocal.backend.user.enums.ProfileStep;
 import com.hyperlocal.backend.user.enums.Role;
+import com.hyperlocal.backend.user.enums.VerificationStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -22,9 +23,8 @@ public class UserListDto {
     private String phone;
     private String community;
     private Long communityId;
-    private String status;
+    private VerificationStatus status;
     private Role role;
-    private boolean verified;
     private ProfileStep currentStep;
     private Integer profileCompletionPercentage;
     private LocalDateTime createdAt;
@@ -39,9 +39,8 @@ public class UserListDto {
                 .phone(user.getPhone())
                 .community(getCommunityName(user.getCommunityId()))
                 .communityId(user.getCommunityId())
-                .status(user.isVerified() ? "VERIFIED" : "PENDING")
+                .status(user.getVerificationStatus())
                 .role(user.getRole())
-                .verified(user.isVerified())
                 .currentStep(user.getCurrentStep())
                 .profileCompletionPercentage(user.getProfileCompletionPercentage())
                 .createdAt(user.getCreatedAt())

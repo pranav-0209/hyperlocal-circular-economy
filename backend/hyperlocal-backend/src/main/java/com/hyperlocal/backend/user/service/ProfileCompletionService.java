@@ -1,6 +1,7 @@
 package com.hyperlocal.backend.user.service;
 
 import com.hyperlocal.backend.user.entity.User;
+import com.hyperlocal.backend.user.enums.VerificationStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -69,6 +70,6 @@ public class ProfileCompletionService {
     }
 
     private boolean isVerified(User user) {
-        return user.isVerified();
+        return user.getVerificationStatus() == VerificationStatus.VERIFIED;
     }
 }

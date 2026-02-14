@@ -9,6 +9,7 @@ import com.hyperlocal.backend.common.dto.PagedResponseDto;
 import com.hyperlocal.backend.common.exception.CustomExceptions;
 import com.hyperlocal.backend.user.entity.User;
 import com.hyperlocal.backend.user.enums.ProfileStep;
+import com.hyperlocal.backend.user.enums.VerificationStatus;
 import com.hyperlocal.backend.user.repository.UserRepository;
 import com.hyperlocal.backend.user.repository.UserSpecification;
 import lombok.RequiredArgsConstructor;
@@ -110,10 +111,11 @@ public class SuperAdminService {
     }
 
     private VerificationResponseDto approveUserDocuments(User user) {
-        // Approve: Set verified = true, move to COMPLETE step
-        user.setVerified(true);
+        // Approve: Set verification status to VERIFIED, move to COMPLETE step
+        user.setVerificationStatus(VerificationStatus.VERIFIED);
         user.setCurrentStep(ProfileStep.COMPLETE);
         user.setProfileCompletionPercentage(100);
+        user.setRejectionReason(null); // Clear any previous rejection reason
 
         userRepository.save(user);
 
@@ -127,10 +129,11 @@ public class SuperAdminService {
     }
 
     private VerificationResponseDto rejectUserDocuments(User user, String rejectionReason) {
-        // Reject: Move back to DOCUMENT_VERIFICATION step so user can re-upload
-        user.setVerified(false);
+        // Reject: Set verification status to REJECTED, move back to DOCUMENT_VERIFICATION step
+        user.setVerificationStatus(VerificationStatus.REJECTED);
         user.setCurrentStep(ProfileStep.DOCUMENT_VERIFICATION);
         user.setProfileCompletionPercentage(ProfileStep.DOCUMENT_VERIFICATION.getPercentage());
+        user.setRejectionReason(rejectionReason);
 
         // Clear the uploaded documents so user can re-upload
         user.setGovernmentIdUrl(null);

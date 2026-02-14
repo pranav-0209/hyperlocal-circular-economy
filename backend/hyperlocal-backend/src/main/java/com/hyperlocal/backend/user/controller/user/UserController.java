@@ -4,7 +4,6 @@ import com.hyperlocal.backend.user.dto.*;
 import com.hyperlocal.backend.user.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -31,5 +30,10 @@ public class UserController {
     public ResponseEntity<DocumentUploadResponse> uploadDocuments(
             @Valid @ModelAttribute DocumentUploadRequest request) {
         return ResponseEntity.ok(userService.uploadDocuments(request));
+    }
+
+    @GetMapping("/verification-status")
+    public ResponseEntity<VerificationStatusDto> getVerificationStatus() {
+        return ResponseEntity.ok(userService.getVerificationStatus());
     }
 }
