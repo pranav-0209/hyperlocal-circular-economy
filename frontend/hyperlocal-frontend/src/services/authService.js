@@ -71,6 +71,15 @@ export const getUserProfile = async () => {
 };
 
 /**
+ * Check user's verification status
+ * @returns {Promise<{ status: 'NOT_VERIFIED'|'VERIFIED'|'REJECTED', profileCompletionPercentage, statusMessage, rejectionReason, verifiedAt }>}
+ */
+export const checkVerificationStatus = async () => {
+  const response = await api.get('/api/v1/users/verification-status');
+  return response.data;
+};
+
+/**
  * Logout user - clear local storage
  */
 export const logoutUser = () => {
@@ -137,7 +146,7 @@ export const getCurrentAdmin = () => {
 
 /**
  * Get all users with pagination and filtering
- * @param {Object} params - { page, size, sortBy, sortDir, email, name, role, verified, currentStep }
+ * @param {Object} params - { page, size, sortBy, sortDir, email, name, role, verificationStatus, currentStep }
  * @returns {Promise<{ content, pageNumber, pageSize, totalElements, totalPages, last }>}
  */
 export const getAllUsers = async (params = {}) => {
@@ -152,7 +161,7 @@ export const getAllUsers = async (params = {}) => {
       ...(params.email && { email: params.email }),
       ...(params.name && { name: params.name }),
       ...(params.role && { role: params.role }),
-      ...(params.verified !== undefined && { verified: params.verified }),
+      ...(params.verificationStatus && { verificationStatus: params.verificationStatus }),
       ...(params.currentStep && { currentStep: params.currentStep }),
     },
     headers: {

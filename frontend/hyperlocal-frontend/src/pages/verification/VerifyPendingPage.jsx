@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { checkVerificationStatus } from '../../services/authService';
 import VerificationLayout from '../../components/ui/VerificationLayout';
 import VerificationTimeline from '../../components/ui/VerificationTimeline';
 
@@ -14,20 +15,59 @@ import VerificationTimeline from '../../components/ui/VerificationTimeline';
  */
 export default function VerifyPendingPage() {
   const navigate = useNavigate();
-  const { user, markVerified } = useAuth();
+  const { user, markVerified, updateUser } = useAuth();
   const [isChecking, setIsChecking] = useState(false);
+  const [showRejectionModal, setShowRejectionModal] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState('');
 
-  // Simulate checking verification status
+  // Scroll to top on mount
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
+  // Check verification status from backend
   const handleCheckStatus = async () => {
     setIsChecking(true);
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    try {
+      const response = await checkVerificationStatus();
+      console.log('Verification status:', response);
 
-    // Mock: Mark as verified after delay
-    // In real app, check actual verification status from backend
-    markVerified();
-    setIsChecking(false);
+      if (response.status === 'VERIFIED') {
+        // User approved - mark as verified and navigate to dashboard
+        markVerified();
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 500);
+      } else if (response.status === 'REJECTED') {
+        // User rejected - update user context with new data from backend
+        updateUser({
+          profileCompletion: response.profileCompletionPercentage || 50,
+          currentStep: 'DOCUMENT_VERIFICATION', // User needs to re-upload documents
+          hasSubmittedDocuments: false,
+          verificationStatus: 'REJECTED',
+          isVerified: false,
+          rejectionReason: response.rejectionReason,
+        });
+        // Show rejection modal
+        setRejectionReason(response.rejectionReason || 'Your verification was rejected. Please contact support.');
+        setShowRejectionModal(true);
+      } else {
+        // NOT_VERIFIED - still pending
+        alert('⏳ Your verification is still under review. We\'ll notify you via email once complete!');
+      }
+    } catch (error) {
+      console.error('Failed to check verification status:', error);
+      alert('❌ Unable to check status. Please try again later.');
+    } finally {
+      setIsChecking(false);
+    }
+  };
+
+  const handleRejectionClose = () => {
+    setShowRejectionModal(false);
+    navigate('/home');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
@@ -115,6 +155,35 @@ export default function VerifyPendingPage() {
           </p>
         </div>
       </div>
+
+      {/* Rejection Modal */}
+      {showRejectionModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 animate-scale-in">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-red-100 mx-auto rounded-full flex items-center justify-center mb-4">
+                <span className="material-symbols-outlined text-4xl text-red-600">cancel</span>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Verification Rejected</h3>
+              <p className="text-gray-600 mb-6">{rejectionReason}</p>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-6">
+                <div className="flex items-start gap-2">
+                  <span className="material-symbols-outlined text-yellow-600 text-sm">info</span>
+                  <p className="text-sm text-yellow-800 text-left">
+                    You can update your documents and resubmit for verification.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleRejectionClose}
+                className="w-full px-6 py-2.5 bg-primary text-white font-medium rounded-lg hover:bg-primary-dark transition-colors"
+              >
+                Go to Home
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </VerificationLayout>
   );
 }

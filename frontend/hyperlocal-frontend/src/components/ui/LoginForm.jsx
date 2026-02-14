@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import FormInput from './FormInput';
 import FormCheckbox from './FormCheckbox';
@@ -11,6 +11,8 @@ import { loginUser, saveAuthData } from '../../services/authService';
 const LoginForm = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const [showRejectionModal, setShowRejectionModal] = useState(false);
+  const [rejectionDetails, setRejectionDetails] = useState({ reason: '', email: '' });
 
   const validateForm = (data) => {
     const newErrors = {};
@@ -39,11 +41,15 @@ const LoginForm = () => {
         email: response.email,
         name: response.name,
         role: response.role,
-        isVerified: response.currentStep === 'COMPLETE',
+        isVerified: response.status === 'VERIFIED',
         profileCompletion: response.profileCompletionPercentage,
         currentStep: response.currentStep,
         pendingSteps: response.pendingSteps || [],
-        hasSubmittedDocuments: !response.pendingSteps?.includes('UPLOAD_DOCUMENTS'),
+        hasSubmittedDocuments: response.status === 'REJECTED' 
+          ? false 
+          : !response.pendingSteps?.includes('UPLOAD_DOCUMENTS'),
+        verificationStatus: response.status,
+        rejectionReason: response.rejectionReason,
         communities: [],
         profile: {
           name: response.name,
@@ -53,12 +59,20 @@ const LoginForm = () => {
         }
       });
 
-      // Navigate based on user's current step
-      if (response.currentStep === 'COMPLETE') {
-        // Fully verified user - go to dashboard
-        navigate('/dashboard');
+      // Check if user's verification was rejected
+      if (response.status === 'REJECTED') {
+        // Don't show modal on login - user will see banner on home page
+        // Just navigate to home with rejection info in context
+        navigate('/home');
+        return;
+      }
+
+      // Navigate based on verification status
+      if (response.status === 'VERIFIED') {
+        // Fully verified user - go directly to community selection
+        navigate('/community/select');
       } else {
-        // All other users go to home page first
+        // All other users (NOT_VERIFIED) go to home page first
         // They can then click to continue verification from there
         navigate('/home');
       }
@@ -149,6 +163,41 @@ const LoginForm = () => {
           Don't have an account? <a href="/register" className="text-primary font-bold hover:underline">Sign up here</a>
         </p>
       </div>
+
+      {/* Rejection Modal */}
+      {showRejectionModal && (
+        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 animate-scale-in">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-red-100 mx-auto rounded-full flex items-center justify-center mb-4">
+                <span className="material-symbols-outlined text-4xl text-red-600">cancel</span>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Verification Rejected</h3>
+              <p className="text-gray-600 mb-6">{rejectionDetails.reason}</p>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                <div className="flex items-start gap-2">
+                  <span className="material-symbols-outlined text-yellow-600 text-sm">info</span>
+                  <div className="text-left">
+                    <p className="text-sm font-medium text-yellow-900 mb-1">What's next?</p>
+                    <p className="text-sm text-yellow-800">
+                      You can update your documents and resubmit for verification from your home page.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowRejectionModal(false);
+                  navigate('/home');
+                }}
+                className="w-full px-6 py-2.5 bg-primary text-white font-medium rounded-lg hover:bg-primary-dark transition-colors"
+              >
+                Continue to Home
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

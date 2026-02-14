@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import VerificationLayout from '../../components/ui/VerificationLayout';
@@ -22,6 +22,11 @@ export default function VerifyDocumentsPage() {
     addressProof: null,
   });
   const [errors, setErrors] = useState({});
+
+  // Scroll to top on mount
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
 
   const handleFileUpload = (documentType, file) => {
     setDocuments((prev) => ({
@@ -81,6 +86,7 @@ export default function VerifyDocumentsPage() {
 
       // Navigate to pending review page
       navigate('/verify/pending');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
       setErrors({ submit: error.message || 'Failed to upload documents' });
     } finally {

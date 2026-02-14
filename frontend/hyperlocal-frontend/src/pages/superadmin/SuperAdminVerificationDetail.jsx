@@ -21,6 +21,7 @@ export default function SuperAdminVerificationDetail() {
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
+  const [rejectValidationError, setRejectValidationError] = useState('');
   const [user, setUser] = useState(null);
   const [profilePhotoUrl, setProfilePhotoUrl] = useState(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -153,10 +154,10 @@ export default function SuperAdminVerificationDetail() {
     }
     
     if (!rejectReason.trim()) {
-      setModalMessage('Please provide a reason for rejection');
-      setShowErrorModal(true);
+      setRejectValidationError('Please provide a reason for rejection');
       return;
     }
+    setRejectValidationError('');
     setIsProcessing(true);
     try {
       const response = await verifyUser(id, {
@@ -222,7 +223,7 @@ export default function SuperAdminVerificationDetail() {
     address: user.address || 'Not provided',
     bio: user.aboutMe || 'No bio provided',
     profilePhoto: profilePhotoUrl, // Use authenticated URL from state
-    status: user.status?.toLowerCase() || (user.verified ? 'verified' : 'pending'),
+    status: user.verificationStatus?.toLowerCase() || 'not_verified',
     submittedAt: user.updatedAt ? new Date(user.updatedAt).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -312,20 +313,69 @@ export default function SuperAdminVerificationDetail() {
           <div className="bg-white rounded-xl border border-gray-200 p-6">
             <h3 className="font-semibold text-gray-900 mb-4">Timeline</h3>
             <div className="space-y-4">
+              {/* Completed: Registration */}
               <div className="flex gap-3">
                 <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
                 <div>
-                  <p className="text-sm text-gray-900">Documents Submitted</p>
-                  <p className="text-xs text-gray-500">{userData.submittedAt}</p>
+                  <p className="text-sm text-gray-900">Account Created</p>
+                  <p className="text-xs text-gray-500">{userData.registeredAt}</p>
                 </div>
               </div>
-              <div className="flex gap-3">
-                <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2 animate-pulse"></div>
-                <div>
-                  <p className="text-sm text-gray-900">Pending Review</p>
-                  <p className="text-xs text-gray-500">Awaiting admin action</p>
+
+              {/* Dynamic steps based on currentStep */}
+              {user.currentStep !== 'PROFILE' && (
+                <div className="flex gap-3">
+                  <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
+                  <div>
+                    <p className="text-sm text-gray-900">Profile Completed</p>
+                    <p className="text-xs text-gray-500">
+                      {user.currentStep === 'DOCUMENT_VERIFICATION' || user.currentStep === 'REVIEW' || user.currentStep === 'COMPLETE'
+                        ? userData.submittedAt
+                        : 'Completed'}
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {user.currentStep === 'DOCUMENT_VERIFICATION' && (
+                <div className="flex gap-3">
+                  <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2 animate-pulse"></div>
+                  <div>
+                    <p className="text-sm text-gray-900">Document Upload</p>
+                    <p className="text-xs text-gray-500">Waiting for documents</p>
+                  </div>
+                </div>
+              )}
+
+              {(user.currentStep === 'REVIEW' || user.currentStep === 'COMPLETE') && (
+                <div className="flex gap-3">
+                  <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
+                  <div>
+                    <p className="text-sm text-gray-900">Documents Submitted</p>
+                    <p className="text-xs text-gray-500">{userData.submittedAt}</p>
+                  </div>
+                </div>
+              )}
+
+              {user.currentStep === 'REVIEW' && (
+                <div className="flex gap-3">
+                  <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2 animate-pulse"></div>
+                  <div>
+                    <p className="text-sm text-gray-900">Under Review</p>
+                    <p className="text-xs text-gray-500">Awaiting admin action</p>
+                  </div>
+                </div>
+              )}
+
+              {user.currentStep === 'PROFILE' && (
+                <div className="flex gap-3">
+                  <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2 animate-pulse"></div>
+                  <div>
+                    <p className="text-sm text-gray-900">Profile Pending</p>
+                    <p className="text-xs text-gray-500">Awaiting profile completion</p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -552,16 +602,34 @@ export default function SuperAdminVerificationDetail() {
             <p className="text-gray-600 mb-4">
               Please provide a reason for rejection. This will be sent to the user via email.
             </p>
+            
+            {/* Validation Error */}
+            {rejectValidationError && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
+                <span className="material-symbols-outlined text-red-600 text-sm">error</span>
+                <p className="text-sm text-red-800">{rejectValidationError}</p>
+              </div>
+            )}
+            
             <textarea
               value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
+              onChange={(e) => {
+                setRejectReason(e.target.value);
+                if (rejectValidationError) setRejectValidationError('');
+              }}
               placeholder="e.g., Document is blurry and unreadable. Please re-upload a clearer image."
               rows={4}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
+              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none ${
+                rejectValidationError ? 'border-red-300 bg-red-50' : 'border-gray-300'
+              }`}
             />
             <div className="flex gap-3 mt-6">
               <button
-                onClick={() => setShowRejectModal(false)}
+                onClick={() => {
+                  setShowRejectModal(false);
+                  setRejectReason('');
+                  setRejectValidationError('');
+                }}
                 className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 Cancel

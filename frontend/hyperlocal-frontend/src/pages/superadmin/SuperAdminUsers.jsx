@@ -48,7 +48,7 @@ export default function SuperAdminUsers() {
         sortBy: 'createdAt',
         sortDir: 'desc',
         currentStep: 'COMPLETE',
-        verified: true,
+        verificationStatus: 'VERIFIED',
       };
 
       if (debouncedSearch.trim()) {

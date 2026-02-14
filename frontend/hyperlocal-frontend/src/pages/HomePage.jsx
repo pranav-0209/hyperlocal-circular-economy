@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import HomeNavbar from '../components/ui/HomeNavbar';
@@ -12,13 +13,22 @@ export default function HomePage() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
+  // Scroll to top on mount
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
   if (!user) {
     return <div>Loading...</div>;
   }
 
-  // If user is verified and has communities, redirect to dashboard
-  if (user.isVerified && user.communities && user.communities.length > 0) {
-    navigate('/dashboard');
+  // If user is verified, redirect to community selection (or dashboard if they have communities)
+  if (user.isVerified) {
+    if (user.communities && user.communities.length > 0) {
+      navigate('/dashboard');
+    } else {
+      navigate('/community/select');
+    }
     return null;
   }
 
@@ -80,6 +90,42 @@ export default function HomePage() {
             your local neighborhood and join the conversation.
           </p>
         </section>
+
+        {/* Rejection Notice Banner */}
+        {user.verificationStatus === 'REJECTED' && user.rejectionReason && (
+          <section className="mb-6">
+            <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-6 shadow-sm">
+              <div className="flex items-start gap-4">
+                <div className="shrink-0">
+                  <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                    <span className="material-symbols-outlined text-red-600 text-xl">error</span>
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-bold text-lg text-red-900 mb-2">Verification Documents Rejected</h3>
+                  <p className="text-sm text-red-800 mb-3">
+                    <strong>Reason:</strong> {user.rejectionReason}
+                  </p>
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 mb-3">
+                    <div className="flex items-start gap-2">
+                      <span className="material-symbols-outlined text-yellow-600 text-sm mt-0.5">info</span>
+                      <p className="text-sm text-yellow-800">
+                        Don't worry! You can re-upload your documents below. Please address the issue mentioned above when resubmitting.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleStartVerification}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-lg">upload_file</span>
+                    Re-upload Documents
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* Verification Status Card */}
         <section className="mb-10 bg-white rounded-2xl p-6 sm:p-8 border border-gray-200 shadow-sm">

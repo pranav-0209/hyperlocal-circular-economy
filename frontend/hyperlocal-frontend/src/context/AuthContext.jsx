@@ -7,7 +7,8 @@ import { createContext, useContext, useState } from 'react';
  * {
  *   id: string,
  *   email: string,
- *   isVerified: boolean,
+ *   isVerified: boolean (derived from verificationStatus === 'VERIFIED'),
+ *   verificationStatus: 'NOT_VERIFIED' | 'VERIFIED' | 'REJECTED',
  *   profileCompletion: number (0-100),
  *   role: 'USER' | 'ADMIN' | 'SUPERADMIN',
  *   communities: array,

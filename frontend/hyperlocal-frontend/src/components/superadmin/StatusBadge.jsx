@@ -1,9 +1,14 @@
 /**
  * StatusBadge Component
- * Colored status indicator chip
+ * Colored status indicator chip for VerificationStatus enum
  */
 export default function StatusBadge({ status }) {
   const statusConfig = {
+    not_verified: {
+      bg: 'bg-yellow-100',
+      text: 'text-yellow-800',
+      label: 'Not Verified',
+    },
     pending: {
       bg: 'bg-yellow-100',
       text: 'text-yellow-800',
@@ -31,7 +36,7 @@ export default function StatusBadge({ status }) {
     },
   };
 
-  const config = statusConfig[status] || statusConfig.pending;
+  const config = statusConfig[status] || statusConfig.not_verified;
 
   return (
     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.bg} ${config.text}`}>
