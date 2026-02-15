@@ -45,8 +45,8 @@ const LoginForm = () => {
         profileCompletion: response.profileCompletionPercentage,
         currentStep: response.currentStep,
         pendingSteps: response.pendingSteps || [],
-        hasSubmittedDocuments: response.status === 'REJECTED' 
-          ? false 
+        hasSubmittedDocuments: response.status === 'REJECTED'
+          ? false
           : !response.pendingSteps?.includes('UPLOAD_DOCUMENTS'),
         verificationStatus: response.status,
         rejectionReason: response.rejectionReason,
@@ -69,8 +69,8 @@ const LoginForm = () => {
 
       // Navigate based on verification status
       if (response.status === 'VERIFIED') {
-        // Fully verified user - go directly to community selection
-        navigate('/community/select');
+        // Fully verified user - go directly to dashboard (which handles community selection)
+        navigate('/dashboard');
       } else {
         // All other users (NOT_VERIFIED) go to home page first
         // They can then click to continue verification from there

@@ -1,26 +1,28 @@
 import axios from 'axios';
+import { API_CONFIG, STORAGE_KEYS } from '../constants';
+import { handleApiError, logError } from '../utils/errorHandler';
 
 /**
  * Base API configuration
  * Axios instance with default settings for all API calls
  */
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+const API_BASE_URL = API_CONFIG.BASE_URL;
 
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000, // 10 seconds
+  timeout: API_CONFIG.TIMEOUT,
 });
 
 // Request interceptor - add auth token if available
 api.interceptors.request.use(
   (config) => {
     // Check for both user and admin tokens
-    const token = localStorage.getItem('authToken');
-    const adminToken = localStorage.getItem('adminToken');
-    
+    const token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+    const adminToken = localStorage.getItem(STORAGE_KEYS.ADMIN_TOKEN);
+
     // Prefer admin token for admin routes, otherwise use user token
     if (config.url?.includes('/admin/')) {
       if (adminToken) {
@@ -29,7 +31,7 @@ api.interceptors.request.use(
     } else if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
+
     return config;
   },
   (error) => {
@@ -41,28 +43,24 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Handle common error cases
-    if (error.response) {
-      const { status, data } = error.response;
-      
-      // Unauthorized - clear token and redirect to login
-      if (status === 401) {
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('user');
-        // Could redirect to login here if needed
-      }
-      
-      // Return a cleaner error message
-      const message = data?.message || data?.error || 'Something went wrong';
-      return Promise.reject(new Error(message));
+    // Convert to AppError using centralized error handler
+    const appError = handleApiError(error);
+
+    // Log error for debugging/monitoring
+    logError(appError, {
+      url: error.config?.url,
+      method: error.config?.method,
+    });
+
+    // Handle unauthorized errors - clear tokens and redirect
+    if (appError.statusCode === 401) {
+      localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
+      localStorage.removeItem(STORAGE_KEYS.USER);
+      // Could trigger a redirect to login here if needed
+      // window.location.href = '/login';
     }
-    
-    // Network error
-    if (error.request) {
-      return Promise.reject(new Error('Network error. Please check your connection.'));
-    }
-    
-    return Promise.reject(error);
+
+    return Promise.reject(appError);
   }
 );
 

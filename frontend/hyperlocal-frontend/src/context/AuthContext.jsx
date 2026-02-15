@@ -1,4 +1,5 @@
 import { createContext, useContext, useState } from 'react';
+import { STORAGE_KEYS } from '../constants';
 
 /**
  * AuthContext manages user authentication and profile state
@@ -22,7 +23,7 @@ const AuthContext = createContext(null);
 // Helper to get initial user from localStorage
 const getStoredUser = () => {
   try {
-    const storedUser = localStorage.getItem('user');
+    const storedUser = localStorage.getItem(STORAGE_KEYS.USER);
     return storedUser ? JSON.parse(storedUser) : null;
   } catch {
     return null;
@@ -37,19 +38,19 @@ export function AuthProvider({ children }) {
   const login = (userData) => {
     setUser(userData);
     // Persist user to localStorage
-    localStorage.setItem('user', JSON.stringify(userData));
+    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(userData));
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('user');
-    localStorage.removeItem('authToken');
+    localStorage.removeItem(STORAGE_KEYS.USER);
+    localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
   };
 
   const updateUser = (updates) => {
     setUser((prev) => {
       const updated = { ...prev, ...updates };
-      localStorage.setItem('user', JSON.stringify(updated));
+      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(updated));
       return updated;
     });
   };
@@ -57,7 +58,7 @@ export function AuthProvider({ children }) {
   const updateProfileCompletion = (percentage) => {
     setUser((prev) => {
       const updated = { ...prev, profileCompletion: Math.min(percentage, 100) };
-      localStorage.setItem('user', JSON.stringify(updated));
+      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(updated));
       return updated;
     });
   };
@@ -70,7 +71,7 @@ export function AuthProvider({ children }) {
         profileCompletion: percentageFromBackend || 75,
         currentStep: 'REVIEW',
       };
-      localStorage.setItem('user', JSON.stringify(updated));
+      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(updated));
       return updated;
     });
   };
@@ -83,7 +84,7 @@ export function AuthProvider({ children }) {
         profileCompletion: 100,
         currentStep: 'COMPLETE',
       };
-      localStorage.setItem('user', JSON.stringify(updated));
+      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(updated));
       return updated;
     });
   };
@@ -94,7 +95,7 @@ export function AuthProvider({ children }) {
         ...prev,
         communities: [...prev.communities, community],
       };
-      localStorage.setItem('user', JSON.stringify(updated));
+      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(updated));
       return updated;
     });
   };

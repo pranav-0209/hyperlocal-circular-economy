@@ -82,6 +82,8 @@ export default function VerifyDocumentsPage() {
         currentStep: response.currentStep,
         pendingSteps: response.pendingSteps || [],
         hasSubmittedDocuments: true,
+        verificationStatus: 'PENDING', // Reset status to pending after re-upload
+        rejectionReason: null, // Clear previous rejection reason
       });
 
       // Navigate to pending review page
@@ -128,7 +130,7 @@ export default function VerifyDocumentsPage() {
           {/* Security Message */}
           <div className="bg-green-50 border border-green-200 rounded-lg p-4">
             <p className="text-sm text-green-700 flex items-start gap-2">
-            <span className="material-symbols-outlined shrink-0 text-lg mt-0.5">lock</span>
+              <span className="material-symbols-outlined shrink-0 text-lg mt-0.5">lock</span>
               Your documents are encrypted and reviewed by admins only. We never share your personal
               data.
             </p>

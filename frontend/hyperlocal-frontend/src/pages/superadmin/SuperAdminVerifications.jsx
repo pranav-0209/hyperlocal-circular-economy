@@ -118,7 +118,7 @@ export default function SuperAdminVerifications() {
     })) || [];
 
   // Fetch stats separately with React Query
-  const { data: statsData } = useQuery({
+  const { data: statsData, refetch: refetchStats } = useQuery({
     queryKey: ['verification-stats'],
     queryFn: async () => {
       const [profileRes, documentsRes, reviewRes] = await Promise.all([
@@ -149,7 +149,8 @@ export default function SuperAdminVerifications() {
   };
 
   const handleRefresh = () => {
-    refetch();
+    refetch(); // Refetch verification list
+    refetchStats(); // Refetch stats badges
   };
 
   if (error) {
@@ -198,9 +199,8 @@ export default function SuperAdminVerifications() {
         };
         return (
           <span
-            className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium border ${
-              colors[row.currentStep] || 'bg-gray-100 text-gray-800 border-gray-200'
-            }`}
+            className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium border ${colors[row.currentStep] || 'bg-gray-100 text-gray-800 border-gray-200'
+              }`}
           >
             {row.currentStepLabel}
           </span>
@@ -329,11 +329,10 @@ export default function SuperAdminVerifications() {
                 <button
                   key={step.value}
                   onClick={() => setFilter(step.value)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${
-                    filter === step.value
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${filter === step.value
                       ? 'bg-primary text-white shadow-md'
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
+                    }`}
                 >
                   <span className="material-symbols-outlined text-base">{step.icon}</span>
                   {step.label}

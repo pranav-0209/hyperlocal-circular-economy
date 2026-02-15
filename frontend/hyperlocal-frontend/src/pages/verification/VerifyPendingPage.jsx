@@ -18,12 +18,27 @@ export default function VerifyPendingPage() {
   const { user, markVerified, updateUser } = useAuth();
   const [isChecking, setIsChecking] = useState(false);
   const [showRejectionModal, setShowRejectionModal] = useState(false);
+  const [showPendingModal, setShowPendingModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [countdown, setCountdown] = useState(5);
   const [rejectionReason, setRejectionReason] = useState('');
 
   // Scroll to top on mount
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
+
+  // Countdown timer for success modal auto-navigation
+  useEffect(() => {
+    if (showSuccessModal && countdown > 0) {
+      const timer = setTimeout(() => {
+        setCountdown(countdown - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else if (showSuccessModal && countdown === 0) {
+      navigate('/dashboard');
+    }
+  }, [showSuccessModal, countdown, navigate]);
 
   // Check verification status from backend
   const handleCheckStatus = async () => {
@@ -34,11 +49,9 @@ export default function VerifyPendingPage() {
       console.log('Verification status:', response);
 
       if (response.status === 'VERIFIED') {
-        // User approved - mark as verified and navigate to dashboard
+        // User approved - mark as verified and show success modal
         markVerified();
-        setTimeout(() => {
-          navigate('/dashboard');
-        }, 500);
+        setShowSuccessModal(true);
       } else if (response.status === 'REJECTED') {
         // User rejected - update user context with new data from backend
         updateUser({
@@ -54,7 +67,7 @@ export default function VerifyPendingPage() {
         setShowRejectionModal(true);
       } else {
         // NOT_VERIFIED - still pending
-        alert('⏳ Your verification is still under review. We\'ll notify you via email once complete!');
+        setShowPendingModal(true);
       }
     } catch (error) {
       console.error('Failed to check verification status:', error);
@@ -180,6 +193,64 @@ export default function VerifyPendingPage() {
               >
                 Go to Home
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pending Status Modal */}
+      {showPendingModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 animate-scale-in">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-blue-100 mx-auto rounded-full flex items-center justify-center mb-4">
+                <span className="material-symbols-outlined text-4xl text-blue-600">hourglass_empty</span>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Verification Still Pending</h3>
+              <p className="text-gray-600 mb-6">
+                Your verification is still under review. We'll notify you via email once complete!
+              </p>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6">
+                <div className="flex items-start gap-2">
+                  <span className="material-symbols-outlined text-blue-600 text-sm">info</span>
+                  <p className="text-sm text-blue-800 text-left">
+                    Usually completed within 24–48 hours. Thank you for your patience!
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowPendingModal(false)}
+                className="w-full px-6 py-2.5 bg-primary text-white font-medium rounded-lg hover:bg-primary-dark transition-colors"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 animate-scale-in">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-green-100 mx-auto rounded-full flex items-center justify-center mb-4">
+                <span className="material-symbols-outlined text-4xl text-green-600">check_circle</span>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Verification Approved! 🎉</h3>
+              <p className="text-gray-600 mb-6">
+                Congratulations! Your identity has been verified. You can now access all features and join communities.
+              </p>
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-6">
+                <div className="flex items-center justify-center gap-2">
+                  <div className="animate-spin">
+                    <span className="material-symbols-outlined text-green-600 text-sm">progress_activity</span>
+                  </div>
+                  <p className="text-sm text-green-800">
+                    Redirecting to dashboard in {countdown} second{countdown !== 1 ? 's' : ''}...
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>

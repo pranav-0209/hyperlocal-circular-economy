@@ -135,8 +135,8 @@ export default function SuperAdminVerificationDetail() {
       queryClient.invalidateQueries({ queryKey: ['verifications'] });
       queryClient.invalidateQueries({ queryKey: ['verification-stats'] });
       queryClient.invalidateQueries({ queryKey: ['verified-users'] });
-      // Auto-navigate after 3 seconds
-      setTimeout(() => navigate('/superadmin/verifications'), 3000);
+      // Auto-navigate after 2.5 seconds
+      setTimeout(() => navigate('/superadmin/verifications'), 2500);
     } catch (error) {
       console.error('Error approving verification:', error);
       setModalMessage(error.message || 'Failed to approve verification. Please try again.');
@@ -173,8 +173,8 @@ export default function SuperAdminVerificationDetail() {
       queryClient.invalidateQueries({ queryKey: ['verifications'] });
       queryClient.invalidateQueries({ queryKey: ['verification-stats'] });
       queryClient.invalidateQueries({ queryKey: ['verified-users'] });
-      // Auto-navigate after 3 seconds
-      setTimeout(() => navigate('/superadmin/verifications'), 3000);
+      // Auto-navigate after 2.5 seconds
+      setTimeout(() => navigate('/superadmin/verifications'), 2500);
     } catch (error) {
       console.error('Error rejecting verification:', error);
       setShowRejectModal(false);

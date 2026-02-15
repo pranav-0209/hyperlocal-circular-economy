@@ -89,25 +89,40 @@ export default function SuperAdminUsers() {
     }),
   })) || [];
 
-  // Calculate stats directly from data (not from users to avoid infinite loop)
+  // Fetch all users to calculate stats
+  const { data: allUsersData, refetch: refetchStats } = useQuery({
+    queryKey: ['all-users-for-stats'],
+    queryFn: async () => {
+      // Fetch all users without pagination to get accurate counts
+      const response = await getAllUsers({
+        currentStep: 'COMPLETE',
+        verificationStatus: 'VERIFIED',
+        size: 1000 // Large number to get all users
+      });
+      return response;
+    },
+    staleTime: 1000 * 60 * 2, // 2 minutes
+  });
+
+  // Calculate stats from all users data
   useEffect(() => {
-    if (data) {
-      const adminCount = data.content.filter((u) => u.role === 'ROLE_ADMIN').length;
+    if (allUsersData?.content) {
+      const adminCount = allUsersData.content.filter((u) => u.role === 'ROLE_ADMIN').length;
       setStats({
-        total: data.totalElements,
-        verified: data.totalElements,
+        total: allUsersData.totalElements,
+        verified: allUsersData.totalElements,
         admins: adminCount,
         suspended: 0,
       });
     }
-  }, [data]);
+  }, [allUsersData]);
 
   const handlePageChange = (newPage) => {
     setPagination((prev) => ({ ...prev, pageNumber: newPage }));
   };
 
-  const handleRefresh = () => {
-    refetch();
+  const handleRefresh = async () => {
+    await Promise.all([refetch(), refetchStats()]);
   };
 
   if (error) {
@@ -149,9 +164,8 @@ export default function SuperAdminUsers() {
       key: 'role',
       label: 'Role',
       render: (row) => (
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-          row.role === 'Community Admin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
-        }`}>
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${row.role === 'Community Admin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+          }`}>
           {row.role}
         </span>
       ),
@@ -163,18 +177,7 @@ export default function SuperAdminUsers() {
   return (
     <SuperAdminLayout title="Users Management">
       {/* Stats Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-              <span className="material-symbols-outlined text-green-600">verified_user</span>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-green-700">{pagination.totalElements}</p>
-              <p className="text-sm text-green-600">Verified Users</p>
-            </div>
-          </div>
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
         <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
@@ -192,7 +195,7 @@ export default function SuperAdminUsers() {
               <span className="material-symbols-outlined text-blue-600">groups</span>
             </div>
             <div>
-              <p className="text-2xl font-bold text-blue-700">{pagination.totalElements - stats.admins}</p>
+              <p className="text-2xl font-bold text-blue-700">{stats.verified - stats.admins}</p>
               <p className="text-sm text-blue-600">Regular Users</p>
             </div>
           </div>
@@ -225,9 +228,12 @@ export default function SuperAdminUsers() {
             Refresh
           </button>
         </div>
-        <p className="text-sm text-gray-500 mt-2">
-          📋 Showing only users who have completed verification successfully
-        </p>
+        <div className="flex items-center gap-2 mt-3 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+          <span className="material-symbols-outlined text-blue-600 text-sm">info</span>
+          <p className="text-sm text-blue-800">
+            Displaying verified users only • Total: <span className="font-semibold">{stats.verified}</span>
+          </p>
+        </div>
       </div>
 
       {/* Table */}

@@ -22,13 +22,9 @@ export default function HomePage() {
     return <div>Loading...</div>;
   }
 
-  // If user is verified, redirect to community selection (or dashboard if they have communities)
+  // If user is verified, redirect to dashboard (which handles community selection if needed)
   if (user.isVerified) {
-    if (user.communities && user.communities.length > 0) {
-      navigate('/dashboard');
-    } else {
-      navigate('/community/select');
-    }
+    navigate('/dashboard');
     return null;
   }
 
@@ -44,7 +40,7 @@ export default function HomePage() {
       };
       return stepRoutes[user.currentStep] || '/verify/profile';
     }
-    
+
     // Fallback: derive from profileCompletion percentage
     if (user.profileCompletion >= 75) return '/verify/pending';
     if (user.profileCompletion >= 50) return '/verify/documents';
@@ -63,7 +59,7 @@ export default function HomePage() {
       navigate('/verify/profile');
       return;
     }
-    navigate('/community/select');
+    navigate('/dashboard');
   };
 
   const handleCreateCommunity = () => {
@@ -71,7 +67,7 @@ export default function HomePage() {
       navigate('/verify/profile');
       return;
     }
-    navigate('/community/select');
+    navigate('/dashboard');
   };
 
   return (
@@ -136,14 +132,14 @@ export default function HomePage() {
                 <span className="material-symbols-outlined text-3xl text-primary">verified_user</span>
               </div>
             </div>
-            
+
             {/* Content */}
             <div className="grow">
               <h3 className="font-bold text-lg text-charcoal mb-1">Identity Verification</h3>
               <p className="text-sm text-muted-green mb-4">
                 Verification required before joining communities
               </p>
-              
+
               {/* Progress Bar */}
               <div className="flex items-center gap-4 mb-2">
                 <span className="text-xs font-medium text-muted-green">
@@ -152,7 +148,7 @@ export default function HomePage() {
                 <span className="text-xs font-bold text-primary">{user.profileCompletion}%</span>
               </div>
               <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-                <div 
+                <div
                   className="h-full bg-primary rounded-full transition-all duration-500"
                   style={{ width: `${user.profileCompletion}%` }}
                 />
@@ -161,7 +157,7 @@ export default function HomePage() {
                 Next: {user.profileCompletion < 50 ? 'Upload Proof of Address' : user.profileCompletion < 75 ? 'Submit Documents' : 'Awaiting Review'}
               </p>
             </div>
-            
+
             {/* Action Button */}
             <div className="shrink-0 sm:ml-4">
               <button

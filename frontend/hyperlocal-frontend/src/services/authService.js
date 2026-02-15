@@ -1,4 +1,5 @@
 import api from './api';
+import { STORAGE_KEYS } from '../constants';
 
 /**
  * Authentication Service
@@ -83,8 +84,8 @@ export const checkVerificationStatus = async () => {
  * Logout user - clear local storage
  */
 export const logoutUser = () => {
-  localStorage.removeItem('authToken');
-  localStorage.removeItem('user');
+  localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
+  localStorage.removeItem(STORAGE_KEYS.USER);
 };
 
 /**
@@ -92,7 +93,7 @@ export const logoutUser = () => {
  * @returns {Object|null}
  */
 export const getCurrentUser = () => {
-  const user = localStorage.getItem('user');
+  const user = localStorage.getItem(STORAGE_KEYS.USER);
   return user ? JSON.parse(user) : null;
 };
 
@@ -120,10 +121,10 @@ export const adminLogin = async (credentials) => {
  */
 export const saveAdminAuthData = (token, admin) => {
   if (token) {
-    localStorage.setItem('adminToken', token);
+    localStorage.setItem(STORAGE_KEYS.ADMIN_TOKEN, token);
   }
   if (admin) {
-    localStorage.setItem('adminUser', JSON.stringify(admin));
+    localStorage.setItem(STORAGE_KEYS.ADMIN_USER, JSON.stringify(admin));
   }
 };
 
@@ -131,8 +132,8 @@ export const saveAdminAuthData = (token, admin) => {
  * Logout admin - clear admin local storage
  */
 export const logoutAdmin = () => {
-  localStorage.removeItem('adminToken');
-  localStorage.removeItem('adminUser');
+  localStorage.removeItem(STORAGE_KEYS.ADMIN_TOKEN);
+  localStorage.removeItem(STORAGE_KEYS.ADMIN_USER);
 };
 
 /**
@@ -140,7 +141,7 @@ export const logoutAdmin = () => {
  * @returns {Object|null}
  */
 export const getCurrentAdmin = () => {
-  const admin = localStorage.getItem('adminUser');
+  const admin = localStorage.getItem(STORAGE_KEYS.ADMIN_USER);
   return admin ? JSON.parse(admin) : null;
 };
 
@@ -151,7 +152,7 @@ export const getCurrentAdmin = () => {
  */
 export const getAllUsers = async (params = {}) => {
   // Use admin token for this request
-  const adminToken = localStorage.getItem('adminToken');
+  const adminToken = localStorage.getItem(STORAGE_KEYS.ADMIN_TOKEN);
   const response = await api.get('/api/v1/admin/users', {
     params: {
       page: params.page || 0,
@@ -177,7 +178,7 @@ export const getAllUsers = async (params = {}) => {
  * @returns {Promise<Object>}
  */
 export const getUserById = async (userId) => {
-  const adminToken = localStorage.getItem('adminToken');
+  const adminToken = localStorage.getItem(STORAGE_KEYS.ADMIN_TOKEN);
   const response = await api.get(`/api/v1/admin/users/${userId}`, {
     headers: {
       Authorization: `Bearer ${adminToken}`,
@@ -193,7 +194,7 @@ export const getUserById = async (userId) => {
  * @returns {Promise<Object>}
  */
 export const verifyUser = async (userId, data) => {
-  const adminToken = localStorage.getItem('adminToken');
+  const adminToken = localStorage.getItem(STORAGE_KEYS.ADMIN_TOKEN);
   const response = await api.post(
     `/api/v1/admin/users/${userId}/verify`,
     data,
@@ -213,10 +214,10 @@ export const verifyUser = async (userId, data) => {
  */
 export const saveAuthData = (token, user) => {
   if (token) {
-    localStorage.setItem('authToken', token);
+    localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, token);
   }
   if (user) {
-    localStorage.setItem('user', JSON.stringify(user));
+    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
   }
 };
 

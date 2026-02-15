@@ -9,9 +9,16 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 5, // 5 minutes
-      cacheTime: 1000 * 60 * 10, // 10 minutes
+      gcTime: 1000 * 60 * 10, // 10 minutes (renamed from cacheTime in v5)
       refetchOnWindowFocus: false,
+      refetchOnReconnect: true, // Refetch on network reconnection
       retry: 1,
+    },
+    mutations: {
+      retry: 1,
+      onError: (error) => {
+        console.error('Mutation error:', error);
+      },
     },
   },
 });
