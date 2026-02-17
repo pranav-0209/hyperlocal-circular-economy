@@ -148,6 +148,12 @@ public class UserService {
             throw new CustomExceptions.FileUploadException(e);
         }
 
+        // If user was previously rejected and is now re-uploading, reset verification status
+        if (user.getVerificationStatus() == VerificationStatus.REJECTED) {
+            user.setVerificationStatus(VerificationStatus.NOT_VERIFIED);
+            user.setRejectionReason(null);
+        }
+
         // Update profile completion
         int percentage = profileCompletionService.calculatePercentage(user);
         user.setProfileCompletionPercentage(percentage);

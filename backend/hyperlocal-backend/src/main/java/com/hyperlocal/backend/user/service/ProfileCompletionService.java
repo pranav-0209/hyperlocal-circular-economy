@@ -59,14 +59,14 @@ public class ProfileCompletionService {
     }
 
     private boolean hasProfileDetails(User user) {
-        return user.getPhone() != null
-                && user.getAddress() != null
-                && user.getAboutMe() != null
-                && user.getProfilePhotoUrl() != null;
+        return user.getPhone() != null && !user.getPhone().trim().isEmpty()
+                && user.getAddress() != null && !user.getAddress().trim().isEmpty()
+                && user.getAboutMe() != null && !user.getAboutMe().trim().isEmpty();
+                // Note: profilePhotoUrl is optional for profile completion
     }
 
     private boolean hasDocumentsUploaded(User user) {
-        return user.getGovernmentIdUrl() != null;
+        return user.getGovernmentIdUrl() != null && !user.getGovernmentIdUrl().trim().isEmpty();
     }
 
     private boolean isVerified(User user) {
