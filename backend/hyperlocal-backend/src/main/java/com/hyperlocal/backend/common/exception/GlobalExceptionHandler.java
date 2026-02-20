@@ -125,6 +125,32 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request.getRequestURI());
     }
 
+    // ── Community exception handlers ─────────────────────────────────────────
+
+    @ExceptionHandler(CustomExceptions.CommunityNotFoundException.class)
+    public ResponseEntity<ErrorResponseDto> handleCommunityNotFound(CustomExceptions.CommunityNotFoundException ex,
+                                                                    HttpServletRequest request) {
+        return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler(CustomExceptions.InvalidCommunityCodeException.class)
+    public ResponseEntity<ErrorResponseDto> handleInvalidCommunityCode(CustomExceptions.InvalidCommunityCodeException ex,
+                                                                       HttpServletRequest request) {
+        return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler(CustomExceptions.AlreadyMemberException.class)
+    public ResponseEntity<ErrorResponseDto> handleAlreadyMember(CustomExceptions.AlreadyMemberException ex,
+                                                                HttpServletRequest request) {
+        return buildResponse(HttpStatus.CONFLICT, ex.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler(CustomExceptions.NotCommunityMemberException.class)
+    public ResponseEntity<ErrorResponseDto> handleNotCommunityMember(CustomExceptions.NotCommunityMemberException ex,
+                                                                     HttpServletRequest request) {
+        return buildResponse(HttpStatus.FORBIDDEN, ex.getMessage(), request.getRequestURI());
+    }
+
     // Handle validation errors for request DTOs
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponseDto> handleValidation(MethodArgumentNotValidException ex,

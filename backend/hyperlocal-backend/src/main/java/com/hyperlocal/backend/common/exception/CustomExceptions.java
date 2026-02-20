@@ -73,4 +73,33 @@ public class CustomExceptions {
             super("Rejection reason is required when rejecting documents");
         }
     }
+
+    // ── Community exceptions ─────────────────────────────────────────────────
+
+    public static class CommunityNotFoundException extends RuntimeException {
+        public CommunityNotFoundException() {
+            super("Community not found");
+        }
+        public CommunityNotFoundException(String message) {
+            super(message);
+        }
+    }
+
+    public static class InvalidCommunityCodeException extends RuntimeException {
+        public InvalidCommunityCodeException() {
+            super("Invalid community code. Please check and try again.");
+        }
+    }
+
+    public static class AlreadyMemberException extends RuntimeException {
+        public AlreadyMemberException() {
+            super("You are already a member of this community.");
+        }
+    }
+
+    public static class NotCommunityMemberException extends RuntimeException {
+        public NotCommunityMemberException() {
+            super("You are not a member of this community.");
+        }
+    }
 }
