@@ -102,4 +102,10 @@ public class CustomExceptions {
             super("You are not a member of this community.");
         }
     }
+
+    public static class CommunityNameAlreadyExistsException extends RuntimeException {
+        public CommunityNameAlreadyExistsException(String name) {
+            super("A community with the name \"" + name + "\" already exists. Please choose a different name.");
+        }
+    }
 }

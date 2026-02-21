@@ -151,6 +151,12 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.FORBIDDEN, ex.getMessage(), request.getRequestURI());
     }
 
+    @ExceptionHandler(CustomExceptions.CommunityNameAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponseDto> handleCommunityNameAlreadyExists(
+            CustomExceptions.CommunityNameAlreadyExistsException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.CONFLICT, ex.getMessage(), request.getRequestURI());
+    }
+
     // Handle validation errors for request DTOs
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponseDto> handleValidation(MethodArgumentNotValidException ex,

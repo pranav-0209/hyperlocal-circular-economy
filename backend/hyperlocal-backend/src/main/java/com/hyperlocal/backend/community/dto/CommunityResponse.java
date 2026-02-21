@@ -1,6 +1,7 @@
 package com.hyperlocal.backend.community.dto;
 
 import com.hyperlocal.backend.community.enums.CommunityCategory;
+import com.hyperlocal.backend.community.enums.CommunityStatus;
 import lombok.Builder;
 import lombok.Data;
 
@@ -16,6 +17,7 @@ public class CommunityResponse {
     private String code;
     private String description;
     private CommunityCategory category;
+    private CommunityStatus status;
 
     /** Display names of all ADMIN members. */
     private List<String> admins;
@@ -36,4 +38,3 @@ public class CommunityResponse {
      */
     private boolean isAdmin;
 }
-

@@ -35,6 +35,10 @@ public class CommunityService {
     public CommunityResponse createCommunity(CreateCommunityRequest request) {
         User currentUser = getAuthenticatedUser();
 
+        if (communityRepository.existsByNameIgnoreCase(request.getName())) {
+            throw new CustomExceptions.CommunityNameAlreadyExistsException(request.getName());
+        }
+
         String code = generateUniqueCode(request.getName());
 
         Community community = Community.builder()
@@ -151,6 +155,7 @@ public class CommunityService {
                             .code(community.getCode())
                             .description(community.getDescription())
                             .category(community.getCategory())
+                            .status(community.getStatus())
                             .admins(adminNamesByCommunityId.getOrDefault(cid, Collections.emptyList()))
                             .memberCount(memberCountByCommunityId.getOrDefault(cid, 0L))
                             .createdAt(community.getCreatedAt())

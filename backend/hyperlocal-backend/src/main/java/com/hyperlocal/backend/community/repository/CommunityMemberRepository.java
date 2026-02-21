@@ -26,6 +26,8 @@ public interface CommunityMemberRepository extends JpaRepository<CommunityMember
 
     long countByCommunityId(Long communityId);
 
+    long countByUserId(Long userId);
+
     /** Admins of a specific community. */
     List<CommunityMember> findByCommunityIdAndRole(Long communityId, CommunityRole role);
 

@@ -1,8 +1,10 @@
 package com.hyperlocal.backend.community.entity;
 
 import com.hyperlocal.backend.community.enums.CommunityCategory;
+import com.hyperlocal.backend.community.enums.CommunityStatus;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -43,6 +45,12 @@ public class Community {
     /** The user who created the community (always an ADMIN member). */
     @Column(nullable = false)
     private Long createdByUserId;
+
+    @Enumerated(EnumType.STRING)
+    @ColumnDefault("'ACTIVE'")
+    @Column(nullable = false)
+    @Builder.Default
+    private CommunityStatus status = CommunityStatus.ACTIVE;
 
     @Builder.Default
     @OneToMany(mappedBy = "community", cascade = CascadeType.ALL, orphanRemoval = true)

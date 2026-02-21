@@ -20,8 +20,10 @@ public class LoginResponseDto {
 
     private boolean profileCompleted;
     private int profileCompletionPercentage;
-    private String currentStep; // PROFILE, VERIFICATION, REVIEW, COMPLETE
+    private String currentStep;
     private List<String> pendingSteps;
     private String status;
     private String rejectionReason;
+
+    private int communityCount;
 }
