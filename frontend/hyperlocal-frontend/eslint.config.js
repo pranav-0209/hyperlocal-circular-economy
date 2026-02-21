@@ -23,7 +23,21 @@ export default defineConfig([
       },
     },
     rules: {
-      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      // ^[A-Z_] allows PascalCase/SCREAMING_SNAKE unused vars (React components, constants)
+      // ^motion$ suppresses the false-positive for framer-motion's JSX namespace (motion.div, etc.)
+      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]|^motion$' }],
+    },
+  },
+  // Shadcn UI auto-generated files and AuthContext export pattern — fast refresh
+  // warning is expected because they intentionally export both components and hooks/constants
+  {
+    files: [
+      'src/components/ui/badge.jsx',
+      'src/components/ui/form.jsx',
+      'src/context/AuthContext.jsx',
+    ],
+    rules: {
+      'react-refresh/only-export-components': 'off',
     },
   },
 ])

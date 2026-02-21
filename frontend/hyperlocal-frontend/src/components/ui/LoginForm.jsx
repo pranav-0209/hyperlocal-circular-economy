@@ -1,30 +1,44 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import FormInput from './FormInput';
-import FormCheckbox from './FormCheckbox';
-import ErrorAlert from './ErrorAlert';
-import SubmitButton from './SubmitButton';
-import { useForm } from '../../hooks/useForm';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '../../context/AuthContext';
 import { loginUser, saveAuthData } from '../../services/authService';
+import { loginSchema } from '../../schemas/authSchemas';
+import { ROUTES } from '../../constants';
+import { toast } from 'sonner';
+
+// UI Components
+import { Button } from "@/components/ui/button";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 
 const LoginForm = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
   const [showRejectionModal, setShowRejectionModal] = useState(false);
+  // eslint-disable-next-line no-unused-vars -- setRejectionDetails kept for future wiring when REJECTED status returns modal
   const [rejectionDetails, setRejectionDetails] = useState({ reason: '', email: '' });
 
-  const validateForm = (data) => {
-    const newErrors = {};
-    if (!data.email.trim()) newErrors.email = 'Email is required';
-    else if (!/^\S+@\S+\.\S+$/.test(data.email)) newErrors.email = 'Invalid email';
-    if (!data.password) newErrors.password = 'Password is required';
-    return newErrors;
-  };
+  // 1. Define your form.
+  const form = useForm({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
 
-  const handleLogin = async (data) => {
+  // 2. Define a submit handler.
+  async function onSubmit(data) {
     try {
-      // Call the real API
       const response = await loginUser({
         email: data.email,
         password: data.password,
@@ -36,6 +50,9 @@ const LoginForm = () => {
       saveAuthData(response.token, null);
 
       // Set user in context from backend response
+      // hasCommunities: backend should send communityCount (int) in login response.
+      // We use it as a hint so DashboardPage can block until useMyCommunities fetches real data,
+      // preventing the "Select your path" screen from flashing for users who already have communities.
       login({
         id: response.userId,
         email: response.email,
@@ -50,6 +67,8 @@ const LoginForm = () => {
           : !response.pendingSteps?.includes('UPLOAD_DOCUMENTS'),
         verificationStatus: response.status,
         rejectionReason: response.rejectionReason,
+        // If backend sends communityCount, use it; fallback to 0 (safe default)
+        hasCommunities: (response.communityCount ?? 0) > 0,
         communities: [],
         profile: {
           name: response.name,
@@ -61,31 +80,31 @@ const LoginForm = () => {
 
       // Check if user's verification was rejected
       if (response.status === 'REJECTED') {
-        // Don't show modal on login - user will see banner on home page
         // Just navigate to home with rejection info in context
-        navigate('/home');
+        navigate(ROUTES.HOME);
         return;
       }
 
       // Navigate based on verification status
       if (response.status === 'VERIFIED') {
-        // Fully verified user - go directly to dashboard (which handles community selection)
-        navigate('/dashboard');
+        navigate(ROUTES.DASHBOARD);
       } else {
-        // All other users (NOT_VERIFIED) go to home page first
-        // They can then click to continue verification from there
-        navigate('/home');
+        navigate(ROUTES.HOME);
       }
     } catch (error) {
-      throw error;
+      console.error('Login error:', error);
+      // 401 from the login endpoint means wrong credentials, not "session expired"
+      const message =
+        error.statusCode === 401
+          ? 'Invalid email or password. Please try again.'
+          : error.message || 'Login failed. Please check your credentials.';
+      toast.error(message);
+      form.setError('root', {
+        type: 'manual',
+        message,
+      });
     }
-  };
-
-  const form = useForm(
-    { email: '', password: '', rememberMe: false },
-    handleLogin,
-    validateForm
-  );
+  }
 
   return (
     <div className="w-full">
@@ -93,74 +112,84 @@ const LoginForm = () => {
       <div className="mb-8 text-center lg:text-left">
         <h1 className="font-heading text-3xl font-bold mb-2 text-charcoal">Welcome back</h1>
         <p className="text-muted-green text-sm">
-          New to ShareMore? <a className="text-primary font-bold hover:underline" href="/register">Create an account</a>
+          New to ShareMore? <a className="text-primary font-bold hover:underline" href={ROUTES.REGISTER}>Create an account</a>
         </p>
       </div>
 
-      {/* Error Alert */}
-      <ErrorAlert message={form.errors.submit} />
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
 
-      {/* Form */}
-      <form className="space-y-5" onSubmit={form.handleSubmit}>
-        {/* Email */}
-        <FormInput
-          label="Email"
-          name="email"
-          type="email"
-          icon="mail"
-          value={form.formData.email}
-          onChange={form.handleChange}
-          placeholder="your@email.com"
-          error={form.errors.email}
-          ariaLabel="Email address"
-        />
+          {/* Email */}
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Email</FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-gray-400 text-lg">
+                      mail
+                    </span>
+                    <Input placeholder="your@email.com" type="email" className="pl-10" {...field} />
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-        {/* Password */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="block text-xs font-bold uppercase tracking-wider text-muted-green">
-              Password
-            </label>
-          </div>
-          <FormInput
+          {/* Password */}
+          <FormField
+            control={form.control}
             name="password"
-            type="password"
-            icon="lock"
-            value={form.formData.password}
-            onChange={form.handleChange}
-            placeholder="••••••••"
-            error={form.errors.password}
-            ariaLabel="Password"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="flex justify-between items-center">
+                  <span>Password</span>
+                  {/* <a href="#" className="font-normal text-xs text-primary hover:underline">Forgot password?</a> */}
+                </FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-gray-400 text-lg">
+                      lock
+                    </span>
+                    <Input placeholder="••••••••" type="password" className="pl-10" {...field} />
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
-        </div>
 
-        {/* Remember Me */}
-        {/* <FormCheckbox
-          id="rememberMe"
-          checked={form.formData.rememberMe}
-          onChange={form.handleChange}
-          label="Keep me signed in for 30 days"
-          ariaLabel="Remember me"
-        /> */}
+          {/* Global Error */}
+          {form.formState.errors.root && (
+            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm flex items-start gap-2">
+              <span className="material-symbols-outlined text-lg mt-0.5">error</span>
+              <span>{form.formState.errors.root.message}</span>
+            </div>
+          )}
 
-        {/* Submit Button */}
-        <div className="pt-3">
-          <SubmitButton
-            loading={form.loading}
-            label="Sign In"
-            loadingLabel="Signing in..."
-          />
-        </div>
-      </form>
+          <div className="pt-3">
+            <Button type="submit" className="w-full py-6 font-bold text-base" disabled={form.formState.isSubmitting}>
+              {form.formState.isSubmitting ? (
+                <>
+                  <span className="material-symbols-outlined animate-spin mr-2">progress_activity</span>
+                  Signing in...
+                </>
+              ) : (
+                "Sign In"
+              )}
+            </Button>
+          </div>
+        </form>
+      </Form>
 
       {/* Security Notice */}
       <div className="mt-8 pt-6 border-t border-gray-200 text-center space-y-4">
         <p className="text-xs text-muted-green/70 flex items-center justify-center gap-2">
           <span className="material-symbols-outlined text-sm">lock</span>
           Your account is protected with encryption
-        </p>
-        <p className="text-xs text-muted-green/60">
-          Don't have an account? <a href="/register" className="text-primary font-bold hover:underline">Sign up here</a>
         </p>
       </div>
 
@@ -188,7 +217,7 @@ const LoginForm = () => {
               <button
                 onClick={() => {
                   setShowRejectionModal(false);
-                  navigate('/home');
+                  navigate(ROUTES.HOME);
                 }}
                 className="w-full px-6 py-2.5 bg-primary text-white font-medium rounded-lg hover:bg-primary-dark transition-colors"
               >

@@ -1,33 +1,45 @@
 import React, { useState } from 'react';
-import FormInput from './FormInput';
-import FormCheckbox from './FormCheckbox';
-import ErrorAlert from './ErrorAlert';
-import SubmitButton from './SubmitButton';
-import { useForm } from '../../hooks/useForm';
-import { useAuth } from '../../context/AuthContext';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
 import { registerUser } from '../../services/authService';
+import { registerSchema } from '../../schemas/authSchemas';
+import { ROUTES } from '../../constants';
+
+// UI Components
+import { Button } from "@/components/ui/button";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  FormDescription,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { toast } from 'sonner';
 
 const RegisterForm = () => {
-  const [success, setSuccess] = useState(false);
-  const { login } = useAuth();
   const navigate = useNavigate();
+  const [success, setSuccess] = useState(false);
 
-  const validateForm = (data) => {
-    const newErrors = {};
-    if (!data.fullName.trim()) newErrors.fullName = 'Full name is required';
-    if (!data.email.trim()) newErrors.email = 'Email is required';
-    else if (!/^\S+@\S+\.\S+$/.test(data.email)) newErrors.email = 'Invalid email';
-    if (!data.password) newErrors.password = 'Password is required';
-    else if (data.password.length < 6) newErrors.password = 'Password must be at least 6 characters';
-    if (data.password !== data.confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
-    if (!data.agreed) newErrors.agreed = 'You must agree to terms';
-    return newErrors;
-  };
+  // 1. Define your form.
+  const form = useForm({
+    resolver: zodResolver(registerSchema),
+    defaultValues: {
+      fullName: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+      agreed: false,
+    },
+  });
 
-  const handleRegister = async (data) => {
+  // 2. Define a submit handler.
+  async function onSubmit(data) {
     try {
-      // Call the real API
       const response = await registerUser({
         name: data.fullName,
         email: data.email,
@@ -36,27 +48,19 @@ const RegisterForm = () => {
       });
 
       console.log('Registration successful:', response);
-
       setSuccess(true);
-      setTimeout(() => navigate('/login'), 2000);
+      toast.success('Account created successfully!');
+
+      setTimeout(() => navigate(ROUTES.LOGIN), 2000);
     } catch (error) {
-      // Error is already formatted by the API interceptor
-      throw error;
+      console.error('Registration error:', error);
+      toast.error(error.message || 'Registration failed. Please try again.');
+      form.setError('root', {
+        type: 'manual',
+        message: error.message || 'Registration failed'
+      });
     }
-  };
-
-  const form = useForm(
-    {
-      fullName: '',
-      email: '',
-      password: '',
-      confirmPassword: '',
-      agreed: false,
-    },
-    handleRegister,
-    validateForm
-  );
-
+  }
 
   if (success) {
     return (
@@ -67,7 +71,7 @@ const RegisterForm = () => {
         <div className="space-y-3">
           <h2 className="text-3xl font-bold text-charcoal">Welcome to ShareMore!</h2>
           <p className="text-muted-green text-base max-w-sm">
-            Your account has been created successfully. Setting up your profile...
+            Your account has been created successfully. Redirecting to login...
           </p>
         </div>
         <div className="w-full h-1 bg-gray-200 rounded-full overflow-hidden mt-6">
@@ -83,91 +87,136 @@ const RegisterForm = () => {
       <div className="mb-8 text-center lg:text-left">
         <h1 className="font-heading text-3xl font-bold mb-2 text-charcoal">Create your account</h1>
         <p className="text-muted-green text-sm">
-          Already part of the movement? <a className="text-primary font-bold hover:underline" href="/login">Log in here</a>
+          Already part of the movement? <a className="text-primary font-bold hover:underline" href={ROUTES.LOGIN}>Log in here</a>
         </p>
       </div>
 
-      {/* Error Alert */}
-      <ErrorAlert message={form.errors.submit} />
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
 
-      {/* Form */}
-      <form className="space-y-4" onSubmit={form.handleSubmit}>
-        {/* Full Name */}
-        <FormInput
-          label="Full Name"
-          name="fullName"
-          type="text"
-          icon="person"
-          value={form.formData.fullName}
-          onChange={form.handleChange}
-          placeholder="e.g. Priya Sharma"
-          error={form.errors.fullName}
-          ariaLabel="Full name"
-        />
-
-        {/* Email */}
-        <FormInput
-          label="Email"
-          name="email"
-          type="email"
-          icon="mail"
-          value={form.formData.email}
-          onChange={form.handleChange}
-          placeholder="e.g. priya@gmail.com"
-          error={form.errors.email}
-          ariaLabel="Email address"
-        />
-
-        {/* Password Fields - Two Column on desktop */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <FormInput
-            label="Password"
-            name="password"
-            type="password"
-            icon="lock"
-            value={form.formData.password}
-            onChange={form.handleChange}
-            placeholder="••••••••"
-            error={form.errors.password}
-            ariaLabel="Password"
+          {/* Full Name */}
+          <FormField
+            control={form.control}
+            name="fullName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Full Name</FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-gray-400 text-lg">
+                      person
+                    </span>
+                    <Input placeholder="e.g. Priya Sharma" className="pl-10" {...field} />
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
-          <FormInput
-            label="Confirm Password"
-            name="confirmPassword"
-            type="password"
-            icon="verified"
-            value={form.formData.confirmPassword}
-            onChange={form.handleChange}
-            placeholder="••••••••"
-            error={form.errors.confirmPassword}
-            ariaLabel="Confirm password"
+
+          {/* Email */}
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Email</FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-gray-400 text-lg">
+                      mail
+                    </span>
+                    <Input placeholder="e.g. priya@gmail.com" type="email" className="pl-10" {...field} />
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
           />
-        </div>
 
-        {/* Terms Checkbox */}
-        <FormCheckbox
-          id="terms"
-          name="agreed"
-          checked={form.formData.agreed}
-          onChange={form.handleChange}
-          label={
-            <>
-              I agree to the <a className="text-primary font-bold hover:underline" href="#">Terms</a> and{' '}
-              <a className="text-primary font-bold hover:underline" href="#">Privacy Policy</a>
-            </>
-          }
-          error={form.errors.agreed}
-          ariaLabel="Agree to terms and privacy policy"
-        />
+          {/* Password Fields */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Password</FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-gray-400 text-lg">
+                        lock
+                      </span>
+                      <Input placeholder="••••••••" type="password" className="pl-10" {...field} />
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-        {/* Submit Button */}
-        <SubmitButton
-          loading={form.loading}
-          disabled={form.loading || !form.formData.fullName.trim()}
-          label="Create Account"
-          loadingLabel="Creating account..."
-        />
-      </form>
+            <FormField
+              control={form.control}
+              name="confirmPassword"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Confirm Password</FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-gray-400 text-lg">
+                        verified
+                      </span>
+                      <Input placeholder="••••••••" type="password" className="pl-10" {...field} />
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          {/* Terms Checkbox */}
+          <FormField
+            control={form.control}
+            name="agreed"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                <FormControl>
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                  <FormLabel>
+                    I agree to the <a className="text-primary font-bold hover:underline" href="#">Terms</a> and <a className="text-primary font-bold hover:underline" href="#">Privacy Policy</a>
+                  </FormLabel>
+                  <FormMessage />
+                </div>
+              </FormItem>
+            )}
+          />
+
+          {/* Global Error */}
+          {form.formState.errors.root && (
+            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm flex items-start gap-2">
+              <span className="material-symbols-outlined text-lg mt-0.5">error</span>
+              <span>{form.formState.errors.root.message}</span>
+            </div>
+          )}
+
+          <Button type="submit" className="w-full py-6 font-bold text-base" disabled={form.formState.isSubmitting}>
+            {form.formState.isSubmitting ? (
+              <>
+                <span className="material-symbols-outlined animate-spin mr-2">progress_activity</span>
+                Creating account...
+              </>
+            ) : (
+              "Create Account"
+            )}
+          </Button>
+        </form>
+      </Form>
 
       {/* Security Notice */}
       <div className="mt-6 pt-6 border-t border-gray-200 text-center">

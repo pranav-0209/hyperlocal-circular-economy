@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import SuperAdminLayout from '../../components/superadmin/SuperAdminLayout';
 import DataTable from '../../components/superadmin/DataTable';
@@ -11,7 +10,6 @@ import { getAllUsers } from '../../services/authService';
  * Only shows users with currentStep = COMPLETE
  */
 export default function SuperAdminUsers() {
-  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [pagination, setPagination] = useState({
@@ -20,20 +18,11 @@ export default function SuperAdminUsers() {
     totalElements: 0,
     totalPages: 0,
   });
-  const [stats, setStats] = useState({
-    total: 0,
-    verified: 0,
-    admins: 0,
-    suspended: 0,
-  });
-
   // Debounce search query
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchQuery);
-      if (pagination.pageNumber !== 0) {
-        setPagination((prev) => ({ ...prev, pageNumber: 0 }));
-      }
+      setPagination((prev) => ({ ...prev, pageNumber: 0 }));
     }, 500);
     return () => clearTimeout(timer);
   }, [searchQuery]);
@@ -104,18 +93,15 @@ export default function SuperAdminUsers() {
     staleTime: 1000 * 60 * 2, // 2 minutes
   });
 
-  // Calculate stats from all users data
-  useEffect(() => {
-    if (allUsersData?.content) {
-      const adminCount = allUsersData.content.filter((u) => u.role === 'ROLE_ADMIN').length;
-      setStats({
+  // Derive stats from all users data (avoids setState in effect)
+  const stats = allUsersData?.content
+    ? {
         total: allUsersData.totalElements,
         verified: allUsersData.totalElements,
-        admins: adminCount,
+        admins: allUsersData.content.filter((u) => u.role === 'ROLE_ADMIN').length,
         suspended: 0,
-      });
-    }
-  }, [allUsersData]);
+      }
+    : { total: 0, verified: 0, admins: 0, suspended: 0 };
 
   const handlePageChange = (newPage) => {
     setPagination((prev) => ({ ...prev, pageNumber: newPage }));

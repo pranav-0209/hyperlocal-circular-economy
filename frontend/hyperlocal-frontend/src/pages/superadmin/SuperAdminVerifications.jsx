@@ -21,13 +21,6 @@ export default function SuperAdminVerifications() {
     totalElements: 0,
     totalPages: 0,
   });
-  const [stats, setStats] = useState({
-    profile: 0,
-    documents: 0,
-    review: 0,
-    total: 0,
-  });
-
   // Helper function to get readable currentStep label (must be before use)
   const getCurrentStepLabel = (step) => {
     switch (step) {
@@ -48,9 +41,7 @@ export default function SuperAdminVerifications() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchQuery);
-      if (pagination.pageNumber !== 0) {
-        setPagination((prev) => ({ ...prev, pageNumber: 0 }));
-      }
+      setPagination((prev) => ({ ...prev, pageNumber: 0 }));
     }, 500);
     return () => clearTimeout(timer);
   }, [searchQuery]);
@@ -137,12 +128,8 @@ export default function SuperAdminVerifications() {
     staleTime: 1000 * 60 * 2, // 2 minutes
   });
 
-  // Update stats when data arrives
-  useEffect(() => {
-    if (statsData) {
-      setStats(statsData);
-    }
-  }, [statsData]);
+  // Derive stats directly from query data (avoids setState in effect)
+  const stats = statsData ?? { profile: 0, documents: 0, review: 0, total: 0 };
 
   const handlePageChange = (newPage) => {
     setPagination((prev) => ({ ...prev, pageNumber: newPage }));
@@ -187,7 +174,6 @@ export default function SuperAdminVerifications() {
       ),
     },
     { key: 'phone', label: 'Phone' },
-    { key: 'community', label: 'Community' },
     {
       key: 'currentStep',
       label: 'Current Step',
@@ -222,7 +208,7 @@ export default function SuperAdminVerifications() {
         </div>
       ),
     },
-    { key: 'submittedAt', label: 'Submitted' },
+    { key: 'submittedAt', label: 'Last Activity' },
     {
       key: 'actions',
       label: 'Action',

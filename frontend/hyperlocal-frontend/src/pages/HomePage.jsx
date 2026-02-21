@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import HomeNavbar from '../components/ui/HomeNavbar';
@@ -13,6 +13,13 @@ export default function HomePage() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
+  // Animated progress bar — starts at 0, fills to actual value after mount
+  const [barWidth, setBarWidth] = useState(0);
+  useEffect(() => {
+    const t = setTimeout(() => setBarWidth(user?.profileCompletion ?? 0), 120);
+    return () => clearTimeout(t);
+  }, [user?.profileCompletion]);
+
   // Scroll to top on mount
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -20,12 +27,6 @@ export default function HomePage() {
 
   if (!user) {
     return <div>Loading...</div>;
-  }
-
-  // If user is verified, redirect to dashboard (which handles community selection if needed)
-  if (user.isVerified) {
-    navigate('/dashboard');
-    return null;
   }
 
   // Determine the next verification step based on currentStep or profileCompletion
@@ -140,22 +141,13 @@ export default function HomePage() {
                 Verification required before joining communities
               </p>
 
-              {/* Progress Bar */}
-              <div className="flex items-center gap-4 mb-2">
-                <span className="text-xs font-medium text-muted-green">
-                  Step {user.profileCompletion < 50 ? '1' : user.profileCompletion < 75 ? '2' : '3'} of 3 completed
-                </span>
-                <span className="text-xs font-bold text-primary">{user.profileCompletion}%</span>
-              </div>
-              <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+              {/* Animated progress bar — no numbers, slider from 0 → actual */}
+              <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden my-3">
                 <div
-                  className="h-full bg-primary rounded-full transition-all duration-500"
-                  style={{ width: `${user.profileCompletion}%` }}
+                  className="h-full bg-primary rounded-full transition-[width] duration-1000 ease-out"
+                  style={{ width: `${barWidth}%` }}
                 />
               </div>
-              <p className="text-xs text-muted-green mt-2">
-                Next: {user.profileCompletion < 50 ? 'Upload Proof of Address' : user.profileCompletion < 75 ? 'Submit Documents' : 'Awaiting Review'}
-              </p>
             </div>
 
             {/* Action Button */}

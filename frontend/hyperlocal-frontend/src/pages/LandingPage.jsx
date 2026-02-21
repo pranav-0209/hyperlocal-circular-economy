@@ -1,6 +1,7 @@
 import React from 'react'
 import { Link, useNavigate } from 'react-router-dom';
 import "../index.css";
+import { ROUTES } from '../constants';
 
 const LandingPage = () => {
   const navigate = useNavigate();
@@ -48,22 +49,22 @@ const LandingPage = () => {
           </nav>
 
           <div className="flex items-center gap-3">
-  {/* Join Now */}
-  <button 
-    onClick={() => navigate('/register')}
-    className="px-6 py-2.5 bg-primary text-white text-sm font-bold rounded-lg hover:brightness-110 transition-all"
-  >
-    Join Now
-  </button>
-  
-  {/* Login */}
-  <button 
-    onClick={() => navigate('/login')}
-    className="hidden sm:block px-6 py-2.5 bg-gray-100 text-charcoal text-sm font-bold rounded-lg hover:bg-gray-200 transition-all"
-  >
-    Login
-  </button>
-</div>
+            {/* Join Now */}
+            <button
+              onClick={() => navigate(ROUTES.REGISTER)}
+              className="px-6 py-2.5 bg-primary text-white text-sm font-bold rounded-lg hover:brightness-110 transition-all"
+            >
+              Join Now
+            </button>
+
+            {/* Login */}
+            <button
+              onClick={() => navigate(ROUTES.LOGIN)}
+              className="hidden sm:block px-6 py-2.5 bg-gray-100 text-charcoal text-sm font-bold rounded-lg hover:bg-gray-200 transition-all"
+            >
+              Login
+            </button>
+          </div>
 
         </div>
       </header>

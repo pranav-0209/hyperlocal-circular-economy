@@ -5,6 +5,8 @@ import VerificationLayout from '../../components/ui/VerificationLayout';
 import DocumentUpload from '../../components/ui/DocumentUpload';
 import SubmitButton from '../../components/ui/SubmitButton';
 import { uploadDocuments } from '../../services/authService';
+import { toast } from 'sonner';
+import { documentValidation } from '../../schemas/verificationSchemas';
 
 /**
  * VerifyDocumentsPage (/verify/documents)
@@ -29,10 +31,28 @@ export default function VerifyDocumentsPage() {
   }, []);
 
   const handleFileUpload = (documentType, file) => {
+    // If file is null (cleared), just update state
+    if (!file) {
+      setDocuments((prev) => ({
+        ...prev,
+        [documentType]: null,
+      }));
+      return;
+    }
+
+    // Validate file using schema
+    const validation = documentValidation.validateFile(file);
+    if (!validation.valid) {
+      toast.error(validation.error);
+      return;
+    }
+
+    // If valid, update state and clear error
     setDocuments((prev) => ({
       ...prev,
       [documentType]: file,
     }));
+
     if (errors[documentType]) {
       setErrors((prev) => ({
         ...prev,
@@ -86,10 +106,21 @@ export default function VerifyDocumentsPage() {
         rejectionReason: null, // Clear previous rejection reason
       });
 
+      // Show success toast
+      toast.success('Documents uploaded successfully!', {
+        description: 'Your verification is now pending review',
+        duration: 3000,
+      });
+
       // Navigate to pending review page
       navigate('/verify/pending');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
+      // Show error toast
+      toast.error('Failed to upload documents', {
+        description: error.message || 'Please try again',
+        duration: 4000,
+      });
       setErrors({ submit: error.message || 'Failed to upload documents' });
     } finally {
       setIsLoading(false);

@@ -15,7 +15,7 @@ import VerificationTimeline from '../../components/ui/VerificationTimeline';
  */
 export default function VerifyPendingPage() {
   const navigate = useNavigate();
-  const { user, markVerified, updateUser } = useAuth();
+  const { markVerified, updateUser } = useAuth();
   const [isChecking, setIsChecking] = useState(false);
   const [showRejectionModal, setShowRejectionModal] = useState(false);
   const [showPendingModal, setShowPendingModal] = useState(false);

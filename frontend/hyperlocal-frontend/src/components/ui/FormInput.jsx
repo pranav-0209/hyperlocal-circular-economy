@@ -1,55 +1,64 @@
-import React from 'react';
-
 /**
- * Reusable form input component with icon, label, and error handling
+ * FormInput — reusable labeled input with optional material-symbol icon.
+ *
+ * Props:
+ *  label       — visible label text
+ *  name        — input id / name attribute
+ *  type        — input type (default "text")
+ *  value       — controlled value
+ *  onChange    — change handler
+ *  placeholder — placeholder text
+ *  icon        — material-symbols-outlined ligature name (e.g. "person")
+ *  disabled    — renders a read-only styled field
+ *  error       — optional error string shown below input
  */
 const FormInput = ({
   label,
   name,
   type = 'text',
-  icon,
   value,
   onChange,
   placeholder,
+  icon,
+  disabled = false,
   error,
-  ariaLabel,
-  disabled = false
-}) => {
-  const borderColor = error ? 'border-red-500' : 'border-gray-300';
-  const focusBorder = error ? 'focus:border-red-400' : 'focus:border-primary';
-  
-  return (
-    <div className="group">
-      {label && (
-        <label className="block text-xs font-bold uppercase tracking-wider text-muted-green mb-2 ml-0.5">
-          {label}
-        </label>
+}) => (
+  <div className="flex flex-col gap-1.5">
+    {label && (
+      <label htmlFor={name} className="text-sm font-medium text-charcoal">
+        {label}
+      </label>
+    )}
+
+    <div className="relative">
+      {icon && (
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-gray-400 text-xl pointer-events-none">
+          {icon}
+        </span>
       )}
-      <div className="relative">
-        {icon && (
-          <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-green/50 text-lg group-focus-within:text-primary transition-colors">
-            {icon}
-          </span>
-        )}
-        <input
-          className={`w-full pl-11 pr-4 h-11 rounded-lg border transition-all text-charcoal placeholder:text-muted-green/40 text-sm bg-white focus:ring-2 focus:ring-primary/30 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${borderColor} ${focusBorder}`}
-          type={type}
-          name={name}
-          value={value}
-          onChange={onChange}
-          placeholder={placeholder}
-          aria-label={ariaLabel || label}
-          disabled={disabled}
-        />
-      </div>
-      {error && (
-        <p className="text-xs text-red-500 mt-1.5 ml-0.5 flex items-center gap-1">
-          <span className="material-symbols-outlined text-xs">error</span>
-          {error}
-        </p>
-      )}
+      <input
+        id={name}
+        name={name}
+        type={type}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        disabled={disabled}
+        className={[
+          'w-full px-3 py-2 border rounded-lg text-sm transition-colors',
+          icon ? 'pl-10' : '',
+          disabled
+            ? 'bg-gray-50 text-muted-green border-gray-200 cursor-not-allowed'
+            : 'bg-white text-charcoal border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent',
+          error ? 'border-red-400' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+      />
     </div>
-  );
-};
+
+    {error && <p className="text-xs text-red-500 mt-0.5">{error}</p>}
+  </div>
+);
 
 export default FormInput;

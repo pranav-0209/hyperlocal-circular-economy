@@ -33,7 +33,6 @@ const getStoredUser = () => {
 export function AuthProvider({ children }) {
   // Initialize user from localStorage if available
   const [user, setUser] = useState(getStoredUser);
-  const [isLoading, setIsLoading] = useState(false);
 
   const login = (userData) => {
     setUser(userData);
@@ -102,7 +101,6 @@ export function AuthProvider({ children }) {
 
   const value = {
     user,
-    isLoading,
     login,
     logout,
     updateUser,

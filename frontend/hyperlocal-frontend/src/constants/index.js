@@ -19,6 +19,10 @@ export const ROUTES = {
     VERIFY_DOCUMENTS: '/verify/documents',
     VERIFY_PENDING: '/verify/pending',
 
+    // App routes
+    MY_COMMUNITIES: '/my-communities',
+    DISCOVER: '/discover',
+
     // Admin routes
     ADMIN: '/admin',
 

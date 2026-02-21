@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { useState, useEffect } from "react";
 
 /**
  * VerificationLayout Component
@@ -17,6 +18,13 @@ export default function VerificationLayout({
 
   // Use actual profile completion from backend, fallback to step-based calculation
   const completionPercentage = user?.profileCompletion ?? Math.round((stepNumber / totalSteps) * 100);
+
+  // Animate the bar from 0 → target on mount (and whenever percentage changes)
+  const [animatedWidth, setAnimatedWidth] = useState(0);
+  useEffect(() => {
+    const timer = setTimeout(() => setAnimatedWidth(completionPercentage), 80);
+    return () => clearTimeout(timer);
+  }, [completionPercentage]);
 
   const handleLogout = () => {
     // Clear auth state and redirect to login
@@ -66,8 +74,8 @@ export default function VerificationLayout({
           {/* Progress Bar */}
           <div className="w-full bg-gray-300 rounded-full h-2">
             <div
-              className="bg-primary h-2 rounded-full transition-all duration-300"
-              style={{ width: `${completionPercentage}%` }}
+              className="bg-primary h-2 rounded-full transition-[width] duration-700 ease-out"
+              style={{ width: `${animatedWidth}%` }}
             ></div>
           </div>
         </div>

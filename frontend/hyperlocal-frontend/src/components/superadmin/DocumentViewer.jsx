@@ -52,7 +52,7 @@ export default function DocumentViewer({ documents }) {
       loadAuthenticatedImages();
     }
 
-    // Cleanup object URLs
+    // Cleanup object URLs on re-run/unmount
     return () => {
       Object.values(imageUrls).forEach((item) => {
         if (item && item.url) {
@@ -60,6 +60,8 @@ export default function DocumentViewer({ documents }) {
         }
       });
     };
+  // imageUrls is read-only in cleanup; adding it to deps would re-trigger fetches on every URL update
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [documents]);
 
   const handleImageError = (index) => {

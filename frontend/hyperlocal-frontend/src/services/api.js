@@ -24,11 +24,13 @@ api.interceptors.request.use(
     const adminToken = localStorage.getItem(STORAGE_KEYS.ADMIN_TOKEN);
 
     // Prefer admin token for admin routes, otherwise use user token
-    if (config.url?.includes('/admin/')) {
+    // Skip token injection for auth/login endpoints to avoid 401 loops with stale tokens
+    const isAuthEndpoint = config.url?.includes('/auth/login') || config.url?.includes('/auth/register');
+    if (!isAuthEndpoint && config.url?.includes('/admin/')) {
       if (adminToken) {
         config.headers.Authorization = `Bearer ${adminToken}`;
       }
-    } else if (token) {
+    } else if (!isAuthEndpoint && token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
 

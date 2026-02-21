@@ -1,12 +1,14 @@
+import { Link } from 'react-router-dom';
+
 const SidebarBenefits = () => (
   <aside className="hidden lg:flex lg:w-[45%] flex-col justify-between p-12 border-r border-gray-200 bg-linear-to-br from-primary/5 via-accent/5 to-primary/5 relative overflow-hidden">
     <div className="relative z-10">
-      <div className="flex items-center gap-3 mb-12">
+      <Link to="/" className="flex items-center gap-3 mb-12 w-fit">
         <div className="w-9 h-9 bg-primary rounded-lg flex items-center justify-center text-white text-sm font-bold">
           SG
         </div>
         <span className="font-bold text-lg tracking-tight text-charcoal">ShareMore</span>
-      </div>
+      </Link>
       <div className="space-y-10">
         <div>
           <h2 className="text-3xl lg:text-4xl font-bold leading-tight mb-4 text-charcoal">

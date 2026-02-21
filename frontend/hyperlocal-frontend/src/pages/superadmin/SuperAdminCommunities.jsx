@@ -134,7 +134,7 @@ export default function SuperAdminCommunities() {
     {
       key: 'actions',
       label: 'Actions',
-      render: (row) => (
+      render: () => (
         <div className="flex items-center gap-2">
           <button
             className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"

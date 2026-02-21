@@ -1,12 +1,48 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import { ViteImageOptimizer } from 'vite-plugin-image-optimizer';
+import path from 'path'
+import { fileURLToPath } from 'url'
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
+    ViteImageOptimizer({
+      /* pass your config */
+      png: {
+        quality: 80,
+      },
+      jpeg: {
+        quality: 80,
+      },
+      jpg: {
+        quality: 80,
+      },
+      tiff: {
+        quality: 80,
+      },
+      gif: {
+        optimizationLevel: 7,
+        interlaced: false,
+      },
+      webp: {
+        lossless: true,
+      },
+      avif: {
+        lossless: true,
+      },
+      cache: false,
+      cacheLocation: undefined,
+    }),
   ],
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+    },
+  },
   build: {
     // Optimize build output
     sourcemap: false, // Disable sourcemaps in production for smaller bundle
