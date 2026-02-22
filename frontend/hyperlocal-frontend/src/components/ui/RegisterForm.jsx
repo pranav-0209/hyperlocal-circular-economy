@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { registerUser } from '../../services/authService';
 import { registerSchema } from '../../schemas/authSchemas';
 import { ROUTES } from '../../constants';
+import PolicyModal from './PolicyModal';
 
 // UI Components
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,7 @@ import { toast } from 'sonner';
 const RegisterForm = () => {
   const navigate = useNavigate();
   const [success, setSuccess] = useState(false);
+  const [policyModal, setPolicyModal] = useState(null); // 'terms' | 'privacy' | null
 
   // 1. Define your form.
   const form = useForm({
@@ -92,7 +94,7 @@ const RegisterForm = () => {
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-1">
 
           {/* Full Name */}
           <FormField
@@ -135,7 +137,7 @@ const RegisterForm = () => {
           />
 
           {/* Password Fields */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
             <FormField
               control={form.control}
               name="password"
@@ -180,18 +182,28 @@ const RegisterForm = () => {
             control={form.control}
             name="agreed"
             render={({ field }) => (
-              <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                <FormControl>
-                  <Checkbox
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
-                <div className="space-y-1 leading-none">
-                  <FormLabel>
-                    I agree to the <a className="text-primary font-bold hover:underline" href="#">Terms</a> and <a className="text-primary font-bold hover:underline" href="#">Privacy Policy</a>
-                  </FormLabel>
-                  <FormMessage />
+              <FormItem>
+                <div className="flex items-start gap-3">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      className="mt-0.5"
+                    />
+                  </FormControl>
+                  <div>
+                    <FormLabel className="font-normal text-sm text-muted-green leading-snug cursor-pointer">
+                      I agree to the{' '}
+                      <button
+                        type="button"
+                        onClick={() => setPolicyModal('combined')}
+                        className="text-primary font-semibold hover:underline"
+                      >
+                        Terms &amp; Privacy Policy
+                      </button>
+                    </FormLabel>
+                    <FormMessage />
+                  </div>
                 </div>
               </FormItem>
             )}
@@ -217,6 +229,8 @@ const RegisterForm = () => {
           </Button>
         </form>
       </Form>
+
+      {policyModal && <PolicyModal type={policyModal} onClose={() => setPolicyModal(null)} />}
 
       {/* Security Notice */}
       <div className="mt-6 pt-6 border-t border-gray-200 text-center">

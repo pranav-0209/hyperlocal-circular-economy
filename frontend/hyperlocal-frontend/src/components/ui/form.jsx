@@ -55,7 +55,7 @@ function FormItem({
 
   return (
     <FormItemContext.Provider value={{ id }}>
-      <div data-slot="form-item" className={cn("grid gap-2", className)} {...props} />
+      <div data-slot="form-item" className={cn("grid gap-1", className)} {...props} />
     </FormItemContext.Provider>
   );
 }
@@ -117,17 +117,22 @@ function FormMessage({
   const { error, formMessageId } = useFormField()
   const body = error ? String(error?.message ?? "") : props.children
 
-  if (!body) {
-    return null
-  }
-
+  // Always render so space is reserved — prevents layout shift when errors appear.
+  // Use `invisible` (not display:none) when no error so the row height stays stable.
   return (
     <p
       data-slot="form-message"
       id={formMessageId}
-      className={cn("text-destructive text-sm", className)}
-      {...props}>
-      {body}
+      aria-live="polite"
+      aria-hidden={!body}
+      className={cn(
+        "text-xs font-medium min-h-4 leading-tight",
+        body ? "text-red-600" : "invisible",
+        className
+      )}
+      {...props}
+    >
+      {body || "\u00A0"}
     </p>
   );
 }

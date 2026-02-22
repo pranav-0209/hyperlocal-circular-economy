@@ -117,7 +117,7 @@ const LoginForm = () => {
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-1">
 
           {/* Email */}
           <FormField
@@ -170,18 +170,16 @@ const LoginForm = () => {
             </div>
           )}
 
-          <div className="pt-3">
-            <Button type="submit" className="w-full py-6 font-bold text-base" disabled={form.formState.isSubmitting}>
-              {form.formState.isSubmitting ? (
-                <>
-                  <span className="material-symbols-outlined animate-spin mr-2">progress_activity</span>
-                  Signing in...
-                </>
-              ) : (
-                "Sign In"
-              )}
-            </Button>
-          </div>
+          <Button type="submit" className="w-full py-6 font-bold text-base" disabled={form.formState.isSubmitting}>
+            {form.formState.isSubmitting ? (
+              <>
+                <span className="material-symbols-outlined animate-spin mr-2">progress_activity</span>
+                Signing in...
+              </>
+            ) : (
+              "Sign In"
+            )}
+          </Button>
         </form>
       </Form>
 
@@ -195,7 +193,7 @@ const LoginForm = () => {
 
       {/* Rejection Modal */}
       {showRejectionModal && (
-        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/50 z-60 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 animate-scale-in">
             <div className="text-center">
               <div className="w-16 h-16 bg-red-100 mx-auto rounded-full flex items-center justify-center mb-4">
