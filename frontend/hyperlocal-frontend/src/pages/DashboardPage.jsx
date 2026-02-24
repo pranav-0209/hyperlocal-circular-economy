@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
@@ -8,15 +8,14 @@ import HomeNavbar from '../components/ui/HomeNavbar';
 import CommunityDashboard from './CommunityDashboard';
 import CreateItemModal from '../components/marketplace/CreateItemModal';
 import { getMyListings, getRecentRequests } from '../services/marketplaceService';
-import { useJoinCommunity, useCreateCommunity, useMyCommunities } from '../hooks/useCommunityMutations';
-import { joinCommunitySchema, createCommunitySchema, COMMUNITY_CATEGORIES } from '../schemas/communitySchemas';
+import { useJoinCommunity, useMyCommunities } from '../hooks/useCommunityMutations';
+import { joinCommunitySchema } from '../schemas/communitySchemas';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
+import CreateCommunityModal from '../components/ui/CreateCommunityModal';
 
 /**
  * DashboardPage (/dashboard)
@@ -38,29 +37,16 @@ export default function DashboardPage() {
 
   // React Query mutations
   const joinMutation = useJoinCommunity();
-  const createMutation = useCreateCommunity();
 
   // Modal states
   const [showJoinModal, setShowJoinModal] = useState(false);
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(() => searchParams.get('showCreate') === 'true');
   const [showCreateItemModal, setShowCreateItemModal] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [createdCommunity, setCreatedCommunity] = useState(null);
-  const [codeCopied, setCodeCopied] = useState(false);
 
   // React Hook Form instances
   const joinForm = useForm({
     resolver: zodResolver(joinCommunitySchema),
     defaultValues: { code: '' },
-  });
-
-  const createForm = useForm({
-    resolver: zodResolver(createCommunitySchema),
-    defaultValues: {
-      communityName: '',
-      description: '',
-      category: '',
-    },
   });
 
   // Marketplace Queries
@@ -85,29 +71,10 @@ export default function DashboardPage() {
     });
   };
 
-  const handleCreateCommunity = (data) => {
-    createMutation.mutate(
-      {
-        name: data.communityName,
-        description: data.description,
-        category: data.category,
-      },
-      {
-        onSuccess: (community) => {
-          createForm.reset();
-          setShowCreateModal(false);
-          setCreatedCommunity(community);
-          setCodeCopied(false);
-          setShowSuccessModal(true);
-        },
-      }
-    );
-  };
-
   // Block render while:
-  // • initial load (no cache yet)
-  // • OR user told us at login they have communities (hasCommunities) but the
-  //   fresh fetch hasn't landed yet — prevents wrong screen from flashing
+  // â€¢ initial load (no cache yet)
+  // â€¢ OR user told us at login they have communities (hasCommunities) but the
+  //   fresh fetch hasn't landed yet â€” prevents wrong screen from flashing
   if (!user || communitiesLoading || (user.hasCommunities && communitiesFetching)) {
     return <div>Loading...</div>;
   }
@@ -126,7 +93,7 @@ export default function DashboardPage() {
               <span className="material-symbols-outlined text-white">verified</span>
             </div>
             <div>
-              <h3 className="font-bold text-green-900 mb-1">You're verified! 🎉</h3>
+              <h3 className="font-bold text-green-900 mb-1">You're verified! ðŸŽ‰</h3>
               <p className="text-sm text-green-700">
                 You can now access trusted local groups and start sharing securely with your neighbors.
               </p>
@@ -197,7 +164,7 @@ export default function DashboardPage() {
                 <ul className="space-y-3">
                   {[
                     { icon: 'key', text: 'Get an auto-generated invite code' },
-                    { icon: 'lock', text: 'Private — only people you invite can join' },
+                    { icon: 'lock', text: 'Private â€” only people you invite can join' },
                     { icon: 'swap_horiz', text: 'Share, borrow & trade within your circle' },
                   ].map(({ icon, text }) => (
                     <li key={icon} className="flex items-center gap-3">
@@ -288,157 +255,8 @@ export default function DashboardPage() {
           </DialogContent>
         </Dialog>
 
-        {/* Create Community Modal */}
-        <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Create Community</DialogTitle>
-              <DialogDescription>
-                Start a new sharing circle for your apartment or neighborhood.
-              </DialogDescription>
-            </DialogHeader>
+        <CreateCommunityModal open={showCreateModal} onOpenChange={setShowCreateModal} />
 
-            <Form {...createForm}>
-              <form onSubmit={createForm.handleSubmit(handleCreateCommunity)} className="space-y-4">
-                <FormField
-                  control={createForm.control}
-                  name="communityName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Community Name *</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          placeholder="e.g. Maple Street Neighbors"
-                          disabled={createMutation.isPending}
-                          autoFocus
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={createForm.control}
-                  name="category"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Category *</FormLabel>
-                      <Select modal={false} onValueChange={field.onChange} value={field.value} disabled={createMutation.isPending}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select community type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent className="z-[300]">
-                          {COMMUNITY_CATEGORIES.map((cat) => (
-                            <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={createForm.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description *</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          {...field}
-                          placeholder="Briefly describe your community's goal..."
-                          rows={3}
-                          disabled={createMutation.isPending}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {createMutation.isError && (
-                  <p className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">
-                    {createMutation.error.message}
-                  </p>
-                )}
-
-                <div className="flex gap-3">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setShowCreateModal(false);
-                      createForm.reset();
-                      createMutation.reset();
-                    }}
-                    className="flex-1"
-                    disabled={createMutation.isPending}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={createMutation.isPending}
-                    className="flex-1 bg-charcoal hover:bg-charcoal/90"
-                  >
-                    {createMutation.isPending ? 'Creating...' : 'Create'}
-                  </Button>
-                </div>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
-
-        {/* Community Created Successfully */}
-        <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
-          <DialogContent className="sm:max-w-md">
-            <DialogTitle className="sr-only">Community Created</DialogTitle>
-            <div className="flex flex-col items-center text-center pt-4 pb-2">
-              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                <span className="material-symbols-outlined text-green-600" style={{ fontSize: '2.5rem' }}>check_circle</span>
-              </div>
-              <h2 className="text-2xl font-bold text-charcoal mb-1">Community Created!</h2>
-              <p className="text-muted-green text-sm">
-                <span className="font-semibold text-charcoal">{createdCommunity?.name}</span> is live. Share the invite code below with your neighbors to let them join.
-              </p>
-            </div>
-            <div className="mt-4 bg-gradient-to-br from-gray-50 to-primary/5 rounded-2xl p-5 border border-primary/10">
-              <p className="text-xs text-muted-green mb-3 font-semibold uppercase tracking-widest text-center">Your Invite Code</p>
-              <div className="flex items-center justify-between gap-4">
-                <code className="text-3xl font-mono font-bold text-charcoal tracking-widest">
-                  {createdCommunity?.code || '—'}
-                </code>
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(createdCommunity?.code || '');
-                    setCodeCopied(true);
-                  }}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all shrink-0 ${
-                    codeCopied
-                      ? 'bg-green-600 text-white'
-                      : 'bg-primary text-white hover:brightness-110'
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-base">
-                    {codeCopied ? 'check' : 'content_copy'}
-                  </span>
-                  {codeCopied ? 'Copied!' : 'Copy Code'}
-                </button>
-              </div>
-              {codeCopied && (
-                <p className="text-xs text-green-600 mt-3 text-center font-medium">✓ Code copied to clipboard</p>
-              )}
-            </div>
-            <Button onClick={() => setShowSuccessModal(false)} className="w-full mt-5" size="lg">
-              Go to Dashboard
-            </Button>
-          </DialogContent>
-        </Dialog>
       </div>
     );
   }
@@ -501,7 +319,7 @@ export default function DashboardPage() {
                         <div className="text-left">
                           <h3 className="font-semibold text-charcoal">{community.name}</h3>
                           <p className="text-xs text-muted-green">
-                            {community.memberCount || '?'} members · {community.role}
+                            {community.memberCount || '?'} members Â· {community.role}
                           </p>
                         </div>
                       </div>
@@ -538,7 +356,7 @@ export default function DashboardPage() {
                     <div key={req.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-white border border-gray-200 rounded-full flex items-center justify-center text-lg">
-                          🎁
+                          ðŸŽ
                         </div>
                         <div>
                           <p className="text-sm font-semibold text-charcoal">
@@ -588,7 +406,7 @@ export default function DashboardPage() {
                         <div className="flex items-center gap-2 mt-1">
                           <Badge variant="secondary" className="text-[10px] px-1.5 h-5">{item.type}</Badge>
                           <span className="text-xs text-muted-green font-medium">
-                            {item.price ? `₹${item.price}` : 'Free'}
+                            {item.price ? `â‚¹${item.price}` : 'Free'}
                           </span>
                         </div>
                       </div>
@@ -643,7 +461,7 @@ export default function DashboardPage() {
               </div>
 
               <button className="w-full py-2 text-sm text-primary hover:bg-gray-50 rounded-lg transition-colors">
-                View detailed breakdown →
+                View detailed breakdown â†’
               </button>
             </div>
 
@@ -781,111 +599,7 @@ export default function DashboardPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Create Community Modal */}
-      <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Create Community</DialogTitle>
-            <DialogDescription>
-              Start a new sharing circle for your apartment or neighborhood.
-            </DialogDescription>
-          </DialogHeader>
-
-          <Form {...createForm}>
-            <form onSubmit={createForm.handleSubmit(handleCreateCommunity)} className="space-y-4">
-              <FormField
-                control={createForm.control}
-                name="communityName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Community Name *</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        placeholder="e.g. Maple Street Neighbors"
-                        disabled={createMutation.isPending}
-                        autoFocus
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={createForm.control}
-                name="category"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Category *</FormLabel>
-                    <Select modal={false} onValueChange={field.onChange} value={field.value} disabled={createMutation.isPending}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select community type" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent className="z-[300]">
-                        {COMMUNITY_CATEGORIES.map((cat) => (
-                          <SelectItem key={cat.value} value={cat.value}>{cat.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={createForm.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description *</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        {...field}
-                        placeholder="Briefly describe your community's goal..."
-                        rows={3}
-                        disabled={createMutation.isPending}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {createMutation.isError && (
-                <p className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">
-                  {createMutation.error.message}
-                </p>
-              )}
-
-              <div className="flex gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setShowCreateModal(false);
-                    createForm.reset();
-                    createMutation.reset();
-                  }}
-                  className="flex-1"
-                  disabled={createMutation.isPending}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={createMutation.isPending}
-                  className="flex-1 bg-charcoal hover:bg-charcoal/90"
-                >
-                  {createMutation.isPending ? 'Creating...' : 'Create'}
-                </Button>
-              </div>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+      <CreateCommunityModal open={showCreateModal} onOpenChange={setShowCreateModal} />
 
       <CreateItemModal
         open={showCreateItemModal}
@@ -893,51 +607,6 @@ export default function DashboardPage() {
         communityId={user.communities?.[0]?.id || '1'}
       />
 
-      {/* Community Created Successfully */}
-      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
-        <DialogContent className="sm:max-w-md">
-          <DialogTitle className="sr-only">Community Created</DialogTitle>
-          <div className="flex flex-col items-center text-center pt-4 pb-2">
-            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-4">
-              <span className="material-symbols-outlined text-green-600" style={{ fontSize: '2.5rem' }}>check_circle</span>
-            </div>
-            <h2 className="text-2xl font-bold text-charcoal mb-1">Community Created!</h2>
-            <p className="text-muted-green text-sm">
-              <span className="font-semibold text-charcoal">{createdCommunity?.name}</span> is live. Share the invite code below with your neighbors to let them join.
-            </p>
-          </div>
-          <div className="mt-4 bg-gradient-to-br from-gray-50 to-primary/5 rounded-2xl p-5 border border-primary/10">
-            <p className="text-xs text-muted-green mb-3 font-semibold uppercase tracking-widest text-center">Your Invite Code</p>
-            <div className="flex items-center justify-between gap-4">
-              <code className="text-3xl font-mono font-bold text-charcoal tracking-widest">
-                {createdCommunity?.code || '—'}
-              </code>
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(createdCommunity?.code || '');
-                  setCodeCopied(true);
-                }}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all shrink-0 ${
-                  codeCopied
-                    ? 'bg-green-600 text-white'
-                    : 'bg-primary text-white hover:brightness-110'
-                }`}
-              >
-                <span className="material-symbols-outlined text-base">
-                  {codeCopied ? 'check' : 'content_copy'}
-                </span>
-                {codeCopied ? 'Copied!' : 'Copy Code'}
-              </button>
-            </div>
-            {codeCopied && (
-              <p className="text-xs text-green-600 mt-3 text-center font-medium">✓ Code copied to clipboard</p>
-            )}
-          </div>
-          <Button onClick={() => setShowSuccessModal(false)} className="w-full mt-5" size="lg">
-            Go to Dashboard
-          </Button>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

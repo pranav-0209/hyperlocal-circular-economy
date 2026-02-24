@@ -20,7 +20,7 @@ export default function SuperAdminSidebar() {
   ];
 
   return (
-    <aside className="w-64 bg-gray-900 min-h-screen flex flex-col">
+    <aside className="w-64 bg-gray-900 h-screen flex flex-col shrink-0 overflow-y-auto">
       {/* Logo */}
       <div className="p-6 border-b border-gray-800">
         <div className="flex items-center gap-3">

@@ -40,4 +40,9 @@ export const createCommunitySchema = z.object({
         .enum(['NEIGHBOURHOOD', 'SOCIETY', 'COLLEGE', 'OFFICE', 'INTEREST_GROUP', 'OTHER'], {
             errorMap: () => ({ message: 'Please select a community category' }),
         }),
+    joinPolicy: z
+        .enum(['OPEN', 'APPROVAL_REQUIRED'], {
+            errorMap: () => ({ message: 'Please select a join policy' }),
+        })
+        .default('OPEN'),
 });

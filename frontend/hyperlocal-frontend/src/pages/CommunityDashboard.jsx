@@ -173,6 +173,139 @@ export default function CommunityDashboard({ community }) {
                     </div>
                 </div>
 
+                {/* ── Admin Controls Panel ───────────────────────────── */}
+                {community.role === 'admin' && (
+                    <div className="mb-8">
+                        <div className="flex items-center gap-2 mb-4">
+                            <div className="w-7 h-7 bg-cyan-700 rounded-lg flex items-center justify-center">
+                                <span className="material-symbols-outlined text-white text-sm">admin_panel_settings</span>
+                            </div>
+                            <h2 className="text-base font-bold text-charcoal">Admin Controls</h2>
+                            <span className="ml-auto text-xs font-medium text-cyan-700 bg-cyan-50 border border-cyan-100 px-2.5 py-0.5 rounded-full">
+                                Admin Only
+                            </span>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            {/* Join Requests */}
+                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col gap-3 hover:shadow-md transition-shadow">
+                                <div className="flex items-start justify-between">
+                                    <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center">
+                                        <span className="material-symbols-outlined text-amber-600 text-xl">how_to_reg</span>
+                                    </div>
+                                    <span className="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100">0 pending</span>
+                                </div>
+                                <div>
+                                    <p className="font-semibold text-charcoal text-sm">Join Requests</p>
+                                    <p className="text-xs text-muted-green mt-0.5">Approve or reject requests</p>
+                                </div>
+                                <button className="text-xs text-amber-600 font-semibold hover:underline text-left flex items-center gap-1">
+                                    Review <span className="material-symbols-outlined text-xs">arrow_forward</span>
+                                </button>
+                            </div>
+
+                            {/* Member Management */}
+                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col gap-3 hover:shadow-md transition-shadow">
+                                <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
+                                    <span className="material-symbols-outlined text-blue-600 text-xl">manage_accounts</span>
+                                </div>
+                                <div>
+                                    <p className="font-semibold text-charcoal text-sm">Member Management</p>
+                                    <p className="text-xs text-muted-green mt-0.5">Promote or remove members</p>
+                                </div>
+                                <button className="text-xs text-blue-600 font-semibold hover:underline text-left flex items-center gap-1">
+                                    Manage <span className="material-symbols-outlined text-xs">arrow_forward</span>
+                                </button>
+                            </div>
+
+                            {/* Edit Community */}
+                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col gap-3 hover:shadow-md transition-shadow">
+                                <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
+                                    <span className="material-symbols-outlined text-primary text-xl">edit</span>
+                                </div>
+                                <div>
+                                    <p className="font-semibold text-charcoal text-sm">Edit Details</p>
+                                    <p className="text-xs text-muted-green mt-0.5">Update name, desc &amp; category</p>
+                                </div>
+                                <button className="text-xs text-primary font-semibold hover:underline text-left flex items-center gap-1">
+                                    Edit <span className="material-symbols-outlined text-xs">arrow_forward</span>
+                                </button>
+                            </div>
+
+                            {/* Manage Listings */}
+                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col gap-3 hover:shadow-md transition-shadow">
+                                <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center">
+                                    <span className="material-symbols-outlined text-purple-600 text-xl">storefront</span>
+                                </div>
+                                <div>
+                                    <p className="font-semibold text-charcoal text-sm">Manage Listings</p>
+                                    <p className="text-xs text-muted-green mt-0.5">Moderate marketplace items</p>
+                                </div>
+                                <button className="text-xs text-purple-600 font-semibold hover:underline text-left flex items-center gap-1">
+                                    View <span className="material-symbols-outlined text-xs">arrow_forward</span>
+                                </button>
+                            </div>
+
+                            {/* Join Policy */}
+                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col gap-3 hover:shadow-md transition-shadow">
+                                <div className="w-10 h-10 bg-cyan-50 rounded-xl flex items-center justify-center">
+                                    <span className="material-symbols-outlined text-cyan-600 text-xl">{community.joinPolicy === 'OPEN' ? 'public' : 'lock'}</span>
+                                </div>
+                                <div>
+                                    <p className="font-semibold text-charcoal text-sm">Join Policy</p>
+                                    <p className="text-xs text-muted-green mt-0.5">
+                                        Now: <span className="font-semibold text-charcoal">{community.joinPolicy === 'APPROVAL_REQUIRED' ? 'Approval Required' : 'Open'}</span>
+                                    </p>
+                                </div>
+                                <button className="text-xs text-cyan-600 font-semibold hover:underline text-left flex items-center gap-1">
+                                    Change <span className="material-symbols-outlined text-xs">arrow_forward</span>
+                                </button>
+                            </div>
+
+                            {/* Analytics */}
+                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col gap-3 hover:shadow-md transition-shadow">
+                                <div className="w-10 h-10 bg-teal-50 rounded-xl flex items-center justify-center">
+                                    <span className="material-symbols-outlined text-teal-600 text-xl">bar_chart</span>
+                                </div>
+                                <div>
+                                    <p className="font-semibold text-charcoal text-sm">Analytics</p>
+                                    <p className="text-xs text-muted-green mt-0.5">Activity trends &amp; sharing stats</p>
+                                </div>
+                                <button className="text-xs text-teal-600 font-semibold hover:underline text-left flex items-center gap-1">
+                                    View <span className="material-symbols-outlined text-xs">arrow_forward</span>
+                                </button>
+                            </div>
+
+                            {/* Regenerate Invite Code */}
+                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col gap-3 hover:shadow-md transition-shadow">
+                                <div className="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center">
+                                    <span className="material-symbols-outlined text-orange-500 text-xl">refresh</span>
+                                </div>
+                                <div>
+                                    <p className="font-semibold text-charcoal text-sm">Invite Code</p>
+                                    <p className="text-xs text-muted-green mt-0.5">Regenerate if compromised</p>
+                                </div>
+                                <button className="text-xs text-orange-500 font-semibold hover:underline text-left flex items-center gap-1">
+                                    Regenerate <span className="material-symbols-outlined text-xs">arrow_forward</span>
+                                </button>
+                            </div>
+
+                            {/* Danger Zone */}
+                            <div className="bg-white rounded-2xl border border-red-100 shadow-sm p-5 flex flex-col gap-3 hover:shadow-md transition-shadow">
+                                <div className="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center">
+                                    <span className="material-symbols-outlined text-red-500 text-xl">power_settings_new</span>
+                                </div>
+                                <div>
+                                    <p className="font-semibold text-red-600 text-sm">Danger Zone</p>
+                                    <p className="text-xs text-muted-green mt-0.5">Deactivate or delete community</p>
+                                </div>
+                                <button className="text-xs text-red-500 font-semibold hover:underline text-left flex items-center gap-1">
+                                    Actions <span className="material-symbols-outlined text-xs">arrow_forward</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* ── Main grid ───────────────────────────────────────── */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
