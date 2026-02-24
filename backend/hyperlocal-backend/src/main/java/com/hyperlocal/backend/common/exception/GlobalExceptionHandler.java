@@ -157,6 +157,24 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.CONFLICT, ex.getMessage(), request.getRequestURI());
     }
 
+    @ExceptionHandler(CustomExceptions.JoinRequestPendingException.class)
+    public ResponseEntity<ErrorResponseDto> handleJoinRequestPending(
+            CustomExceptions.JoinRequestPendingException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.CONFLICT, ex.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler(CustomExceptions.JoinRequestNotFoundException.class)
+    public ResponseEntity<ErrorResponseDto> handleJoinRequestNotFound(
+            CustomExceptions.JoinRequestNotFoundException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler(CustomExceptions.NotCommunityAdminException.class)
+    public ResponseEntity<ErrorResponseDto> handleNotCommunityAdmin(
+            CustomExceptions.NotCommunityAdminException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.FORBIDDEN, ex.getMessage(), request.getRequestURI());
+    }
+
     // Handle validation errors for request DTOs
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponseDto> handleValidation(MethodArgumentNotValidException ex,

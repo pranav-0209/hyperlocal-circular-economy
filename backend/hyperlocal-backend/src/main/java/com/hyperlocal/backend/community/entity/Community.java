@@ -2,6 +2,7 @@ package com.hyperlocal.backend.community.entity;
 
 import com.hyperlocal.backend.community.enums.CommunityCategory;
 import com.hyperlocal.backend.community.enums.CommunityStatus;
+import com.hyperlocal.backend.community.enums.JoinPolicy;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.ColumnDefault;
@@ -35,12 +36,22 @@ public class Community {
     @Column(nullable = false, unique = true)
     private String code;
 
-    @Column(length = 1000)
+    @Column(length = 1000, nullable = false)
     private String description;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private CommunityCategory category;
+
+    /**
+     * Controls how new members can join.
+     * Defaults to {@link JoinPolicy#OPEN} so existing communities are unaffected.
+     */
+    @Enumerated(EnumType.STRING)
+    @ColumnDefault("'OPEN'")
+    @Column(nullable = false)
+    @Builder.Default
+    private JoinPolicy joinPolicy = JoinPolicy.OPEN;
 
     /** The user who created the community (always an ADMIN member). */
     @Column(nullable = false)

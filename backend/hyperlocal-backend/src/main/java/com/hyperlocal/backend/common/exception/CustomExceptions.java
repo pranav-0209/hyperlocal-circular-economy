@@ -108,4 +108,22 @@ public class CustomExceptions {
             super("A community with the name \"" + name + "\" already exists. Please choose a different name.");
         }
     }
+
+    public static class JoinRequestPendingException extends RuntimeException {
+        public JoinRequestPendingException() {
+            super("Your join request is already pending approval by a community admin.");
+        }
+    }
+
+    public static class JoinRequestNotFoundException extends RuntimeException {
+        public JoinRequestNotFoundException() {
+            super("Join request not found.");
+        }
+    }
+
+    public static class NotCommunityAdminException extends RuntimeException {
+        public NotCommunityAdminException() {
+            super("You must be a community admin to perform this action.");
+        }
+    }
 }

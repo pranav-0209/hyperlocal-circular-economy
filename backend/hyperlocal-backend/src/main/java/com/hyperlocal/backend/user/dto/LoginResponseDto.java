@@ -25,5 +25,9 @@ public class LoginResponseDto {
     private String status;
     private String rejectionReason;
 
-    private int communityCount;
+    /** IDs of all communities the user has joined (approved membership). */
+    private List<Long> joinedCommunityIds;
+
+    /** IDs of all communities the user has created. */
+    private List<Long> createdCommunityIds;
 }

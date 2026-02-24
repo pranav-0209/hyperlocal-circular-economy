@@ -2,6 +2,7 @@ package com.hyperlocal.backend.community.repository;
 
 import com.hyperlocal.backend.community.entity.CommunityMember;
 import com.hyperlocal.backend.community.enums.CommunityRole;
+import com.hyperlocal.backend.community.enums.MemberStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -28,12 +29,21 @@ public interface CommunityMemberRepository extends JpaRepository<CommunityMember
 
     long countByUserId(Long userId);
 
+    /** All members of a community with a given status (e.g., PENDING). */
+    List<CommunityMember> findByCommunityIdAndStatus(Long communityId, MemberStatus status);
+
+    /** Paged members of a community with a given status (e.g., APPROVED). */
+    Page<CommunityMember> findByCommunityIdAndStatus(Long communityId, MemberStatus status, Pageable pageable);
+
+    /** Count members of a community with a given status. */
+    long countByCommunityIdAndStatus(Long communityId, MemberStatus status);
+
     /** Admins of a specific community. */
     List<CommunityMember> findByCommunityIdAndRole(Long communityId, CommunityRole role);
 
     /** IDs of communities where the user is an ADMIN. */
     @Query("SELECT cm.community.id FROM CommunityMember cm WHERE cm.userId = :userId AND cm.role = 'ADMIN'")
-    List<Long> findAdminCommunityIdsByUserId(@Param("userId") Long userId);
+    List<Long>findAdminCommunityIdsByUserId(@Param("userId") Long userId);
 
     /**
      * Bulk member-count query.
@@ -47,6 +57,11 @@ public interface CommunityMemberRepository extends JpaRepository<CommunityMember
     @Query("SELECT cm.community.id, COUNT(cm) FROM CommunityMember cm " +
            "WHERE cm.community.id IN :communityIds GROUP BY cm.community.id")
     List<Object[]> countByCommunityIdIn(@Param("communityIds") Collection<Long> communityIds);
+
+    /** Bulk pending-count query per community. */
+    @Query("SELECT cm.community.id, COUNT(cm) FROM CommunityMember cm " +
+           "WHERE cm.community.id IN :communityIds AND cm.status = 'PENDING' GROUP BY cm.community.id")
+    List<Object[]> countPendingByCommunityIdIn(@Param("communityIds") Collection<Long> communityIds);
 }
 
 

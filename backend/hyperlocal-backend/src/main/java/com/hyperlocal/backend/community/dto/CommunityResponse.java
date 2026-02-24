@@ -2,6 +2,7 @@ package com.hyperlocal.backend.community.dto;
 
 import com.hyperlocal.backend.community.enums.CommunityCategory;
 import com.hyperlocal.backend.community.enums.CommunityStatus;
+import com.hyperlocal.backend.community.enums.JoinPolicy;
 import lombok.Builder;
 import lombok.Data;
 
@@ -19,10 +20,24 @@ public class CommunityResponse {
     private CommunityCategory category;
     private CommunityStatus status;
 
+    /**
+     * How new members can join.
+     * OPEN – invite code grants immediate membership.
+     * APPROVAL_REQUIRED – join request waits for admin approval.
+     */
+    private JoinPolicy joinPolicy;
+
     /** Display names of all ADMIN members. */
     private List<String> admins;
 
     private long memberCount;
+
+    /**
+     * Number of join requests currently awaiting admin approval.
+     * Only populated when the authenticated user is a community admin.
+     */
+    private long pendingCount;
+
     private LocalDateTime createdAt;
 
     /**
@@ -37,4 +52,10 @@ public class CommunityResponse {
      * community, manage members) without a separate "check role" API call.
      */
     private boolean isAdmin;
+
+    /**
+     * Membership status of the requesting user in this community.
+     * APPROVED – full member. PENDING – awaiting admin approval.
+     */
+    private String membershipStatus;
 }

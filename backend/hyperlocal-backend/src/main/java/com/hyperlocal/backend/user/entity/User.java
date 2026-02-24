@@ -7,6 +7,8 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Getter
@@ -67,7 +69,25 @@ public class User {
     @Column(name = "current_profile_step")
     private ProfileStep currentStep = ProfileStep.PROFILE;
 
-    private Long communityId;
+    /**
+     * IDs of communities the user has joined as a member.
+     * Populated automatically when a join request is approved (or immediately for OPEN communities).
+     */
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "user_joined_communities", joinColumns = @JoinColumn(name = "user_id"))
+    @Column(name = "community_id")
+    @Builder.Default
+    private List<Long> joinedCommunityIds = new ArrayList<>();
+
+    /**
+     * IDs of communities the user has created (where they are the creator/admin).
+     * Populated automatically when a community is created.
+     */
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "user_created_communities", joinColumns = @JoinColumn(name = "user_id"))
+    @Column(name = "community_id")
+    @Builder.Default
+    private List<Long> createdCommunityIds = new ArrayList<>();
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;

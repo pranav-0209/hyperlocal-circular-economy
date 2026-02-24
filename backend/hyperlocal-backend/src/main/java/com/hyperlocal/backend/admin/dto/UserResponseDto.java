@@ -10,6 +10,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Builder
@@ -30,7 +31,13 @@ public class UserResponseDto {
     private String addressProofUrl;
     private Integer profileCompletionPercentage;
     private ProfileStep currentStep;
-    private Long communityId;
+
+    /** IDs of communities the user has joined (approved membership). */
+    private List<Long> joinedCommunityIds;
+
+    /** IDs of communities the user has created. */
+    private List<Long> createdCommunityIds;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -50,7 +57,8 @@ public class UserResponseDto {
                 .addressProofUrl(user.getAddressProofUrl())
                 .profileCompletionPercentage(user.getProfileCompletionPercentage())
                 .currentStep(user.getCurrentStep())
-                .communityId(user.getCommunityId())
+                .joinedCommunityIds(user.getJoinedCommunityIds())
+                .createdCommunityIds(user.getCreatedCommunityIds())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .build();

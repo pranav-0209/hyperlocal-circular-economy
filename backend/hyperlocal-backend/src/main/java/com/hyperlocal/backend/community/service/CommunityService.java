@@ -6,9 +6,16 @@ import com.hyperlocal.backend.community.dto.CommunityMemberResponse;
 import com.hyperlocal.backend.community.dto.CommunityResponse;
 import com.hyperlocal.backend.community.dto.CreateCommunityRequest;
 import com.hyperlocal.backend.community.dto.JoinCommunityRequest;
+import com.hyperlocal.backend.community.dto.PendingMemberResponse;
+import com.hyperlocal.backend.community.dto.UpdateCommunityRequest;
+import com.hyperlocal.backend.community.dto.UpdateCommunityStatusRequest;
+import com.hyperlocal.backend.community.dto.UpdateJoinPolicyRequest;
 import com.hyperlocal.backend.community.entity.Community;
 import com.hyperlocal.backend.community.entity.CommunityMember;
 import com.hyperlocal.backend.community.enums.CommunityRole;
+import com.hyperlocal.backend.community.enums.CommunityStatus;
+import com.hyperlocal.backend.community.enums.JoinPolicy;
+import com.hyperlocal.backend.community.enums.MemberStatus;
 import com.hyperlocal.backend.community.repository.CommunityMemberRepository;
 import com.hyperlocal.backend.community.repository.CommunityRepository;
 import com.hyperlocal.backend.user.entity.User;
@@ -41,23 +48,37 @@ public class CommunityService {
 
         String code = generateUniqueCode(request.getName());
 
+        JoinPolicy joinPolicy = request.getJoinPolicy() != null ? request.getJoinPolicy() : JoinPolicy.OPEN;
+
         Community community = Community.builder()
                 .name(request.getName())
                 .code(code)
                 .description(request.getDescription())
                 .category(request.getCategory())
+                .joinPolicy(joinPolicy)
                 .createdByUserId(currentUser.getId())
                 .build();
 
         community = communityRepository.save(community);
 
+        // Creator is always an APPROVED ADMIN
         CommunityMember adminMember = CommunityMember.builder()
                 .community(community)
                 .userId(currentUser.getId())
                 .role(CommunityRole.ADMIN)
+                .status(MemberStatus.APPROVED)
                 .build();
 
         communityMemberRepository.save(adminMember);
+
+        // Update user's community lists
+        if (!currentUser.getCreatedCommunityIds().contains(community.getId())) {
+            currentUser.getCreatedCommunityIds().add(community.getId());
+        }
+        if (!currentUser.getJoinedCommunityIds().contains(community.getId())) {
+            currentUser.getJoinedCommunityIds().add(community.getId());
+        }
+        userRepository.save(currentUser);
 
         return buildCommunityResponse(community, currentUser.getId());
     }
@@ -68,10 +89,14 @@ public class CommunityService {
         Community community = communityRepository.findById(communityId)
                 .orElseThrow(CustomExceptions.CommunityNotFoundException::new);
 
-        if (!communityMemberRepository.existsByCommunityIdAndUserId(communityId, currentUser.getId())) {
+        Optional<CommunityMember> membershipOpt =
+                communityMemberRepository.findByCommunityIdAndUserId(communityId, currentUser.getId());
+
+        if (membershipOpt.isEmpty()) {
             throw new CustomExceptions.NotCommunityMemberException();
         }
 
+        // Allow pending members to see basic info but signal their status
         return buildCommunityResponse(community, currentUser.getId());
     }
 
@@ -82,19 +107,129 @@ public class CommunityService {
         Community community = communityRepository.findByCode(request.getCode().toUpperCase())
                 .orElseThrow(CustomExceptions.InvalidCommunityCodeException::new);
 
-        if (communityMemberRepository.existsByCommunityIdAndUserId(community.getId(), currentUser.getId())) {
+        Optional<CommunityMember> existing =
+                communityMemberRepository.findByCommunityIdAndUserId(community.getId(), currentUser.getId());
+
+        if (existing.isPresent()) {
+            CommunityMember existingMember = existing.get();
+            if (existingMember.getStatus() == MemberStatus.PENDING) {
+                throw new CustomExceptions.JoinRequestPendingException();
+            }
             throw new CustomExceptions.AlreadyMemberException();
         }
+
+        MemberStatus initialStatus = community.getJoinPolicy() == JoinPolicy.APPROVAL_REQUIRED
+                ? MemberStatus.PENDING
+                : MemberStatus.APPROVED;
 
         CommunityMember member = CommunityMember.builder()
                 .community(community)
                 .userId(currentUser.getId())
                 .role(CommunityRole.MEMBER)
+                .status(initialStatus)
                 .build();
 
         communityMemberRepository.save(member);
 
+        // Only update user's joined list if immediately approved
+        if (initialStatus == MemberStatus.APPROVED) {
+            if (!currentUser.getJoinedCommunityIds().contains(community.getId())) {
+                currentUser.getJoinedCommunityIds().add(community.getId());
+                userRepository.save(currentUser);
+            }
+        }
+
         return buildCommunityResponse(community, currentUser.getId());
+    }
+
+    /**
+     * Returns all pending join requests for a community (admin only).
+     */
+    public List<PendingMemberResponse> getPendingMembers(Long communityId) {
+        User currentUser = getAuthenticatedUser();
+
+        if (!communityRepository.existsById(communityId)) {
+            throw new CustomExceptions.CommunityNotFoundException();
+        }
+
+        assertIsAdmin(communityId, currentUser.getId());
+
+        List<CommunityMember> pending =
+                communityMemberRepository.findByCommunityIdAndStatus(communityId, MemberStatus.PENDING);
+
+        List<Long> userIds = pending.stream().map(CommunityMember::getUserId).collect(Collectors.toList());
+        Map<Long, User> usersById = userRepository.findAllById(userIds).stream()
+                .collect(Collectors.toMap(User::getId, u -> u));
+
+        return pending.stream()
+                .map(cm -> {
+                    User u = usersById.get(cm.getUserId());
+                    return PendingMemberResponse.builder()
+                            .membershipId(cm.getId())
+                            .userId(cm.getUserId())
+                            .name(u != null ? u.getName() : "Unknown")
+                            .email(u != null ? u.getEmail() : null)
+                            .profilePhotoUrl(u != null ? u.getProfilePhotoUrl() : null)
+                            .status(cm.getStatus())
+                            .requestedAt(cm.getJoinedAt())
+                            .build();
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Admin approves a pending join request.
+     */
+    @Transactional
+    public void approveMember(Long communityId, Long membershipId) {
+        User currentUser = getAuthenticatedUser();
+
+        if (!communityRepository.existsById(communityId)) {
+            throw new CustomExceptions.CommunityNotFoundException();
+        }
+
+        assertIsAdmin(communityId, currentUser.getId());
+
+        CommunityMember membership = communityMemberRepository.findById(membershipId)
+                .orElseThrow(CustomExceptions.JoinRequestNotFoundException::new);
+
+        if (!membership.getCommunity().getId().equals(communityId)) {
+            throw new CustomExceptions.JoinRequestNotFoundException();
+        }
+
+        membership.setStatus(MemberStatus.APPROVED);
+        communityMemberRepository.save(membership);
+
+        // Update the approved user's joinedCommunityIds
+        userRepository.findById(membership.getUserId()).ifPresent(user -> {
+            if (!user.getJoinedCommunityIds().contains(communityId)) {
+                user.getJoinedCommunityIds().add(communityId);
+                userRepository.save(user);
+            }
+        });
+    }
+
+    /**
+     * Admin rejects (removes) a pending join request.
+     */
+    @Transactional
+    public void rejectMember(Long communityId, Long membershipId) {
+        User currentUser = getAuthenticatedUser();
+
+        if (!communityRepository.existsById(communityId)) {
+            throw new CustomExceptions.CommunityNotFoundException();
+        }
+
+        assertIsAdmin(communityId, currentUser.getId());
+
+        CommunityMember membership = communityMemberRepository.findById(membershipId)
+                .orElseThrow(CustomExceptions.JoinRequestNotFoundException::new);
+
+        if (!membership.getCommunity().getId().equals(communityId)) {
+            throw new CustomExceptions.JoinRequestNotFoundException();
+        }
+
+        communityMemberRepository.delete(membership);
     }
 
     public List<CommunityResponse> getMyCommunities() {
@@ -114,8 +249,16 @@ public class CommunityService {
                 .countByCommunityIdIn(communityIds)
                 .stream()
                 .collect(Collectors.toMap(
-                        row -> (Long) row[0],
-                        row -> (Long) row[1]
+                        row -> (Long) ((Object[]) row)[0],
+                        row -> (Long) ((Object[]) row)[1]
+                ));
+
+        Map<Long, Long> pendingCountByCommunityId = communityMemberRepository
+                .countPendingByCommunityIdIn(communityIds)
+                .stream()
+                .collect(Collectors.toMap(
+                        row -> (Long) ((Object[]) row)[0],
+                        row -> (Long) ((Object[]) row)[1]
                 ));
 
         Set<Long> adminCommunityIds = new HashSet<>(
@@ -156,11 +299,14 @@ public class CommunityService {
                             .description(community.getDescription())
                             .category(community.getCategory())
                             .status(community.getStatus())
+                            .joinPolicy(community.getJoinPolicy())
                             .admins(adminNamesByCommunityId.getOrDefault(cid, Collections.emptyList()))
                             .memberCount(memberCountByCommunityId.getOrDefault(cid, 0L))
+                            .pendingCount(isAdmin ? pendingCountByCommunityId.getOrDefault(cid, 0L) : 0L)
                             .createdAt(community.getCreatedAt())
                             .inviteCode(isAdmin ? community.getCode() : null)
                             .isAdmin(isAdmin)
+                            .membershipStatus(membership.getStatus().name())
                             .build();
                 })
                 .collect(Collectors.toList());
@@ -173,11 +319,16 @@ public class CommunityService {
             throw new CustomExceptions.CommunityNotFoundException();
         }
 
-        if (!communityMemberRepository.existsByCommunityIdAndUserId(communityId, currentUser.getId())) {
+        Optional<CommunityMember> membership =
+                communityMemberRepository.findByCommunityIdAndUserId(communityId, currentUser.getId());
+
+        if (membership.isEmpty() || membership.get().getStatus() == MemberStatus.PENDING) {
             throw new CustomExceptions.NotCommunityMemberException();
         }
 
-        Page<CommunityMember> membersPage = communityMemberRepository.findByCommunityId(communityId, pageable);
+        // Only show approved members
+        Page<CommunityMember> membersPage =
+                communityMemberRepository.findByCommunityIdAndStatus(communityId, MemberStatus.APPROVED, pageable);
 
         List<Long> userIds = membersPage.getContent().stream()
                 .map(CommunityMember::getUserId)
@@ -201,6 +352,103 @@ public class CommunityService {
         return PagedResponseDto.from(responsePage);
     }
 
+    /**
+     * Admin removes an approved member from the community.
+     * The admin cannot remove themselves.
+     */
+    @Transactional
+    public void removeMember(Long communityId, Long membershipId) {
+        User currentUser = getAuthenticatedUser();
+
+        if (!communityRepository.existsById(communityId)) {
+            throw new CustomExceptions.CommunityNotFoundException();
+        }
+
+        assertIsAdmin(communityId, currentUser.getId());
+
+        CommunityMember membership = communityMemberRepository.findById(membershipId)
+                .orElseThrow(CustomExceptions.JoinRequestNotFoundException::new);
+
+        if (!membership.getCommunity().getId().equals(communityId)) {
+            throw new CustomExceptions.JoinRequestNotFoundException();
+        }
+
+        // Admin cannot remove themselves
+        if (membership.getUserId().equals(currentUser.getId())) {
+            throw new CustomExceptions.AccessDeniedException();
+        }
+
+        communityMemberRepository.delete(membership);
+
+        // Remove communityId from the removed user's joinedCommunityIds
+        userRepository.findById(membership.getUserId()).ifPresent(user -> {
+            user.getJoinedCommunityIds().remove(communityId);
+            userRepository.save(user);
+        });
+    }
+
+    /**
+     * Admin edits community name, description, and category.
+     */
+    @Transactional
+    public CommunityResponse updateCommunity(Long communityId, UpdateCommunityRequest request) {
+        User currentUser = getAuthenticatedUser();
+
+        Community community = communityRepository.findById(communityId)
+                .orElseThrow(CustomExceptions.CommunityNotFoundException::new);
+
+        assertIsAdmin(communityId, currentUser.getId());
+
+        // Check name uniqueness only if the name actually changed
+        if (!community.getName().equalsIgnoreCase(request.getName())
+                && communityRepository.existsByNameIgnoreCase(request.getName())) {
+            throw new CustomExceptions.CommunityNameAlreadyExistsException(request.getName());
+        }
+
+        community.setName(request.getName());
+        community.setDescription(request.getDescription());
+        community.setCategory(request.getCategory());
+        communityRepository.save(community);
+
+        return buildCommunityResponse(community, currentUser.getId());
+    }
+
+    /**
+     * Admin changes the join policy (OPEN / APPROVAL_REQUIRED).
+     */
+    @Transactional
+    public CommunityResponse updateJoinPolicy(Long communityId, UpdateJoinPolicyRequest request) {
+        User currentUser = getAuthenticatedUser();
+
+        Community community = communityRepository.findById(communityId)
+                .orElseThrow(CustomExceptions.CommunityNotFoundException::new);
+
+        assertIsAdmin(communityId, currentUser.getId());
+
+        community.setJoinPolicy(request.getJoinPolicy());
+        communityRepository.save(community);
+
+        return buildCommunityResponse(community, currentUser.getId());
+    }
+
+    /**
+     * Admin changes the community status (ACTIVE / INACTIVE).
+     */
+    @Transactional
+    public CommunityResponse updateStatus(Long communityId, UpdateCommunityStatusRequest request) {
+        User currentUser = getAuthenticatedUser();
+
+        Community community = communityRepository.findById(communityId)
+                .orElseThrow(CustomExceptions.CommunityNotFoundException::new);
+
+        assertIsAdmin(communityId, currentUser.getId());
+
+        community.setStatus(request.getStatus());
+        communityRepository.save(community);
+
+        return buildCommunityResponse(community, currentUser.getId());
+    }
+
     private CommunityResponse buildCommunityResponse(Community community, Long requestingUserId) {
         List<CommunityMember> adminMembers = communityMemberRepository
                 .findByCommunityIdAndRole(community.getId(), CommunityRole.ADMIN);
@@ -219,9 +467,18 @@ public class CommunityService {
                 })
                 .collect(Collectors.toList());
 
-        long memberCount = communityMemberRepository.countByCommunityId(community.getId());
+        long memberCount = communityMemberRepository.countByCommunityIdAndStatus(community.getId(), MemberStatus.APPROVED);
 
         boolean isAdmin = adminUserIds.contains(requestingUserId);
+
+        long pendingCount = isAdmin
+                ? communityMemberRepository.countByCommunityIdAndStatus(community.getId(), MemberStatus.PENDING)
+                : 0L;
+
+        Optional<CommunityMember> myMembership =
+                communityMemberRepository.findByCommunityIdAndUserId(community.getId(), requestingUserId);
+
+        String membershipStatus = myMembership.map(cm -> cm.getStatus().name()).orElse(null);
 
         return CommunityResponse.builder()
                 .id(community.getId())
@@ -229,12 +486,27 @@ public class CommunityService {
                 .code(community.getCode())
                 .description(community.getDescription())
                 .category(community.getCategory())
+                .joinPolicy(community.getJoinPolicy())
                 .admins(adminNames)
                 .memberCount(memberCount)
+                .pendingCount(pendingCount)
                 .createdAt(community.getCreatedAt())
                 .inviteCode(isAdmin ? community.getCode() : null)
                 .isAdmin(isAdmin)
+                .membershipStatus(membershipStatus)
+                .status(community.getStatus())
                 .build();
+    }
+
+    /** Throws {@link CustomExceptions.NotCommunityAdminException} if the user is not an ADMIN. */
+    private void assertIsAdmin(Long communityId, Long userId) {
+        boolean isAdmin = communityMemberRepository
+                .findByCommunityIdAndUserId(communityId, userId)
+                .map(cm -> cm.getRole() == CommunityRole.ADMIN)
+                .orElse(false);
+        if (!isAdmin) {
+            throw new CustomExceptions.NotCommunityAdminException();
+        }
     }
 
     private String generateUniqueCode(String name) {

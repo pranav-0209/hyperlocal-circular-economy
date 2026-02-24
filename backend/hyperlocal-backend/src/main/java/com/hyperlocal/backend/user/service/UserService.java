@@ -2,7 +2,6 @@ package com.hyperlocal.backend.user.service;
 
 import com.hyperlocal.backend.common.exception.CustomExceptions;
 import com.hyperlocal.backend.common.storage.FileStorageService;
-import com.hyperlocal.backend.community.repository.CommunityMemberRepository;
 import com.hyperlocal.backend.security.JwtService;
 import com.hyperlocal.backend.user.dto.*;
 import com.hyperlocal.backend.user.enums.ProfileStep;
@@ -27,7 +26,6 @@ public class UserService {
     private final JwtService jwtService;
     private final ProfileCompletionService profileCompletionService;
     private final FileStorageService fileStorageService;
-    private final CommunityMemberRepository communityMemberRepository;
 
     @Transactional
     public RegisterResponseDto registerUser(RegisterRequestDto dto) {
@@ -70,8 +68,6 @@ public class UserService {
 
         String token = jwtService.generateToken(user);
 
-        int communityCount = (int) communityMemberRepository.countByUserId(user.getId());
-
         return LoginResponseDto.builder()
                 .token(token)
                 .userId(user.getId())
@@ -84,7 +80,8 @@ public class UserService {
                 .pendingSteps(profileCompletionService.getPendingSteps(user))
                 .status(user.getVerificationStatus().name())
                 .rejectionReason(user.getRejectionReason())
-                .communityCount(communityCount)
+                .joinedCommunityIds(user.getJoinedCommunityIds())
+                .createdCommunityIds(user.getCreatedCommunityIds())
                 .build();
     }
 

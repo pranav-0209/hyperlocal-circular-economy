@@ -1,14 +1,15 @@
 package com.hyperlocal.backend.community.dto;
 
 import com.hyperlocal.backend.community.enums.CommunityCategory;
-import com.hyperlocal.backend.community.enums.JoinPolicy;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import lombok.Data;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
-@Data
-public class CreateCommunityRequest {
+@Getter
+@NoArgsConstructor
+public class UpdateCommunityRequest {
 
     @NotBlank(message = "Community name is required")
     @Size(min = 3, max = 100, message = "Name must be between 3 and 100 characters")
@@ -20,12 +21,5 @@ public class CreateCommunityRequest {
 
     @NotNull(message = "Category is required")
     private CommunityCategory category;
-
-    /**
-     * Controls who can join. Defaults to OPEN when the client omits the field.
-     * OPEN              – anyone with the invite code joins instantly.
-     * APPROVAL_REQUIRED – each join request must be approved by a community admin.
-     */
-    private JoinPolicy joinPolicy = JoinPolicy.OPEN;
 }
 

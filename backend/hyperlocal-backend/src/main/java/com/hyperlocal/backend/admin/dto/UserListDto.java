@@ -10,6 +10,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Builder
@@ -21,12 +22,17 @@ public class UserListDto {
     private String name;
     private String email;
     private String phone;
-    private String community;
-    private Long communityId;
     private VerificationStatus status;
     private Role role;
     private ProfileStep currentStep;
     private Integer profileCompletionPercentage;
+
+    /** IDs of communities the user has joined (approved membership). */
+    private List<Long> joinedCommunityIds;
+
+    /** IDs of communities the user has created. */
+    private List<Long> createdCommunityIds;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -37,8 +43,8 @@ public class UserListDto {
                 .name(user.getName())
                 .email(user.getEmail())
                 .phone(user.getPhone())
-                .community(getCommunityName(user.getCommunityId()))
-                .communityId(user.getCommunityId())
+                .joinedCommunityIds(user.getJoinedCommunityIds())
+                .createdCommunityIds(user.getCreatedCommunityIds())
                 .status(user.getVerificationStatus())
                 .role(user.getRole())
                 .currentStep(user.getCurrentStep())
@@ -46,16 +52,6 @@ public class UserListDto {
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .build();
-    }
-
-    // Helper method to get community name - can be enhanced with actual community lookup
-    private static String getCommunityName(Long communityId) {
-        if (communityId == null) {
-            return null;
-        }
-        // TODO: Replace with actual community service lookup
-        // For now, return a placeholder based on ID
-        return "Community-" + communityId;
     }
 }
 

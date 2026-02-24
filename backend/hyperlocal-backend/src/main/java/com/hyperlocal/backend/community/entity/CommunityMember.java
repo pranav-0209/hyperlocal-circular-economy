@@ -1,8 +1,10 @@
 package com.hyperlocal.backend.community.entity;
 
 import com.hyperlocal.backend.community.enums.CommunityRole;
+import com.hyperlocal.backend.community.enums.MemberStatus;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
@@ -32,9 +34,21 @@ public class CommunityMember {
     private Long userId;
 
     @Enumerated(EnumType.STRING)
+    @ColumnDefault("'MEMBER'")
     @Column(nullable = false)
     @Builder.Default
     private CommunityRole role = CommunityRole.MEMBER;
+
+    /**
+     * Approval status of this membership.
+     * APPROVED  – active member (default for OPEN communities and creator/admin).
+     * PENDING   – awaiting admin approval (APPROVAL_REQUIRED communities).
+     */
+    @Enumerated(EnumType.STRING)
+    @ColumnDefault("'APPROVED'")
+    @Column(nullable = false)
+    @Builder.Default
+    private MemberStatus status = MemberStatus.APPROVED;
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)

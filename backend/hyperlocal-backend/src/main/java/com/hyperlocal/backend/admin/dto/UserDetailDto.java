@@ -10,6 +10,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Builder
@@ -30,8 +31,13 @@ public class UserDetailDto {
     private String addressProofUrl;
     private Integer profileCompletionPercentage;
     private ProfileStep currentStep;
-    private Long communityId;
-    private String community;
+
+    /** IDs of communities the user has joined (approved membership). */
+    private List<Long> joinedCommunityIds;
+
+    /** IDs of communities the user has created. */
+    private List<Long> createdCommunityIds;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -48,8 +54,8 @@ public class UserDetailDto {
                 .aboutMe(user.getAboutMe())
                 .profileCompletionPercentage(user.getProfileCompletionPercentage())
                 .currentStep(user.getCurrentStep())
-                .communityId(user.getCommunityId())
-                .community(getCommunityName(user.getCommunityId()))
+                .joinedCommunityIds(user.getJoinedCommunityIds())
+                .createdCommunityIds(user.getCreatedCommunityIds())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .build();
@@ -74,14 +80,6 @@ public class UserDetailDto {
             ? fileName.substring(Math.max(fileName.lastIndexOf("/"), fileName.lastIndexOf("\\")) + 1)
             : fileName;
         return baseUrl + "/api/v1/admin/files/" + userId + "/" + filename;
-    }
-
-    private static String getCommunityName(Long communityId) {
-        if (communityId == null) {
-            return null;
-        }
-        // TODO: Replace with actual community service lookup
-        return "Community-" + communityId;
     }
 }
 
