@@ -22,6 +22,9 @@ export const ROUTES = {
     // App routes
     MY_COMMUNITIES: '/my-communities',
     DISCOVER: '/discover',
+    ITEM_DETAIL: '/discover/item/:id',
+    MY_LISTINGS: '/my-listings',
+    PROFILE: '/profile',
 
     // Admin routes
     ADMIN: '/admin',
@@ -63,6 +66,31 @@ export const VERIFICATION_STEPS = {
     DOCUMENTS: 'DOCUMENTS',
     REVIEW: 'REVIEW',
     COMPLETE: 'COMPLETE',
+};
+
+// Community enums (mirrors backend)
+export const COMMUNITY_STATUS = {
+    ACTIVE: 'ACTIVE',
+    INACTIVE: 'INACTIVE',
+};
+
+export const JOIN_POLICY = {
+    OPEN: 'OPEN',
+    APPROVAL_REQUIRED: 'APPROVAL_REQUIRED',
+};
+
+export const MEMBERSHIP_STATUS = {
+    APPROVED: 'APPROVED',
+    PENDING: 'PENDING',
+};
+
+export const COMMUNITY_CATEGORY = {
+    SOCIETY: 'SOCIETY',
+    COLLEGE: 'COLLEGE',
+    OFFICE: 'OFFICE',
+    INTEREST_GROUP: 'INTEREST_GROUP',
+    NEIGHBOURHOOD: 'NEIGHBOURHOOD',
+    OTHER: 'OTHER',
 };
 
 // API Configuration

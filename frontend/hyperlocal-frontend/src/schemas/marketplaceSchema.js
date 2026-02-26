@@ -1,20 +1,20 @@
 import { z } from 'zod';
 
 export const ITEM_CATEGORIES = [
-    'Tools',
     'Electronics',
-    'Home & Garden',
+    'Vehicles',
+    'Appliances',
     'Books',
+    'Fashion',
+    'Tools',
     'Sports',
-    'Clothing',
-    'Services',
-    'Other'
+    'Kids',
+    'Other',
 ];
 
+// App only supports Borrow & Lend
 export const LISTING_TYPES = [
-    { value: 'GIFT', label: 'Gift / Free' },
-    { value: 'RENT', label: 'Rent / Borrow' },
-    { value: 'SALE', label: 'For Sale' }
+    { value: 'RENT', label: 'Borrow / Lend' },
 ];
 
 export const CONDITIONS = [
@@ -22,7 +22,7 @@ export const CONDITIONS = [
     'Like New',
     'Good',
     'Fair',
-    'Poor'
+    'Poor',
 ];
 
 export const marketplaceSchema = z.object({
@@ -40,27 +40,15 @@ export const marketplaceSchema = z.object({
         .enum(ITEM_CATEGORIES, {
             errorMap: () => ({ message: 'Please select a valid category' }),
         }),
-    type: z
-        .enum(['GIFT', 'RENT', 'SALE'], {
-            errorMap: () => ({ message: 'Please select a listing type' }),
-        }),
+    type: z.literal('RENT').default('RENT'),
     price: z
         .coerce.number()
-        .min(0, 'Price must be a positive number')
-        .optional(),
+        .min(1, 'Price per day must be at least ₹1'),
     condition: z
         .enum(CONDITIONS, {
             errorMap: () => ({ message: 'Please select item condition' }),
         }),
-    images: z
-        .any()
-        .optional(), // File upload handling will be separate or basic for now
-}).refine((data) => {
-    if ((data.type === 'RENT' || data.type === 'SALE') && (!data.price || data.price <= 0)) {
-        return false;
-    }
-    return true;
-}, {
-    message: "Price is required for Rent or Sale items",
-    path: ["price"],
+    availableFrom: z.string().optional(),
+    availableTo: z.string().optional(),
+    images: z.any().optional(),
 });

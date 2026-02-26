@@ -306,26 +306,58 @@ export default function DashboardPage() {
 
               {user.communities && user.communities.length > 0 ? (
                 <div className="space-y-3">
-                  {user.communities.slice(0, 3).map((community) => (
-                    <button
-                      key={community.id}
-                      onClick={() => navigate(`/dashboard?community=${community.id}`)}
-                      className="w-full flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
-                    >
+                  {/* Pending memberships — amber strip at top */}
+                  {user.communities.filter(c => c.membershipStatus === 'PENDING').map((community) => (
+                    <div key={community.id} className="w-full flex items-center justify-between p-3 bg-amber-50 rounded-xl border border-amber-100">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-                          <span className="material-symbols-outlined text-white">groups</span>
+                        <div className="w-9 h-9 bg-amber-100 rounded-lg flex items-center justify-center">
+                          <span className="material-symbols-outlined text-amber-600 text-[18px]">hourglass_empty</span>
                         </div>
                         <div className="text-left">
-                          <h3 className="font-semibold text-charcoal">{community.name}</h3>
-                          <p className="text-xs text-muted-green">
-                            {community.memberCount || '?'} members Â· {community.role}
-                          </p>
+                          <h3 className="font-semibold text-charcoal text-sm">{community.name}</h3>
+                          <p className="text-xs text-amber-600">Awaiting admin approval</p>
                         </div>
                       </div>
-                      <span className="material-symbols-outlined text-muted-green">chevron_right</span>
-                    </button>
+                      <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">PENDING</span>
+                    </div>
                   ))}
+                  {/* Active communities — most recent first */}
+                  {user.communities
+                    .filter(c => c.membershipStatus !== 'PENDING')
+                    .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+                    .slice(0, 3)
+                    .map((community) => {
+                    const isAdmin = community.isAdmin === true;
+                    return (
+                      <button
+                        key={community.id}
+                        onClick={() => navigate(`/dashboard?community=${community.id}`)}
+                        className="w-full flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isAdmin ? 'bg-cyan-700' : 'bg-primary'}`}>
+                            <span className="material-symbols-outlined text-white text-[20px]">
+                              {isAdmin ? 'admin_panel_settings' : 'groups'}
+                            </span>
+                          </div>
+                          <div className="text-left">
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-semibold text-charcoal">{community.name}</h3>
+                              {isAdmin && (
+                                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-cyan-100 text-cyan-700 uppercase tracking-wide">
+                                  Admin
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-green">
+                              {community.memberCount || '?'} members
+                            </p>
+                          </div>
+                        </div>
+                        <span className="material-symbols-outlined text-muted-green">chevron_right</span>
+                      </button>
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="text-center py-8">

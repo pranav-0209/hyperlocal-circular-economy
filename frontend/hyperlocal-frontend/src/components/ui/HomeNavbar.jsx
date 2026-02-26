@@ -74,7 +74,7 @@ export default function HomeNavbar({ hideNavLinks = false }) {
                 : 'text-charcoal hover:text-primary'
                 }`}
             >
-              Discover All
+              Marketplace
               {isActive(ROUTES.DISCOVER) && (
                 <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full"></span>
               )}

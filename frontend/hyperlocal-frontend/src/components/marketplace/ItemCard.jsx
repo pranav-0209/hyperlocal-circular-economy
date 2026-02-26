@@ -16,7 +16,13 @@ const ItemCard = ({ item, onRequest }) => {
     };
 
     return (
-        <div className="group bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-all duration-300 flex flex-col h-full">
+        <div
+            role="button"
+            tabIndex={0}
+            onClick={() => onRequest(item)}
+            onKeyDown={(e) => e.key === 'Enter' && onRequest(item)}
+            className="group bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-all duration-300 flex flex-col h-full cursor-pointer"
+        >
             {/* Image Container */}
             <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
                 {item.images && item.images.length > 0 ? (

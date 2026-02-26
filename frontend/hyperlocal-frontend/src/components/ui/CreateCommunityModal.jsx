@@ -1,14 +1,93 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useQueryClient } from '@tanstack/react-query';
 import { useCreateCommunity } from '../../hooks/useCommunityMutations';
 import { createCommunitySchema, COMMUNITY_CATEGORIES } from '../../schemas/communitySchemas';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+
+/**
+ * Custom category dropdown — no external library, pure React + Tailwind.
+ * Closes on outside click and on Escape, traps focus inside the list.
+ */
+function CategoryDropdown({ value, onChange, disabled }) {
+    const [open, setOpen] = useState(false);
+    const ref = useRef(null);
+
+    // Close on click outside
+    useEffect(() => {
+        if (!open) return;
+        const handler = (e) => {
+            if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [open]);
+
+    // Close on Escape
+    useEffect(() => {
+        if (!open) return;
+        const handler = (e) => { if (e.key === 'Escape') setOpen(false); };
+        document.addEventListener('keydown', handler);
+        return () => document.removeEventListener('keydown', handler);
+    }, [open]);
+
+    const selected = COMMUNITY_CATEGORIES.find(c => c.value === value);
+
+    return (
+        <div ref={ref} className="relative">
+            <button
+                type="button"
+                disabled={disabled}
+                onClick={() => setOpen(o => !o)}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl border text-sm transition-colors bg-white
+                    ${ open
+                        ? 'border-primary ring-2 ring-primary/20'
+                        : 'border-gray-200 hover:border-gray-300'
+                    } ${ disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer' }`}
+            >
+                <span className={selected ? 'text-charcoal' : 'text-gray-400'}>
+                    {selected ? selected.label : 'Select community type'}
+                </span>
+                <span
+                    className={`material-symbols-outlined text-gray-400 text-base transition-transform duration-150 ${ open ? 'rotate-180' : '' }`}
+                >
+                    keyboard_arrow_down
+                </span>
+            </button>
+
+            {open && (
+                <ul
+                    className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden"
+                    role="listbox"
+                >
+                    {COMMUNITY_CATEGORIES.map((cat) => (
+                        <li
+                            key={cat.value}
+                            role="option"
+                            aria-selected={value === cat.value}
+                            onClick={() => { onChange(cat.value); setOpen(false); }}
+                            className={`flex items-center justify-between px-4 py-2.5 text-sm cursor-pointer transition-colors
+                                ${ value === cat.value
+                                    ? 'bg-primary/5 text-primary font-semibold'
+                                    : 'text-charcoal hover:bg-gray-50'
+                                }`}
+                        >
+                            {cat.label}
+                            {value === cat.value && (
+                                <span className="material-symbols-outlined text-primary text-base">check</span>
+                            )}
+                        </li>
+                    ))}
+                </ul>
+            )}
+        </div>
+    );
+}
 
 /**
  * CreateCommunityModal
@@ -21,6 +100,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
  *   onOpenChange  {function}  - called when the dialog should open/close
  */
 export default function CreateCommunityModal({ open, onOpenChange }) {
+    const queryClient = useQueryClient();
     const createMutation = useCreateCommunity();
     const [showSuccess, setShowSuccess] = useState(false);
     const [createdCommunity, setCreatedCommunity] = useState(null);
@@ -36,6 +116,15 @@ export default function CreateCommunityModal({ open, onOpenChange }) {
         },
     });
 
+    // Clear the server-side error ("name already exists" etc.) whenever the user
+    // edits any field — so stale error messages don't linger after corrections.
+    useEffect(() => {
+        const subscription = form.watch(() => {
+            if (createMutation.isError) createMutation.reset();
+        });
+        return () => subscription.unsubscribe();
+    }, [form, createMutation]);
+
     const handleSubmit = (data) => {
         createMutation.mutate(
             {
@@ -48,6 +137,9 @@ export default function CreateCommunityModal({ open, onOpenChange }) {
                 onSuccess: (community) => {
                     form.reset();
                     onOpenChange(false);
+                    // Defer invalidation until the success modal is dismissed,
+                    // so the parent tree doesn't re-render and unmount this component
+                    // (which would reset showSuccess state).
                     setCreatedCommunity(community);
                     setCodeCopied(false);
                     setShowSuccess(true);
@@ -101,25 +193,13 @@ export default function CreateCommunityModal({ open, onOpenChange }) {
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>Category *</FormLabel>
-                                        <Select
-                                            modal={false}
-                                            onValueChange={field.onChange}
-                                            value={field.value}
-                                            disabled={createMutation.isPending}
-                                        >
-                                            <FormControl>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Select community type" />
-                                                </SelectTrigger>
-                                            </FormControl>
-                                            <SelectContent className="z-[300]">
-                                                {COMMUNITY_CATEGORIES.map((cat) => (
-                                                    <SelectItem key={cat.value} value={cat.value}>
-                                                        {cat.label}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                        <FormControl>
+                                            <CategoryDropdown
+                                                value={field.value}
+                                                onChange={field.onChange}
+                                                disabled={createMutation.isPending}
+                                            />
+                                        </FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}
@@ -255,7 +335,16 @@ export default function CreateCommunityModal({ open, onOpenChange }) {
                         )}
                     </div>
 
-                    <Button onClick={() => setShowSuccess(false)} className="w-full mt-5" size="lg">
+                    <Button
+                        onClick={() => {
+                            setShowSuccess(false);
+                            // Now that the user has seen the success screen, refetch communities
+                            // so the dashboard and my-communities page reflect the new one
+                            queryClient.invalidateQueries({ queryKey: ['communities'] });
+                        }}
+                        className="w-full mt-5"
+                        size="lg"
+                    >
                         Done
                     </Button>
                 </DialogContent>

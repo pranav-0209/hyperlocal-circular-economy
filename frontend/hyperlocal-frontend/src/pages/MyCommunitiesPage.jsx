@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import HomeNavbar from '../components/ui/HomeNavbar';
-import { useJoinCommunity } from '../hooks/useCommunityMutations';
+import { useJoinCommunity, useMyCommunities } from '../hooks/useCommunityMutations';
 import { joinCommunitySchema } from '../schemas/communitySchemas';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -29,15 +29,6 @@ const itemVariants = {
 
 /** Card for communities where the user is an admin */
 function AdminCommunityCard({ community, onNavigate }) {
-    const [codeCopied, setCodeCopied] = useState(false);
-
-    const handleCopy = (e) => {
-        e.stopPropagation();
-        navigator.clipboard.writeText(community.code);
-        setCodeCopied(true);
-        setTimeout(() => setCodeCopied(false), 2000);
-    };
-
     return (
         <motion.div
             variants={itemVariants}
@@ -56,54 +47,24 @@ function AdminCommunityCard({ community, onNavigate }) {
                     </div>
                     <h3 className="text-xl font-bold mb-1">{community.name}</h3>
                     <p className="text-sm text-white/60">{community.memberCount ?? '?'} members</p>
-
-                    {/* Invite code in header */}
-                    <div className="mt-4 flex items-center gap-2">
-                        <code className="flex-1 px-3 py-1.5 bg-white/10 rounded-lg font-mono text-sm font-bold tracking-widest text-white">
-                            {community.code}
-                        </code>
-                        <button
-                            onClick={handleCopy}
-                            title="Copy invite code"
-                            className={`p-1.5 rounded-lg transition-all text-xs font-medium flex items-center gap-1 ${
-                                codeCopied ? 'bg-green-500 text-white' : 'bg-white/10 hover:bg-white/20 text-white'
-                            }`}
-                        >
-                            <span className="material-symbols-outlined text-sm">{codeCopied ? 'check' : 'content_copy'}</span>
-                            {codeCopied ? 'Copied' : 'Copy'}
-                        </button>
-                    </div>
                 </div>
             </div>
 
             {/* Content */}
             <div className="p-5">
                 {community.description && (
-                    <p className="text-sm text-muted-green mb-4 line-clamp-2">{community.description}</p>
+                    <p className="text-sm text-muted-green mb-3 line-clamp-2">{community.description}</p>
                 )}
 
-                {/* Admin quick-actions */}
-                <div className="grid grid-cols-2 gap-2 mb-4 text-xs">
-                    <div className="flex items-center gap-1.5 text-muted-green">
-                        <span className="material-symbols-outlined text-sm text-cyan-300">people</span>
-                        View members
-                    </div>
-                    <div className="flex items-center gap-1.5 text-muted-green">
-                        <span className="material-symbols-outlined text-sm text-cyan-300">how_to_reg</span>
-                        Approve joins
-                    </div>
-                    <div className="flex items-center gap-1.5 text-muted-green">
-                        <span className="material-symbols-outlined text-sm text-cyan-300">storefront</span>
-                        Manage listings
-                    </div>
-                    <div className="flex items-center gap-1.5 text-muted-green">
-                        <span className="material-symbols-outlined text-sm text-cyan-300">bar_chart</span>
-                        Analytics
-                    </div>
+                {/* Join policy */}
+                <div className="flex items-center gap-1.5 text-xs text-muted-green mb-4">
+                    <span className="material-symbols-outlined text-sm text-cyan-600">
+                        {community.joinPolicy === 'APPROVAL_REQUIRED' ? 'lock' : 'public'}
+                    </span>
+                    <span>Join Policy: <span className="font-semibold text-charcoal">{community.joinPolicy === 'APPROVAL_REQUIRED' ? 'Approval Required' : 'Open'}</span></span>
                 </div>
 
-                <div className="w-full py-2.5 bg-cyan-50 text-cyan-700 border border-cyan-100 rounded-lg font-semibold text-sm flex items-center justify-center gap-2 group-hover:bg-cyan-100 transition-colors">
-                    <span className="material-symbols-outlined text-sm">settings</span>
+                <div className="w-full py-2.5 bg-cyan-50 text-cyan-700 border border-cyan-100 rounded-lg font-semibold text-sm flex items-center justify-center group-hover:bg-cyan-100 transition-colors">
                     Manage Community
                 </div>
             </div>
@@ -113,15 +74,6 @@ function AdminCommunityCard({ community, onNavigate }) {
 
 /** Card for communities where the user is a regular member */
 function MemberCommunityCard({ community, onNavigate }) {
-    const [codeCopied, setCodeCopied] = useState(false);
-
-    const handleCopy = (e) => {
-        e.stopPropagation();
-        navigator.clipboard.writeText(community.code);
-        setCodeCopied(true);
-        setTimeout(() => setCodeCopied(false), 2000);
-    };
-
     return (
         <motion.div
             variants={itemVariants}
@@ -135,23 +87,6 @@ function MemberCommunityCard({ community, onNavigate }) {
                 </div>
                 <h3 className="text-xl font-bold mb-1">{community.name}</h3>
                 <p className="text-sm text-white/80">{community.memberCount ?? '?'} members</p>
-
-                {/* Invite code in header (matching admin card style) */}
-                <div className="mt-4 flex items-center gap-2">
-                    <code className="flex-1 px-3 py-1.5 bg-white/15 rounded-lg font-mono text-sm font-bold tracking-widest text-white">
-                        {community.code}
-                    </code>
-                    <button
-                        onClick={handleCopy}
-                        title="Copy invite code"
-                        className={`p-1.5 rounded-lg transition-all text-xs font-medium flex items-center gap-1 ${
-                            codeCopied ? 'bg-white text-primary' : 'bg-white/15 hover:bg-white/25 text-white'
-                        }`}
-                    >
-                        <span className="material-symbols-outlined text-sm">{codeCopied ? 'check' : 'content_copy'}</span>
-                        {codeCopied ? 'Copied' : 'Copy'}
-                    </button>
-                </div>
             </div>
 
             {/* Content */}
@@ -177,6 +112,9 @@ export default function MyCommunitiesPage() {
     const { user } = useAuth();
     const shouldReduceMotion = useReducedMotion();
 
+    // Fetch communities fresh from API (normalizes isAdmin → role correctly)
+    const { data: freshCommunities, isLoading } = useMyCommunities();
+
     // React Query mutations
     const joinMutation = useJoinCommunity();
 
@@ -199,7 +137,25 @@ export default function MyCommunitiesPage() {
         });
     };
 
-    if (!user?.communities || user.communities.length === 0) {
+    // Use fresh API data if available; fall back to AuthContext while loading.
+    // Filter out any entries with missing id/name (guards against stale localStorage entries).
+    const communities = (freshCommunities ?? user?.communities ?? []).filter(c => c.id && c.name);
+
+    if (isLoading && communities.length === 0) {
+        return (
+            <div className="min-h-screen bg-gray-50">
+                <HomeNavbar />
+                <main className="pt-24 pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto flex items-center justify-center">
+                    <div className="text-center py-16">
+                        <span className="material-symbols-outlined text-gray-300 text-5xl mb-4 animate-spin">progress_activity</span>
+                        <p className="text-muted-green mt-4">Loading communities...</p>
+                    </div>
+                </main>
+            </div>
+        );
+    }
+
+    if (!isLoading && communities.length === 0) {
         return (
             <div className="min-h-screen bg-gray-50">
                 <HomeNavbar />
@@ -220,8 +176,13 @@ export default function MyCommunitiesPage() {
         );
     }
 
-    const adminCommunities = user.communities.filter(c => c.role === 'admin');
-    const memberCommunities = user.communities.filter(c => c.role === 'member');
+    // Always split using isAdmin boolean (authoritative API field, not derived role string)
+    // Sort newest first within each group
+    const sortNewest = (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+    const adminCommunities = communities.filter(c => c.isAdmin === true).sort(sortNewest);
+    // Member = not admin AND not pending
+    const memberCommunities = communities.filter(c => !c.isAdmin && c.membershipStatus !== 'PENDING').sort(sortNewest);
+    const pendingCommunities = communities.filter(c => c.membershipStatus === 'PENDING');
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -233,7 +194,7 @@ export default function MyCommunitiesPage() {
                     <div>
                         <h1 className="text-3xl font-bold text-charcoal mb-2">My Communities</h1>
                         <p className="text-muted-green">
-                            {adminCommunities.length} managed · {memberCommunities.length} joined
+                            {adminCommunities.length} managed · {memberCommunities.length} joined{pendingCommunities.length > 0 ? ` · ${pendingCommunities.length} pending` : ''}
                         </p>
                     </div>
                     <div className="flex gap-3">
@@ -253,6 +214,45 @@ export default function MyCommunitiesPage() {
                         </button>
                     </div>
                 </div>
+
+                {/* ── Section 3: Pending Approvals ── */}
+                {pendingCommunities.length > 0 && (
+                    <section className="mb-12">
+                        <div className="flex items-center gap-3 mb-5">
+                            <div className="w-8 h-8 bg-amber-500 rounded-lg flex items-center justify-center shrink-0">
+                                <span className="material-symbols-outlined text-white text-sm">hourglass_empty</span>
+                            </div>
+                            <div>
+                                <h2 className="text-lg font-bold text-charcoal">Awaiting Approval</h2>
+                                <p className="text-xs text-muted-green">Your join requests are pending admin review</p>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {pendingCommunities.map((community) => (
+                                <div
+                                    key={community.id}
+                                    className="bg-white rounded-2xl border border-amber-100 shadow-sm overflow-hidden"
+                                >
+                                    <div className="bg-linear-to-r from-amber-50 to-orange-50 p-5 border-b border-amber-100">
+                                        <div className="flex items-center justify-between">
+                                            <h3 className="font-bold text-charcoal">{community.name}</h3>
+                                            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-700">
+                                                Pending
+                                            </span>
+                                        </div>
+                                        <p className="text-xs text-muted-green mt-1">{community.category}</p>
+                                    </div>
+                                    <div className="p-4">
+                                        <p className="text-xs text-muted-green flex items-center gap-1">
+                                            <span className="material-symbols-outlined text-sm text-amber-400">info</span>
+                                            Waiting for the admin to approve your request.
+                                        </p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </section>
+                )}
 
                 {/* ── Section 1: Communities I Manage ── */}
                 {adminCommunities.length > 0 && (

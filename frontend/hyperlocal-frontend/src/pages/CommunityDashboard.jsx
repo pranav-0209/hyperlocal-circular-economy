@@ -1,8 +1,22 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import HomeNavbar from '../components/ui/HomeNavbar';
+import ConfirmModal from '../components/ui/ConfirmModal';
 import { getCommunityMembers } from '../services/communityService';
+import {
+    useCommunityMembers,
+    usePendingJoinRequests,
+    useApproveJoinRequest,
+    useRejectJoinRequest,
+    useRemoveMember,
+    useUpdateCommunity,
+    useUpdateJoinPolicy,
+    useUpdateCommunityStatus,
+} from '../hooks/useCommunityMutations';
+import { updateCommunitySchema, COMMUNITY_CATEGORIES } from '../schemas/communitySchemas';
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -62,7 +76,89 @@ const CATEGORY_LABELS = {
  */
 export default function CommunityDashboard({ community }) {
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
     const [codeCopied, setCodeCopied] = useState(false);
+    // Which admin panel is open: null | 'join-requests' | 'edit'
+    const [activePanel, setActivePanel] = useState(null);
+    const togglePanel = (panel) => setActivePanel(p => p === panel ? null : panel);
+    // Confirm modal state
+    const [confirm, setConfirm] = useState({ open: false, title: '', message: '', confirmLabel: '', confirmClass: '', onConfirm: null });
+    const openConfirm = (opts) => setConfirm({ open: true, ...opts });
+    const closeConfirm = () => setConfirm(c => ({ ...c, open: false }));
+
+    // ── Admin query + mutation hooks (only active when community.isAdmin) ──
+    const { data: pendingRequests = [], isLoading: requestsLoading } =
+        usePendingJoinRequests(community?.isAdmin ? community.id : null);
+    const approveMutation = useApproveJoinRequest(community?.id);
+    const rejectMutation  = useRejectJoinRequest(community?.id);
+
+    const { data: membersPage, isLoading: allMembersLoading } =
+        useCommunityMembers(community?.isAdmin ? community?.id : null, 0, 50);
+    const allMembers = membersPage?.content || [];
+    const removeMutation = useRemoveMember(community?.id);
+
+    const updateMutation  = useUpdateCommunity(community?.id);
+    const policyMutation  = useUpdateJoinPolicy(community?.id);
+    const statusMutation  = useUpdateCommunityStatus(community?.id);
+
+    // Edit form (pre-filled with current community data)
+    const editForm = useForm({
+        resolver: zodResolver(updateCommunitySchema),
+        defaultValues: {
+            name: community?.name || '',
+            description: community?.description || '',
+            category: community?.category || '',
+        },
+    });
+
+    const handleEditSubmit = (data) => {
+        updateMutation.mutate(data, {
+            onSuccess: () => {
+                queryClient.invalidateQueries({ queryKey: ['communities'] });
+                setActivePanel(null);
+            },
+        });
+    };
+
+    const handleTogglePolicy = () => {
+        const next = community.joinPolicy === 'OPEN' ? 'APPROVAL_REQUIRED' : 'OPEN';
+        const label = next === 'APPROVAL_REQUIRED' ? 'Approval Required' : 'Open';
+        openConfirm({
+            title: 'Change Join Policy?',
+            message: `This will switch the join policy to "${label}". Members currently waiting for approval will not be affected.`,
+            confirmLabel: 'Yes, Change',
+            confirmClass: 'bg-cyan-700 text-white hover:bg-cyan-800',
+            onConfirm: () => {
+                policyMutation.mutate(next, {
+                    onSuccess: () => {
+                        queryClient.invalidateQueries({ queryKey: ['communities'] });
+                        closeConfirm();
+                    },
+                });
+            },
+        });
+    };
+
+    const handleToggleStatus = () => {
+        const next = community.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+        const isDeactivating = next === 'INACTIVE';
+        openConfirm({
+            title: isDeactivating ? 'Deactivate Community?' : 'Activate Community?',
+            message: isDeactivating
+                ? 'Members will no longer be able to access or interact with this community until it is reactivated.'
+                : 'This will make the community visible and accessible to all members again.',
+            confirmLabel: isDeactivating ? 'Yes, Deactivate' : 'Yes, Activate',
+            confirmClass: isDeactivating ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-green-600 text-white hover:bg-green-700',
+            onConfirm: () => {
+                statusMutation.mutate(next, {
+                    onSuccess: () => {
+                        queryClient.invalidateQueries({ queryKey: ['communities'] });
+                        closeConfirm();
+                    },
+                });
+            },
+        });
+    };
 
     const { data: membersData, isLoading: membersLoading } = useQuery({
         queryKey: ['communityMembers', community?.id, 'preview'],
@@ -101,7 +197,11 @@ export default function CommunityDashboard({ community }) {
                 </button>
 
                 {/* ── Hero Header ─────────────────────────────────────── */}
-                <div className="relative bg-gradient-to-br from-primary via-primary to-primary/80 rounded-3xl p-8 text-white shadow-xl mb-8 overflow-hidden">
+                <div className={`relative rounded-3xl p-8 text-white shadow-xl mb-8 overflow-hidden ${
+                    community.isAdmin
+                        ? 'bg-gradient-to-br from-cyan-800 via-cyan-700 to-cyan-600'
+                        : 'bg-gradient-to-br from-primary via-primary to-primary/80'
+                }`}>
                     {/* decorative dot pattern */}
                     <div className="absolute inset-0 opacity-10"
                          style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
@@ -115,7 +215,7 @@ export default function CommunityDashboard({ community }) {
                                 <div>
                                     <div className="flex items-center gap-2 flex-wrap mb-1">
                                         <h1 className="text-2xl sm:text-3xl font-bold">{community.name}</h1>
-                                        {community.role === 'admin' && (
+                                        {community.isAdmin && (
                                             <span className="px-2.5 py-0.5 bg-white/20 rounded-full text-xs font-bold tracking-wide">ADMIN</span>
                                         )}
                                     </div>
@@ -174,7 +274,7 @@ export default function CommunityDashboard({ community }) {
                 </div>
 
                 {/* ── Admin Controls Panel ───────────────────────────── */}
-                {community.role === 'admin' && (
+                {community.isAdmin && (
                     <div className="mb-8">
                         <div className="flex items-center gap-2 mb-4">
                             <div className="w-7 h-7 bg-cyan-700 rounded-lg flex items-center justify-center">
@@ -185,40 +285,35 @@ export default function CommunityDashboard({ community }) {
                                 Admin Only
                             </span>
                         </div>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+
+                        {/* Action cards */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                             {/* Join Requests */}
-                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col gap-3 hover:shadow-md transition-shadow">
+                            <button
+                                onClick={() => togglePanel('join-requests')}
+                                className={`bg-white rounded-2xl border shadow-sm p-5 flex flex-col gap-3 hover:shadow-md transition-all text-left ${activePanel === 'join-requests' ? 'border-amber-400 ring-2 ring-amber-200' : 'border-gray-100'}`}
+                            >
                                 <div className="flex items-start justify-between">
                                     <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center">
                                         <span className="material-symbols-outlined text-amber-600 text-xl">how_to_reg</span>
                                     </div>
-                                    <span className="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100">0 pending</span>
+                                    {!requestsLoading && (
+                                        <span className="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-100">
+                                            {pendingRequests.length} pending
+                                        </span>
+                                    )}
                                 </div>
                                 <div>
                                     <p className="font-semibold text-charcoal text-sm">Join Requests</p>
                                     <p className="text-xs text-muted-green mt-0.5">Approve or reject requests</p>
                                 </div>
-                                <button className="text-xs text-amber-600 font-semibold hover:underline text-left flex items-center gap-1">
-                                    Review <span className="material-symbols-outlined text-xs">arrow_forward</span>
-                                </button>
-                            </div>
-
-                            {/* Member Management */}
-                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col gap-3 hover:shadow-md transition-shadow">
-                                <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
-                                    <span className="material-symbols-outlined text-blue-600 text-xl">manage_accounts</span>
-                                </div>
-                                <div>
-                                    <p className="font-semibold text-charcoal text-sm">Member Management</p>
-                                    <p className="text-xs text-muted-green mt-0.5">Promote or remove members</p>
-                                </div>
-                                <button className="text-xs text-blue-600 font-semibold hover:underline text-left flex items-center gap-1">
-                                    Manage <span className="material-symbols-outlined text-xs">arrow_forward</span>
-                                </button>
-                            </div>
+                            </button>
 
                             {/* Edit Community */}
-                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col gap-3 hover:shadow-md transition-shadow">
+                            <button
+                                onClick={() => togglePanel('edit')}
+                                className={`bg-white rounded-2xl border shadow-sm p-5 flex flex-col gap-3 hover:shadow-md transition-all text-left ${activePanel === 'edit' ? 'border-primary ring-2 ring-primary/20' : 'border-gray-100'}`}
+                            >
                                 <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
                                     <span className="material-symbols-outlined text-primary text-xl">edit</span>
                                 </div>
@@ -226,29 +321,18 @@ export default function CommunityDashboard({ community }) {
                                     <p className="font-semibold text-charcoal text-sm">Edit Details</p>
                                     <p className="text-xs text-muted-green mt-0.5">Update name, desc &amp; category</p>
                                 </div>
-                                <button className="text-xs text-primary font-semibold hover:underline text-left flex items-center gap-1">
-                                    Edit <span className="material-symbols-outlined text-xs">arrow_forward</span>
-                                </button>
-                            </div>
+                            </button>
 
-                            {/* Manage Listings */}
-                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col gap-3 hover:shadow-md transition-shadow">
-                                <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center">
-                                    <span className="material-symbols-outlined text-purple-600 text-xl">storefront</span>
-                                </div>
-                                <div>
-                                    <p className="font-semibold text-charcoal text-sm">Manage Listings</p>
-                                    <p className="text-xs text-muted-green mt-0.5">Moderate marketplace items</p>
-                                </div>
-                                <button className="text-xs text-purple-600 font-semibold hover:underline text-left flex items-center gap-1">
-                                    View <span className="material-symbols-outlined text-xs">arrow_forward</span>
-                                </button>
-                            </div>
-
-                            {/* Join Policy */}
-                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col gap-3 hover:shadow-md transition-shadow">
+                            {/* Join Policy toggle */}
+                            <button
+                                onClick={handleTogglePolicy}
+                                disabled={policyMutation.isPending}
+                                className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col gap-3 hover:shadow-md transition-all text-left disabled:opacity-60"
+                            >
                                 <div className="w-10 h-10 bg-cyan-50 rounded-xl flex items-center justify-center">
-                                    <span className="material-symbols-outlined text-cyan-600 text-xl">{community.joinPolicy === 'OPEN' ? 'public' : 'lock'}</span>
+                                    <span className="material-symbols-outlined text-cyan-600 text-xl">
+                                        {community.joinPolicy === 'OPEN' ? 'public' : 'lock'}
+                                    </span>
                                 </div>
                                 <div>
                                     <p className="font-semibold text-charcoal text-sm">Join Policy</p>
@@ -256,53 +340,121 @@ export default function CommunityDashboard({ community }) {
                                         Now: <span className="font-semibold text-charcoal">{community.joinPolicy === 'APPROVAL_REQUIRED' ? 'Approval Required' : 'Open'}</span>
                                     </p>
                                 </div>
-                                <button className="text-xs text-cyan-600 font-semibold hover:underline text-left flex items-center gap-1">
-                                    Change <span className="material-symbols-outlined text-xs">arrow_forward</span>
-                                </button>
-                            </div>
+                            </button>
 
-                            {/* Analytics */}
-                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col gap-3 hover:shadow-md transition-shadow">
-                                <div className="w-10 h-10 bg-teal-50 rounded-xl flex items-center justify-center">
-                                    <span className="material-symbols-outlined text-teal-600 text-xl">bar_chart</span>
+                            {/* Community Status toggle */}
+                            <button
+                                onClick={handleToggleStatus}
+                                disabled={statusMutation.isPending}
+                                className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col gap-3 hover:shadow-md transition-all text-left disabled:opacity-60"
+                            >
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${community.status === 'ACTIVE' ? 'bg-green-50' : 'bg-red-50'}`}>
+                                    <span className={`material-symbols-outlined text-xl ${community.status === 'ACTIVE' ? 'text-green-600' : 'text-red-500'}`}>
+                                        {community.status === 'ACTIVE' ? 'toggle_on' : 'toggle_off'}
+                                    </span>
                                 </div>
                                 <div>
-                                    <p className="font-semibold text-charcoal text-sm">Analytics</p>
-                                    <p className="text-xs text-muted-green mt-0.5">Activity trends &amp; sharing stats</p>
+                                    <p className="font-semibold text-charcoal text-sm">Community Status</p>
+                                    <p className="text-xs text-muted-green mt-0.5">
+                                        Now: <span className={`font-semibold ${community.status === 'ACTIVE' ? 'text-green-600' : 'text-red-500'}`}>{community.status || 'Active'}</span>
+                                    </p>
                                 </div>
-                                <button className="text-xs text-teal-600 font-semibold hover:underline text-left flex items-center gap-1">
-                                    View <span className="material-symbols-outlined text-xs">arrow_forward</span>
-                                </button>
-                            </div>
-
-                            {/* Regenerate Invite Code */}
-                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col gap-3 hover:shadow-md transition-shadow">
-                                <div className="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center">
-                                    <span className="material-symbols-outlined text-orange-500 text-xl">refresh</span>
-                                </div>
-                                <div>
-                                    <p className="font-semibold text-charcoal text-sm">Invite Code</p>
-                                    <p className="text-xs text-muted-green mt-0.5">Regenerate if compromised</p>
-                                </div>
-                                <button className="text-xs text-orange-500 font-semibold hover:underline text-left flex items-center gap-1">
-                                    Regenerate <span className="material-symbols-outlined text-xs">arrow_forward</span>
-                                </button>
-                            </div>
-
-                            {/* Danger Zone */}
-                            <div className="bg-white rounded-2xl border border-red-100 shadow-sm p-5 flex flex-col gap-3 hover:shadow-md transition-shadow">
-                                <div className="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center">
-                                    <span className="material-symbols-outlined text-red-500 text-xl">power_settings_new</span>
-                                </div>
-                                <div>
-                                    <p className="font-semibold text-red-600 text-sm">Danger Zone</p>
-                                    <p className="text-xs text-muted-green mt-0.5">Deactivate or delete community</p>
-                                </div>
-                                <button className="text-xs text-red-500 font-semibold hover:underline text-left flex items-center gap-1">
-                                    Actions <span className="material-symbols-outlined text-xs">arrow_forward</span>
-                                </button>
-                            </div>
+                            </button>
                         </div>
+
+                        {/* Panel: Join Requests */}
+                        {activePanel === 'join-requests' && (
+                            <div className="bg-white rounded-2xl border border-amber-100 shadow-sm p-6 mb-4">
+                                <h3 className="font-bold text-charcoal text-sm mb-4 flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-amber-600 text-base">how_to_reg</span>
+                                    Pending Join Requests
+                                </h3>
+                                {requestsLoading ? (
+                                    <div className="text-center py-8 text-muted-green text-sm">Loading…</div>
+                                ) : pendingRequests.length === 0 ? (
+                                    <div className="text-center py-8 text-muted-green text-sm">No pending requests.</div>
+                                ) : (
+                                    <ul className="divide-y divide-gray-100">
+                                        {pendingRequests.map((req) => (
+                                            <li key={req.membershipId} className="py-3 flex items-center justify-between gap-4">
+                                                <div className="flex items-center gap-3">
+                                                    <MemberAvatar name={req.name} photoUrl={req.profilePhotoUrl} size="sm" />
+                                                    <div>
+                                                        <p className="font-semibold text-charcoal text-sm">{req.name || `User #${req.userId}`}</p>
+                                                        <p className="text-xs text-muted-green">{req.email || ''}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex gap-2 shrink-0">
+                                                    <button
+                                                        onClick={() => approveMutation.mutate(req.membershipId)}
+                                                        disabled={approveMutation.isPending}
+                                                        className="px-3 py-1.5 text-xs bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors disabled:opacity-60"
+                                                    >
+                                                        Approve
+                                                    </button>
+                                                    <button
+                                                        onClick={() => rejectMutation.mutate(req.membershipId)}
+                                                        disabled={rejectMutation.isPending}
+                                                        className="px-3 py-1.5 text-xs bg-red-100 text-red-600 rounded-lg font-semibold hover:bg-red-200 transition-colors disabled:opacity-60"
+                                                    >
+                                                        Reject
+                                                    </button>
+                                                </div>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Panel: Edit Details */}
+                        {activePanel === 'edit' && (
+                            <div className="bg-white rounded-2xl border border-primary/20 shadow-sm p-6 mb-4">
+                                <h3 className="font-bold text-charcoal text-sm mb-4 flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-primary text-base">edit</span>
+                                    Edit Community Details
+                                </h3>
+                                <form onSubmit={editForm.handleSubmit(handleEditSubmit)} className="space-y-4">
+                                    <div>
+                                        <label className="block text-xs font-semibold text-charcoal mb-1">Name</label>
+                                        <input
+                                            {...editForm.register('name')}
+                                            className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                                        />
+                                        {editForm.formState.errors.name && (
+                                            <p className="text-xs text-red-500 mt-1">{editForm.formState.errors.name.message}</p>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-charcoal mb-1">Description</label>
+                                        <textarea
+                                            {...editForm.register('description')}
+                                            rows={3}
+                                            className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                                        />
+                                        {editForm.formState.errors.description && (
+                                            <p className="text-xs text-red-500 mt-1">{editForm.formState.errors.description.message}</p>
+                                        )}
+                                    </div>
+                                    <div className="flex gap-3 pt-2">
+                                        <button
+                                            type="submit"
+                                            disabled={updateMutation.isPending}
+                                            className="px-5 py-2 bg-primary text-white text-sm rounded-xl font-semibold hover:brightness-110 transition-all disabled:opacity-60"
+                                        >
+                                            {updateMutation.isPending ? 'Saving…' : 'Save Changes'}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setActivePanel(null)}
+                                            className="px-5 py-2 bg-gray-100 text-charcoal text-sm rounded-xl font-semibold hover:bg-gray-200 transition-all"
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        )}
                     </div>
                 )}
 
@@ -350,85 +502,144 @@ export default function CommunityDashboard({ community }) {
                             </div>
                         </div>
 
-                        {/* Members preview */}
+                        {/* Members preview / management */}
                         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
                             <div className="flex items-center justify-between mb-5">
-                                <h2 className="text-base font-bold text-charcoal">Members</h2>
-                                <button
-                                    onClick={() => navigate('/my-communities')}
-                                    className="text-sm text-primary hover:underline font-medium"
-                                >
-                                    View All
-                                </button>
+                                <h2 className="text-base font-bold text-charcoal">
+                                    {community.isAdmin ? 'Member Management' : 'Members'}
+                                </h2>
                             </div>
 
-                            {membersLoading ? (
-                                <div className="space-y-3">
-                                    {Array.from({ length: 3 }).map((_, i) => (
-                                        <div key={i} className="flex items-center gap-3 animate-pulse">
-                                            <div className="w-10 h-10 rounded-full bg-gray-100 shrink-0" />
-                                            <div className="flex-1 space-y-2">
-                                                <div className="h-3 bg-gray-100 rounded w-1/3" />
-                                                <div className="h-2.5 bg-gray-50 rounded w-1/4" />
+                            {/* Admin: full member list with remove */}
+                            {community.isAdmin ? (
+                                allMembersLoading ? (
+                                    <div className="space-y-3">
+                                        {Array.from({ length: 3 }).map((_, i) => (
+                                            <div key={i} className="flex items-center gap-3 animate-pulse">
+                                                <div className="w-10 h-10 rounded-full bg-gray-100 shrink-0" />
+                                                <div className="flex-1 space-y-2">
+                                                    <div className="h-3 bg-gray-100 rounded w-1/3" />
+                                                    <div className="h-2.5 bg-gray-50 rounded w-1/4" />
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : previewMembers.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center py-10 gap-2 text-center">
-                                    <span className="material-symbols-outlined text-gray-300 text-4xl">group_off</span>
-                                    <p className="text-sm text-muted-green">No members yet</p>
-                                </div>
-                            ) : (
-                                <div className="relative">
-                                    <div className="divide-y divide-gray-50">
-                                        {previewMembers.map((member, idx) => {
-                                            const isLast = idx === previewMembers.length - 1 && hasMore;
-                                            return (
-                                                <div
-                                                    key={member.userId ?? idx}
-                                                    className={[
-                                                        'flex items-center gap-3 py-3 first:pt-0',
-                                                        isLast
-                                                            ? 'select-none pointer-events-none'
-                                                            : 'hover:bg-gray-50/60 px-2 rounded-xl -mx-2 transition-colors',
-                                                    ].join(' ')}
-                                                    style={isLast ? { filter: 'blur(3.5px)', opacity: 0.5 } : {}}
-                                                >
-                                                    <MemberAvatar name={member.name} photoUrl={member.profilePhotoUrl} />
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="font-semibold text-charcoal text-sm truncate">{member.name}</p>
-                                                        <p className="text-xs text-muted-green truncate">{member.email}</p>
-                                                    </div>
-                                                    <div className="flex items-center gap-2 shrink-0">
-                                                        {(member.role === 'ADMIN' || member.admin) && (
-                                                            <span className="px-2 py-0.5 bg-primary/10 text-primary text-xs font-bold rounded-full">
-                                                                Admin
-                                                            </span>
-                                                        )}
-                                                        {member.joinedAt && (
-                                                            <span className="text-xs text-muted-green hidden sm:inline">
-                                                                {new Date(member.joinedAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
-                                                            </span>
-                                                        )}
+                                        ))}
+                                    </div>
+                                ) : allMembers.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center py-10 gap-2 text-center">
+                                        <span className="material-symbols-outlined text-gray-300 text-4xl">group_off</span>
+                                        <p className="text-sm text-muted-green">No members yet</p>
+                                    </div>
+                                ) : (
+                                    <ul className="divide-y divide-gray-100">
+                                        {allMembers.map((m) => (
+                                            <li key={m.id ?? m.userId} className="py-3 flex items-center justify-between gap-4">
+                                                <div className="flex items-center gap-3">
+                                                    <MemberAvatar name={m.name} photoUrl={m.profilePhotoUrl} size="sm" />
+                                                    <div>
+                                                        <p className="font-semibold text-charcoal text-sm">{m.name || `User #${m.userId}`}</p>
+                                                        <p className="text-xs text-muted-green">{m.email || ''}</p>
                                                     </div>
                                                 </div>
-                                            );
-                                        })}
+                                                <div className="flex items-center gap-3">
+                                                    <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full border ${
+                                                        m.role === 'ADMIN'
+                                                            ? 'bg-cyan-50 text-cyan-700 border-cyan-100'
+                                                            : 'bg-gray-100 text-charcoal border-gray-200'
+                                                    }`}>{m.role}</span>
+                                                    {m.role !== 'ADMIN' && (
+                                                        <button
+                                                            onClick={() => openConfirm({
+                                                                title: 'Remove Member?',
+                                                                message: `Remove ${m.name || 'this member'} from the community?`,
+                                                                confirmLabel: 'Remove',
+                                                                confirmClass: 'bg-red-600 text-white hover:bg-red-700',
+                                                                onConfirm: () => {
+                                                                    removeMutation.mutate(m.userId, {
+                                                                        onSuccess: closeConfirm,
+                                                                    });
+                                                                },
+                                                            })}
+                                                            disabled={removeMutation.isPending}
+                                                            className="px-3 py-1.5 text-xs bg-red-100 text-red-600 rounded-lg font-semibold hover:bg-red-200 transition-colors disabled:opacity-60"
+                                                        >
+                                                            Remove
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )
+                            ) : (
+                                /* Non-admin: preview with blur on last */
+                                membersLoading ? (
+                                    <div className="space-y-3">
+                                        {Array.from({ length: 3 }).map((_, i) => (
+                                            <div key={i} className="flex items-center gap-3 animate-pulse">
+                                                <div className="w-10 h-10 rounded-full bg-gray-100 shrink-0" />
+                                                <div className="flex-1 space-y-2">
+                                                    <div className="h-3 bg-gray-100 rounded w-1/3" />
+                                                    <div className="h-2.5 bg-gray-50 rounded w-1/4" />
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
-
-                                    {hasMore && (
-                                        <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-white via-white/85 to-transparent flex items-end justify-center pb-1">
-                                            <button
-                                                onClick={() => navigate('/my-communities')}
-                                                className="flex items-center gap-1.5 text-sm font-semibold text-primary hover:gap-2.5 transition-all"
-                                            >
-                                                See all {totalMembers} members
-                                                <span className="material-symbols-outlined text-base">arrow_forward</span>
-                                            </button>
+                                ) : previewMembers.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center py-10 gap-2 text-center">
+                                        <span className="material-symbols-outlined text-gray-300 text-4xl">group_off</span>
+                                        <p className="text-sm text-muted-green">No members yet</p>
+                                    </div>
+                                ) : (
+                                    <div className="relative">
+                                        <div className="divide-y divide-gray-50">
+                                            {previewMembers.map((member, idx) => {
+                                                const isLast = idx === previewMembers.length - 1 && hasMore;
+                                                return (
+                                                    <div
+                                                        key={member.userId ?? idx}
+                                                        className={[
+                                                            'flex items-center gap-3 py-3 first:pt-0',
+                                                            isLast
+                                                                ? 'select-none pointer-events-none'
+                                                                : 'hover:bg-gray-50/60 px-2 rounded-xl -mx-2 transition-colors',
+                                                        ].join(' ')}
+                                                        style={isLast ? { filter: 'blur(3.5px)', opacity: 0.5 } : {}}
+                                                    >
+                                                        <MemberAvatar name={member.name} photoUrl={member.profilePhotoUrl} />
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="font-semibold text-charcoal text-sm truncate">{member.name}</p>
+                                                            <p className="text-xs text-muted-green truncate">{member.email}</p>
+                                                        </div>
+                                                        <div className="flex items-center gap-2 shrink-0">
+                                                            {(member.role === 'ADMIN' || member.admin) && (
+                                                                <span className="px-2 py-0.5 bg-primary/10 text-primary text-xs font-bold rounded-full">
+                                                                    Admin
+                                                                </span>
+                                                            )}
+                                                            {member.joinedAt && (
+                                                                <span className="text-xs text-muted-green hidden sm:inline">
+                                                                    {new Date(member.joinedAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
-                                    )}
-                                </div>
+
+                                        {hasMore && (
+                                            <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-white via-white/85 to-transparent flex items-end justify-center pb-1">
+                                                <button
+                                                    onClick={() => navigate('/my-communities')}
+                                                    className="flex items-center gap-1.5 text-sm font-semibold text-primary hover:gap-2.5 transition-all"
+                                                >
+                                                    See all {totalMembers} members
+                                                    <span className="material-symbols-outlined text-base">arrow_forward</span>
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                )
                             )}
                         </div>
                     </div>
@@ -444,7 +655,7 @@ export default function CommunityDashboard({ community }) {
                                     { icon: 'group',             label: 'Members',         value: community.memberCount ?? '—' },
                                     { icon: 'inventory_2',       label: 'Active Items',     value: 0 },
                                     { icon: 'swap_horiz',        label: 'Completed Shares', value: 0 },
-                                    { icon: 'workspace_premium', label: 'Your Role',        value: community.role === 'admin' ? 'Admin' : 'Member' },
+                                    { icon: 'workspace_premium', label: 'Your Role',        value: community.isAdmin ? 'Admin' : 'Member' },
                                 ].map(({ icon, label, value }) => (
                                     <div key={label} className="flex items-center gap-3">
                                         <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center shrink-0">
@@ -501,33 +712,20 @@ export default function CommunityDashboard({ community }) {
                             </div>
                         </div>
 
-                        {/* Invite Code card */}
-                        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-                            <h3 className="text-xs font-bold text-charcoal mb-1 uppercase tracking-wider">Invite Code</h3>
-                            <p className="text-xs text-muted-green mb-4">Share with people you want to invite</p>
-                            <div className="flex items-center gap-3">
-                                <code className="flex-1 font-mono text-xl font-bold text-charcoal tracking-widest bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-center">
-                                    {community.code}
-                                </code>
-                                <button
-                                    onClick={handleCopyCode}
-                                    title="Copy invite code"
-                                    className={[
-                                        'flex items-center justify-center w-11 h-11 rounded-xl transition-all shrink-0',
-                                        codeCopied
-                                            ? 'bg-primary text-white'
-                                            : 'bg-gray-100 hover:bg-primary/10 text-muted-green hover:text-primary',
-                                    ].join(' ')}
-                                >
-                                    <span className="material-symbols-outlined text-lg">
-                                        {codeCopied ? 'check' : 'content_copy'}
-                                    </span>
-                                </button>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </main>
+
+            <ConfirmModal
+                open={confirm.open}
+                title={confirm.title}
+                message={confirm.message}
+                confirmLabel={confirm.confirmLabel}
+                confirmClass={confirm.confirmClass}
+                onConfirm={confirm.onConfirm}
+                onCancel={closeConfirm}
+                loading={policyMutation.isPending || statusMutation.isPending}
+            />
         </div>
     );
 }

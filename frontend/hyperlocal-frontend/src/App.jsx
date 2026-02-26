@@ -20,6 +20,9 @@ const HomePage = lazy(() => import('./pages/HomePage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const MyCommunitiesPage = lazy(() => import('./pages/MyCommunitiesPage'));
 const DiscoverPage = lazy(() => import('./pages/DiscoverPage'));
+const ItemDetailPage = lazy(() => import('./pages/ItemDetailPage'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const MyListingsPage = lazy(() => import('./pages/MyListingsPage'));
 
 // Verification flow pages
 const VerifyProfilePage = lazy(() => import('./pages/verification/VerifyProfilePage'));
@@ -115,6 +118,36 @@ function App() {
                 element={
                   <VerificationRequiredRoute>
                     <DiscoverPage />
+                  </VerificationRequiredRoute>
+                }
+              />
+
+              {/* Item Detail - Requires verification */}
+              <Route
+                path={ROUTES.ITEM_DETAIL}
+                element={
+                  <VerificationRequiredRoute>
+                    <ItemDetailPage />
+                  </VerificationRequiredRoute>
+                }
+              />
+
+              {/* Profile - Requires authentication */}
+              <Route
+                path={ROUTES.PROFILE}
+                element={
+                  <ProtectedRoute>
+                    <ProfilePage />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* My Listings - Requires verification */}
+              <Route
+                path={ROUTES.MY_LISTINGS}
+                element={
+                  <VerificationRequiredRoute>
+                    <MyListingsPage />
                   </VerificationRequiredRoute>
                 }
               />
