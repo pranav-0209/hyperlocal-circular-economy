@@ -126,4 +126,27 @@ public class CustomExceptions {
             super("You must be a community admin to perform this action.");
         }
     }
+
+    // ── Marketplace exceptions ───────────────────────────────────────────────
+
+    public static class ListingNotFoundException extends RuntimeException {
+        public ListingNotFoundException() {
+            super("Listing not found.");
+        }
+    }
+
+    public static class ListingAccessDeniedException extends RuntimeException {
+        public ListingAccessDeniedException() {
+            super("You are not the owner of this listing.");
+        }
+        public ListingAccessDeniedException(String message) {
+            super(message);
+        }
+    }
+
+    public static class NotCommunityMemberForListingException extends RuntimeException {
+        public NotCommunityMemberForListingException() {
+            super("You must be an approved member of the community to create a listing in it.");
+        }
+    }
 }

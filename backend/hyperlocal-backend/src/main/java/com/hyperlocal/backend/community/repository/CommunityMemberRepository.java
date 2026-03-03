@@ -45,6 +45,10 @@ public interface CommunityMemberRepository extends JpaRepository<CommunityMember
     @Query("SELECT cm.community.id FROM CommunityMember cm WHERE cm.userId = :userId AND cm.role = 'ADMIN'")
     List<Long>findAdminCommunityIdsByUserId(@Param("userId") Long userId);
 
+    /** IDs of all communities where the user is an APPROVED member (any role). This is the source of truth. */
+    @Query("SELECT cm.community.id FROM CommunityMember cm WHERE cm.userId = :userId AND cm.status = 'APPROVED'")
+    List<Long> findApprovedCommunityIdsByUserId(@Param("userId") Long userId);
+
     /**
      * Bulk member-count query.
      * Returns one Object[]{communityId, count} row per community so that

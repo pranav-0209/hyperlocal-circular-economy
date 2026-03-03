@@ -89,6 +89,17 @@ public class User {
     @Builder.Default
     private List<Long> createdCommunityIds = new ArrayList<>();
 
+    /**
+     * Average rating received from other users (updated on each new review).
+     * Null until the user receives their first review.
+     */
+    private Double averageRating;
+
+    /** Total number of reviews received. */
+    @Builder.Default
+    @Column(nullable = false)
+    private Integer totalReviews = 0;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

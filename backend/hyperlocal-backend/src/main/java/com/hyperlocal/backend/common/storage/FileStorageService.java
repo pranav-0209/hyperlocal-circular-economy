@@ -38,6 +38,21 @@ public class FileStorageService {
         return "/uploads/profiles/" + fileName;
     }
 
+    public String storeListingImage(MultipartFile file, Long userId, int index) throws IOException {
+        validateFile(file, ALLOWED_IMAGE_EXTENSIONS, "Listing image");
+
+        Path uploadPath = Paths.get(uploadDir, "listings");
+        Files.createDirectories(uploadPath);
+
+        String extension = getExtension(file.getOriginalFilename());
+        String fileName = "listing_" + userId + "_" + System.currentTimeMillis() + "_" + index + extension;
+        Path filePath = uploadPath.resolve(fileName);
+
+        Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+
+        return "/uploads/listings/" + fileName;
+    }
+
     public String storeDocument(MultipartFile file, Long userId, String documentType) throws IOException {
         validateFile(file, ALLOWED_DOCUMENT_EXTENSIONS, documentType);
 
