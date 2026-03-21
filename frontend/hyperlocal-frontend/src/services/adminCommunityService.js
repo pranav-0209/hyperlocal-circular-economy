@@ -15,7 +15,7 @@ import api from './api';
 /**
  * GET /api/v1/admin/communities
  * @param {{ page?: number, size?: number, status?: 'ACTIVE'|'INACTIVE', search?: string }} params
- * @returns {Promise<{ content, pageNumber, pageSize, totalElements, totalPages, last }>}
+ * @returns {Promise<{ content: Array<{ id, name, code, description, category, status, joinPolicy, memberCount, createdAt, updatedAt }>, pageNumber, pageSize, totalElements, totalPages, last }>}
  */
 export const getAdminCommunities = async (params = {}) => {
   const response = await api.get('/api/v1/admin/communities', { params });
@@ -26,7 +26,7 @@ export const getAdminCommunities = async (params = {}) => {
  * GET /api/v1/admin/communities/{id}
  * Returns community detail including admins[] and members[].
  * @param {number|string} id
- * @returns {Promise<Object>}
+ * @returns {Promise<{ id, name, code, description, category, status, joinPolicy, memberCount, admins, members, createdAt, updatedAt }>}
  */
 export const getAdminCommunityById = async (id) => {
   const response = await api.get(`/api/v1/admin/communities/${id}`);

@@ -197,37 +197,27 @@ export default function SuperAdminCommunities() {
       ),
     },
     {
-      key: 'admins',
-      label: 'Admins',
+      key: 'joinPolicy',
+      label: 'Join Policy',
       render: (row) => {
-        // API may return admins as string[], object[], or null
-        const raw = row.admins ?? row.adminNames ?? row.communityAdmins ?? [];
-        const admins = Array.isArray(raw)
-          ? raw.map((a) => (typeof a === 'string' ? a : (a?.name ?? a?.email ?? JSON.stringify(a))))
-          : [];
-        if (admins.length === 0) {
+        const policy = row.joinPolicy;
+        if (policy === 'OPEN') {
           return (
-            <button
-              onClick={(e) => { e.stopPropagation(); setSelectedId(String(row.id)); setDetailMembersPage(0); }}
-              className="text-xs text-gray-400 hover:text-primary italic transition-colors"
-            >
-              View details
-            </button>
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-green-50 text-green-700 border border-green-100 rounded-full text-xs font-semibold">
+              <span className="material-symbols-outlined text-xs" style={{ fontSize: '13px' }}>lock_open</span>
+              Open
+            </span>
           );
         }
-        return (
-          <div className="flex flex-wrap gap-1">
-            {admins.slice(0, 2).map((a, i) => (
-              <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary/10 text-primary rounded-full text-xs font-medium">
-                <span className="material-symbols-outlined text-xs" style={{ fontSize: '12px' }}>person</span>
-                {a}
-              </span>
-            ))}
-            {admins.length > 2 && (
-              <span className="text-xs text-gray-400">+{admins.length - 2} more</span>
-            )}
-          </div>
-        );
+        if (policy === 'APPROVAL_REQUIRED') {
+          return (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-100 rounded-full text-xs font-semibold">
+              <span className="material-symbols-outlined text-xs" style={{ fontSize: '13px' }}>approval</span>
+              Approval Required
+            </span>
+          );
+        }
+        return <span className="text-xs text-gray-400">—</span>;
       },
     },
     {
@@ -458,6 +448,23 @@ export default function SuperAdminCommunities() {
                       <p className="text-sm text-gray-800 mt-1">{value}</p>
                     </div>
                   ))}
+                  {/* Join Policy — full-width */}
+                  <div className="col-span-2 bg-gray-50 rounded-xl p-3 flex items-center justify-between">
+                    <p className="text-xs text-gray-400 uppercase tracking-wide">Join Policy</p>
+                    {detailData.joinPolicy === 'OPEN' ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-green-50 text-green-700 border border-green-100 rounded-full text-xs font-semibold">
+                        <span className="material-symbols-outlined" style={{ fontSize: '13px' }}>lock_open</span>
+                        Open
+                      </span>
+                    ) : detailData.joinPolicy === 'APPROVAL_REQUIRED' ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-100 rounded-full text-xs font-semibold">
+                        <span className="material-symbols-outlined" style={{ fontSize: '13px' }}>approval</span>
+                        Approval Required
+                      </span>
+                    ) : (
+                      <span className="text-sm text-gray-400">—</span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Admins */}

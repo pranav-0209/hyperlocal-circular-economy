@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import AppFooter from '../components/ui/AppFooter';
 import HomeNavbar from '../components/ui/HomeNavbar';
 import { ROUTES } from '../constants';
+import { getMyProfile, updateMyProfile } from '../services/profileService';
 
 // ── Star rating ───────────────────────────────────────────────────────────────
 function Stars({ rating = 5 }) {
@@ -18,18 +20,7 @@ function Stars({ rating = 5 }) {
     );
 }
 
-// ── Mock profile stats ────────────────────────────────────────────────────────
-const MOCK_STATS = {
-    rating: 4.8,
-    reviews: 24,
-    itemsListed: 6,
-    borrowsCompleted: 18,
-    lendsCompleted: 12,
-    memberSince: 'Jan 2025',
-    communities: ['Green Valley Residents', 'Indiranagar Tech Hub'],
-};
-
-// Mock recent activity
+// ── Mock recent activity (placeholder until activity API is available) ─────────
 const MOCK_ACTIVITY = [
     { id: 1, type: 'lend', item: 'DeWalt Cordless Drill', to: 'Meera T.', date: '15 Feb 2026', status: 'returned' },
     { id: 2, type: 'borrow', item: 'Nikon DSLR Camera', from: 'Sneha R.', date: '10 Feb 2026', status: 'active' },
@@ -42,29 +33,195 @@ const STATUS_STYLE = {
     active: 'text-blue-700 bg-blue-50 border-blue-100',
 };
 
+// ── Edit Profile Modal ────────────────────────────────────────────────────────
+function EditProfileModal({ profile, onClose, onSaved }) {
+    const [form, setForm] = useState({
+        phone: profile?.phone ?? '',
+        address: profile?.address ?? '',
+        bio: profile?.bio ?? '',
+    });
+    const [photoFile, setPhotoFile] = useState(null);
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState('');
+    const fileInputRef = useRef(null);
+
+    const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setSaving(true);
+        setError('');
+        try {
+            await updateMyProfile({ ...form, profilePhoto: photoFile });
+            onSaved();
+        } catch (err) {
+            setError(err?.message ?? 'Failed to update profile. Please try again.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+                <div className="flex items-center justify-between mb-5">
+                    <h2 className="text-lg font-bold text-charcoal">Edit Profile</h2>
+                    <button onClick={onClose} className="text-muted-green hover:text-charcoal transition-colors">
+                        <span className="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+
+                {error && (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-600">{error}</div>
+                )}
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    {/* Profile photo */}
+                    <div>
+                        <label className="block text-xs font-semibold text-muted-green mb-1.5">Profile Photo</label>
+                        <div className="flex items-center gap-3">
+                            <button
+                                type="button"
+                                onClick={() => fileInputRef.current?.click()}
+                                className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-xl text-sm text-charcoal hover:bg-gray-50 transition-colors"
+                            >
+                                <span className="material-symbols-outlined text-base">upload</span>
+                                {photoFile ? photoFile.name : 'Choose photo'}
+                            </button>
+                            {photoFile && (
+                                <button type="button" onClick={() => setPhotoFile(null)} className="text-xs text-red-500 hover:underline">Remove</button>
+                            )}
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => setPhotoFile(e.target.files?.[0] ?? null)}
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-semibold text-muted-green mb-1.5">Phone</label>
+                        <input
+                            name="phone"
+                            value={form.phone}
+                            onChange={handleChange}
+                            placeholder="+91 98765 43210"
+                            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-semibold text-muted-green mb-1.5">Address</label>
+                        <input
+                            name="address"
+                            value={form.address}
+                            onChange={handleChange}
+                            placeholder="Your neighbourhood / area"
+                            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-semibold text-muted-green mb-1.5">Bio</label>
+                        <textarea
+                            name="bio"
+                            value={form.bio}
+                            onChange={handleChange}
+                            rows={3}
+                            placeholder="Tell your community a little about yourself…"
+                            className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                        />
+                    </div>
+
+                    <div className="flex gap-3 pt-1">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="flex-1 border border-gray-200 rounded-xl py-2.5 text-sm font-semibold text-charcoal hover:bg-gray-50 transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={saving}
+                            className="flex-1 bg-primary text-white rounded-xl py-2.5 text-sm font-semibold hover:bg-primary/90 transition-colors disabled:opacity-60"
+                        >
+                            {saving ? 'Saving…' : 'Save Changes'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
+
 export default function ProfilePage() {
     const { user } = useAuth();
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('activity');
+    const [profile, setProfile] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [showEditModal, setShowEditModal] = useState(false);
 
-    const name = user?.profile?.name ?? 'User';
-    const email = user?.email ?? '';
+    const fetchProfile = async () => {
+        try {
+            const data = await getMyProfile();
+            setProfile(data);
+        } catch {
+            // fall back to auth context values silently
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchProfile();
+    }, []);
+
+    const name = profile?.name ?? user?.profile?.name ?? 'User';
+    const email = profile?.email ?? user?.email ?? '';
     const initials = name.trim().split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase();
+    const photoUrl = profile?.profilePhotoUrl ?? user?.profile?.photo ?? null;
+
+    const rating = profile?.averageRating ?? 0;
+    const totalReviews = profile?.totalReviews ?? 0;
+    const listingsPosted = profile?.stats?.listingsPosted ?? 0;
+    const verified = profile?.verified ?? false;
+    const memberSince = profile?.memberSince
+        ? new Date(profile.memberSince).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
+        : null;
+    const bio = profile?.bio ?? null;
+    const address = profile?.address ?? null;
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-gray-50 flex flex-col">
             <HomeNavbar />
+
+            {showEditModal && (
+                <EditProfileModal
+                    profile={profile}
+                    onClose={() => setShowEditModal(false)}
+                    onSaved={() => { setShowEditModal(false); fetchProfile(); }}
+                />
+            )}
 
             {/* ── Header ─────────────────────────────────────────── */}
             <div className="pt-16 bg-white border-b border-gray-100">
-                <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center gap-1.5 text-sm text-muted-green">
+                <div className="w-full px-4 sm:px-6 lg:px-8 py-3.5 flex items-center gap-1.5 text-sm text-muted-green">
                     <button onClick={() => navigate(ROUTES.DASHBOARD)} className="hover:text-primary transition-colors">Dashboard</button>
                     <span className="material-symbols-outlined text-sm">chevron_right</span>
                     <span className="text-charcoal font-semibold">My Profile</span>
                 </div>
             </div>
 
-            <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24">
+            {loading ? (
+                <div className="flex items-center justify-center min-h-[60vh]">
+                    <span className="material-symbols-outlined animate-spin text-primary text-4xl">progress_activity</span>
+                </div>
+            ) : (
+            <div className="w-full px-4 sm:px-6 lg:px-8 py-8 pb-8">
                 <div className="flex flex-col lg:flex-row gap-6 items-start">
 
                     {/* ── Left: Profile card ─────────────────────── */}
@@ -79,37 +236,54 @@ export default function ProfilePage() {
                                 {/* Avatar — overlapping cover */}
                                 <div className="-mt-10 mb-3">
                                     <div className="w-20 h-20 rounded-2xl bg-primary flex items-center justify-center text-white font-bold text-2xl shadow-lg border-4 border-white">
-                                        {user?.profile?.photo ? (
-                                            <img src={user.profile.photo} alt={name} className="w-full h-full rounded-2xl object-cover" />
+                                        {photoUrl ? (
+                                            <img src={photoUrl} alt={name} className="w-full h-full rounded-2xl object-cover" />
                                         ) : initials}
                                     </div>
                                 </div>
 
-                                <h1 className="text-xl font-bold text-charcoal">{name}</h1>
-                                <p className="text-sm text-muted-green">{email}</p>
+                                <h1 className="text-2xl font-bold text-charcoal">{name}</h1>
+                                <p className="text-base text-muted-green">{email}</p>
 
                                 {/* Verification badge */}
+                                {verified && (
                                 <div className="flex items-center gap-1.5 mt-2">
-                                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-green-700 bg-green-50 border border-green-100 px-2.5 py-1 rounded-full">
-                                        <span className="material-symbols-outlined text-sm">verified</span>
+                                    <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-green-700 bg-green-50 border border-green-100 px-2 py-0.5 rounded-full">
+                                        <span className="material-symbols-outlined text-xs">verified</span>
                                         Verified Member
                                     </span>
                                 </div>
+                                )}
 
                                 {/* Rating */}
+                                {totalReviews > 0 && (
                                 <div className="flex items-center gap-2 mt-3">
-                                    <Stars rating={MOCK_STATS.rating} />
-                                    <span className="text-sm font-bold text-charcoal">{MOCK_STATS.rating}</span>
-                                    <span className="text-xs text-muted-green">({MOCK_STATS.reviews} reviews)</span>
+                                    <Stars rating={rating} />
+                                    <span className="text-sm font-bold text-charcoal">{rating.toFixed(1)}</span>
+                                    <span className="text-xs text-muted-green">({totalReviews} reviews)</span>
                                 </div>
+                                )}
 
-                                <p className="text-xs text-muted-green mt-2 flex items-center gap-1">
-                                    <span className="material-symbols-outlined text-sm">calendar_month</span>
-                                    Member since {MOCK_STATS.memberSince}
+                                {address && (
+                                <p className="text-sm text-muted-green mt-2 flex items-center gap-1">
+                                    <span className="material-symbols-outlined text-base">location_on</span>
+                                    {address}
                                 </p>
+                                )}
+
+                                {memberSince && (
+                                <p className="text-sm text-muted-green mt-1 flex items-center gap-1">
+                                    <span className="material-symbols-outlined text-base">calendar_month</span>
+                                    Member since {memberSince}
+                                </p>
+                                )}
+
+                                {bio && (
+                                <p className="text-sm text-muted-green mt-3 leading-relaxed border-t border-gray-100 pt-3">{bio}</p>
+                                )}
 
                                 {/* Edit profile button */}
-                                <button className="mt-4 w-full flex items-center justify-center gap-2 border border-gray-200 rounded-xl py-2.5 text-sm font-semibold text-charcoal hover:bg-gray-50 transition-colors">
+                                <button onClick={() => setShowEditModal(true)} className="mt-4 w-full flex items-center justify-center gap-2 border border-gray-200 rounded-xl py-2.5 text-sm font-semibold text-charcoal hover:bg-gray-50 transition-colors">
                                     <span className="material-symbols-outlined text-base">edit</span>
                                     Edit Profile
                                 </button>
@@ -121,9 +295,9 @@ export default function ProfilePage() {
                             <h2 className="text-xs font-bold uppercase tracking-widest text-muted-green mb-4">Activity Stats</h2>
                             <div className="grid grid-cols-3 gap-3">
                                 {[
-                                    { label: 'Items Listed', value: MOCK_STATS.itemsListed, icon: 'inventory_2' },
-                                    { label: 'Borrows', value: MOCK_STATS.borrowsCompleted, icon: 'download' },
-                                    { label: 'Lends', value: MOCK_STATS.lendsCompleted, icon: 'upload' },
+                                    { label: 'Items Listed', value: listingsPosted, icon: 'inventory_2' },
+                                    { label: 'Borrows', value: 0, icon: 'download' },
+                                    { label: 'Lends', value: 0, icon: 'upload' },
                                 ].map(s => (
                                     <div key={s.label} className="text-center bg-gray-50 rounded-xl p-3">
                                         <span className="material-symbols-outlined text-primary text-xl">{s.icon}</span>
@@ -138,14 +312,16 @@ export default function ProfilePage() {
                         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
                             <h2 className="text-xs font-bold uppercase tracking-widest text-muted-green mb-3">My Communities</h2>
                             <div className="space-y-2">
-                                {MOCK_STATS.communities.map((c, i) => (
-                                    <div key={i} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer">
+                                {(profile?.joinedCommunityIds?.length ?? 0) === 0 ? (
+                                    <p className="text-sm text-muted-green text-center py-2">No communities yet.</p>
+                                ) : (
+                                    <div className="flex items-center gap-3 p-2.5 rounded-xl bg-gray-50">
                                         <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
                                             <span className="material-symbols-outlined text-primary text-base">groups</span>
                                         </div>
-                                        <span className="text-sm font-medium text-charcoal">{c}</span>
+                                        <span className="text-sm font-medium text-charcoal">{profile.joinedCommunityIds.length} comm{profile.joinedCommunityIds.length === 1 ? 'unity' : 'unities'} joined</span>
                                     </div>
-                                ))}
+                                )}
                                 <button
                                     onClick={() => navigate(ROUTES.MY_COMMUNITIES)}
                                     className="w-full mt-1 flex items-center justify-center gap-1.5 text-xs font-semibold text-primary hover:underline"
@@ -259,18 +435,18 @@ export default function ProfilePage() {
                                     <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
                                         <circle cx="18" cy="18" r="15.9" fill="none" stroke="#e5e7eb" strokeWidth="3" />
                                         <circle cx="18" cy="18" r="15.9" fill="none" stroke="currentColor" strokeWidth="3"
-                                            strokeDasharray={`${(MOCK_STATS.rating / 5) * 100} 100`}
+                                            strokeDasharray={`${(rating / 5) * 100} 100`}
                                             strokeLinecap="round" className="text-primary" />
                                     </svg>
                                     <div className="absolute inset-0 flex items-center justify-center">
-                                        <span className="text-lg font-bold text-charcoal">{MOCK_STATS.rating}</span>
+                                        <span className="text-lg font-bold text-charcoal">{rating > 0 ? rating.toFixed(1) : '—'}</span>
                                     </div>
                                 </div>
                                 <div className="flex-1 space-y-2">
                                     {[
-                                        { label: 'Profile verified', done: true },
-                                        { label: 'Community member', done: true },
-                                        { label: '5+ successful lends', done: true },
+                                        { label: 'Profile verified', done: verified },
+                                        { label: 'Community member', done: (profile?.joinedCommunityIds?.length ?? 0) > 0 },
+                                        { label: '5+ successful lends', done: false },
                                         { label: 'Identity document uploaded', done: false },
                                     ].map(t => (
                                         <div key={t.label} className="flex items-center gap-2 text-xs">
@@ -287,6 +463,8 @@ export default function ProfilePage() {
                     </div>
                 </div>
             </div>
+            )}
+            <AppFooter />
         </div>
     );
 }

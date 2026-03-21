@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import ItemCard from './ItemCard';
 import { Button } from "@/components/ui/button";
 
@@ -18,7 +18,6 @@ const itemVariants = {
 };
 
 const MarketplaceGrid = ({ items, isLoading, onRequest, onCreate }) => {
-    const shouldReduceMotion = useReducedMotion();
     // Loading State
     if (isLoading) {
         return (
@@ -62,13 +61,15 @@ const MarketplaceGrid = ({ items, isLoading, onRequest, onCreate }) => {
         <motion.div
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
             variants={containerVariants}
-            initial={shouldReduceMotion ? false : 'hidden'}
+            initial={false}
             animate="show"
         >
             {items.map((item) => (
                 <motion.div
                     key={item.id}
                     variants={itemVariants}
+                    initial={false}
+                    animate={{ opacity: 1, y: 0 }}
                 >
                     <ItemCard item={item} onRequest={onRequest} />
                 </motion.div>

@@ -3,6 +3,7 @@ import { z } from 'zod';
 export const ITEM_CATEGORIES = [
     'Electronics',
     'Vehicles',
+    'Furniture',
     'Appliances',
     'Books',
     'Fashion',
@@ -33,7 +34,7 @@ export const marketplaceSchema = z.object({
         .trim(),
     description: z
         .string()
-        .min(20, 'Description must be at least 20 characters')
+        .min(10, 'Description must be at least 10 characters')
         .max(500, 'Description must be less than 500 characters')
         .trim(),
     category: z
@@ -48,7 +49,17 @@ export const marketplaceSchema = z.object({
         .enum(CONDITIONS, {
             errorMap: () => ({ message: 'Please select item condition' }),
         }),
-    availableFrom: z.string().optional(),
-    availableTo: z.string().optional(),
+    availableFrom: z
+        .string()
+        .min(1, 'Please select available from date'),
+    availableTo: z
+        .string()
+        .min(1, 'Please select available to date'),
     images: z.any().optional(),
-});
+}).refine(
+    (data) => new Date(data.availableTo) >= new Date(data.availableFrom),
+    {
+        message: 'Available to date must be on or after available from date',
+        path: ['availableTo'],
+    }
+);

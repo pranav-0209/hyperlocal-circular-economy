@@ -1,8 +1,16 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import HomeNavbar from '../components/ui/HomeNavbar';
-import { getMyListings } from '../services/marketplaceService';
+import AppFooter from '../components/ui/AppFooter';
+import ConfirmModal from '../components/ui/ConfirmModal';
+import CreateItemModal from '../components/marketplace/CreateItemModal';
+import {
+    deleteItem,
+    getMyListings,
+    toggleListingAvailability,
+} from '../services/marketplaceService';
 import { ROUTES } from '../constants';
 
 const CONDITION_STYLE = {
@@ -21,22 +29,32 @@ const STATUS_STYLE = {
 
 const CAT_ICON = {
     'Electronics': 'devices', 'Vehicles': 'directions_car', 'Appliances': 'kitchen',
+    'Furniture': 'chair_alt',
     'Books': 'menu_book', 'Fashion': 'checkroom', 'Tools': 'hardware',
     'Sports': 'sports_soccer', 'Kids': 'child_care', 'Other': 'category',
 };
 
 function ListingCard({ item, onEdit, onToggle, onDelete }) {
     const s = STATUS_STYLE[item.status] ?? STATUS_STYLE['AVAILABLE'];
+    const [imageFailed, setImageFailed] = useState(false);
+    const hasImage = Boolean(item.images?.[0]) && !imageFailed;
 
     return (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
             {/* Image */}
             <div className="relative aspect-video bg-gray-100">
-                <img
-                    src={item.images?.[0] ?? 'https://placehold.co/600x400/e5e7eb/9ca3af?text=No+Photo'}
-                    alt={item.title}
-                    className="w-full h-full object-cover"
-                />
+                {hasImage ? (
+                    <img
+                        src={item.images[0]}
+                        alt={item.title}
+                        onError={() => setImageFailed(true)}
+                        className="w-full h-full object-cover"
+                    />
+                ) : (
+                    <div className="w-full h-full flex items-center justify-center text-gray-300 text-4xl font-bold">
+                        No Photo
+                    </div>
+                )}
                 {/* Status badge */}
                 <span className={`absolute top-3 left-3 inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full border ${s.cls}`}>
                     <span className="material-symbols-outlined text-xs">{s.icon}</span>
@@ -105,33 +123,83 @@ function ListingCard({ item, onEdit, onToggle, onDelete }) {
 
 export default function MyListingsPage() {
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
     const [filter, setFilter] = useState('All');
+    const [editingItem, setEditingItem] = useState(null);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [listingToDelete, setListingToDelete] = useState(null);
 
     const { data: items = [], isLoading } = useQuery({
         queryKey: ['myListings'],
         queryFn: getMyListings,
     });
 
+    const toggleMutation = useMutation({
+        mutationFn: (item) => toggleListingAvailability(item.id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['myListings'] });
+            queryClient.invalidateQueries({ queryKey: ['marketplaceItems'] });
+            toast.success('Listing availability updated.');
+        },
+        onError: (error) => {
+            toast.error(error.message || 'Failed to update listing availability.');
+        },
+    });
+
+    const deleteMutation = useMutation({
+        mutationFn: (item) => deleteItem(item.id),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['myListings'] });
+            queryClient.invalidateQueries({ queryKey: ['marketplaceItems'] });
+            toast.success('Listing deleted successfully.');
+        },
+        onError: (error) => {
+            toast.error(error.message || 'Failed to delete listing.');
+        },
+    });
+
     const filtered = filter === 'All' ? items : items.filter(i => i.status === filter);
 
-    const handleEdit = () => {};        // Placeholder — will open CreateItemModal pre-filled
-    const handleToggle = () => {};      // Placeholder — toggle AVAILABLE/UNAVAILABLE
-    const handleDelete = () => {};      // Placeholder — confirm + delete
+    const handleEdit = (item) => {
+        setEditingItem(item);
+        setIsEditModalOpen(true);
+    };
+
+    const handleToggle = (item) => {
+        if (toggleMutation.isPending) return;
+        toggleMutation.mutate(item);
+    };
+
+    const handleDelete = (item) => {
+        if (deleteMutation.isPending) return;
+
+        setListingToDelete(item);
+    };
+
+    const confirmDelete = () => {
+        if (!listingToDelete || deleteMutation.isPending) return;
+
+        deleteMutation.mutate(listingToDelete, {
+            onSuccess: () => {
+                setListingToDelete(null);
+            },
+        });
+    };
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-gray-50 flex flex-col">
             <HomeNavbar />
 
             {/* Breadcrumb */}
             <div className="pt-16 bg-white border-b border-gray-100">
-                <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center gap-1.5 text-sm text-muted-green">
+                <div className="w-full px-4 sm:px-6 lg:px-8 py-3.5 flex items-center gap-1.5 text-sm text-muted-green">
                     <button onClick={() => navigate(ROUTES.DASHBOARD)} className="hover:text-primary transition-colors">Dashboard</button>
                     <span className="material-symbols-outlined text-sm">chevron_right</span>
                     <span className="text-charcoal font-semibold">My Listings</span>
                 </div>
             </div>
 
-            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24">
+            <div className="w-full px-4 sm:px-6 lg:px-8 py-8 pb-8">
 
                 {/* Page header */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
@@ -226,6 +294,37 @@ export default function MyListingsPage() {
                     </div>
                 )}
             </div>
+
+            <CreateItemModal
+                open={isEditModalOpen}
+                onOpenChange={(open) => {
+                    setIsEditModalOpen(open);
+                    if (!open) {
+                        setEditingItem(null);
+                    }
+                }}
+                communityId={editingItem?.communityId}
+                mode="edit"
+                listingId={editingItem?.id}
+                initialValues={editingItem}
+                onSuccess={() => {
+                    queryClient.invalidateQueries({ queryKey: ['myListings'] });
+                    queryClient.invalidateQueries({ queryKey: ['marketplaceItems'] });
+                }}
+            />
+
+            <ConfirmModal
+                open={!!listingToDelete}
+                title="Delete listing?"
+                message={listingToDelete ? `Delete listing "${listingToDelete.title}"? This action cannot be undone.` : ''}
+                confirmLabel="Delete"
+                confirmClass="bg-red-600 text-white hover:bg-red-700"
+                onConfirm={confirmDelete}
+                onCancel={() => setListingToDelete(null)}
+                loading={deleteMutation.isPending}
+            />
+
+            <AppFooter />
         </div>
     );
 }

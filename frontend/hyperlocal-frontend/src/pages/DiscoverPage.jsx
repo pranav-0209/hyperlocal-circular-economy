@@ -1,10 +1,11 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import AppFooter from '../components/ui/AppFooter';
 import HomeNavbar from '../components/ui/HomeNavbar';
 import MarketplaceGrid from '../components/marketplace/MarketplaceGrid';
 import CreateItemModal from '../components/marketplace/CreateItemModal';
-import { getItems } from '../services/marketplaceService';
+import { getItems, getListingCategories } from '../services/marketplaceService';
 import { ITEM_CATEGORIES } from '../schemas/marketplaceSchema';
 
 const SORT_OPTIONS = [
@@ -17,6 +18,7 @@ const CATEGORY_ICONS = {
     'All': 'category',
     'Electronics': 'devices',
     'Vehicles': 'directions_car',
+    'Furniture': 'chair_alt',
     'Appliances': 'kitchen',
     'Books': 'menu_book',
     'Fashion': 'checkroom',
@@ -43,9 +45,16 @@ export default function DiscoverPage() {
         queryFn: () => getItems({
             search: searchQuery,
             category: selectedCategory === 'All' ? undefined : selectedCategory,
-            type: 'RENT',
         }),
     });
+
+    const { data: categoryOptions = ITEM_CATEGORIES } = useQuery({
+        queryKey: ['listingCategories'],
+        queryFn: getListingCategories,
+        staleTime: 1000 * 60 * 5,
+    });
+
+    const categories = ['All', ...(categoryOptions.length ? categoryOptions : ITEM_CATEGORIES)];
 
     const sortedItems = useMemo(() => {
         const copy = [...items];
@@ -67,12 +76,12 @@ export default function DiscoverPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-gray-50 flex flex-col">
             <HomeNavbar />
 
             {/* ── Hero ─────────────────────────────────────────────── */}
             <section className="pt-16 bg-white border-b border-gray-100">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
+                <div className="w-full px-4 sm:px-6 lg:px-8 py-12 md:py-16">
                     <div className="flex flex-col lg:flex-row lg:items-start lg:gap-14">
 
                         {/* Left: Text + Search */}
@@ -181,7 +190,7 @@ export default function DiscoverPage() {
 
             {/* ── Borrow & Lend banner strip ─────────────────────── */}
             <div className="bg-white border-b border-gray-200">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex items-center justify-between">
+                <div className="w-full px-4 sm:px-6 lg:px-8 py-2.5 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <span className="inline-flex items-center justify-center w-6 h-6 rounded-md bg-primary text-white flex-shrink-0">
                             <span className="material-symbols-outlined text-sm">swap_horiz</span>
@@ -200,7 +209,7 @@ export default function DiscoverPage() {
             </div>
 
             {/* ── Main Layout ───────────────────────────────────────── */}
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-20">
+            <main className="w-full px-4 sm:px-6 lg:px-8 py-8 pb-8">
                 <div className="flex gap-8">
 
                     {/* Sidebar — desktop only */}
@@ -215,7 +224,7 @@ export default function DiscoverPage() {
                                 )}
                             </div>
                             <div className="space-y-0.5">
-                                {['All', ...ITEM_CATEGORIES].map((cat) => (
+                                {categories.map((cat) => (
                                     <button
                                         key={cat}
                                         onClick={() => setSelectedCategory(cat)}
@@ -251,7 +260,7 @@ export default function DiscoverPage() {
 
                         {/* Category pills — mobile */}
                         <div className="lg:hidden flex items-center gap-2 overflow-x-auto no-scrollbar mb-5 -mx-4 px-4">
-                            {['All', ...ITEM_CATEGORIES].map((cat) => (
+                            {categories.map((cat) => (
                                 <button
                                     key={cat}
                                     onClick={() => setSelectedCategory(cat)}
@@ -328,6 +337,7 @@ export default function DiscoverPage() {
                 communityId="1"
                 onSuccess={() => refetch()}
             />
+            <AppFooter />
         </div>
     );
 }

@@ -1,4 +1,5 @@
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -6,8 +7,24 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { marketplaceSchema, ITEM_CATEGORIES, CONDITIONS } from '../../schemas/marketplaceSchema';
-import { createItem } from '../../services/marketplaceService';
+import { createItem, getListingCategories, updateItem } from '../../services/marketplaceService';
 import { toast } from 'sonner';
+
+const DEFAULT_FORM_VALUES = {
+    title: '',
+    description: '',
+    category: undefined,
+    type: 'RENT',
+    price: '',
+    condition: undefined,
+    availableFrom: '',
+    availableTo: '',
+};
+
+const toDateInputValue = (value) => {
+    if (!value) return '';
+    return String(value).slice(0, 10);
+};
 
 // ── AI mock helpers ──────────────────────────────────────────────────────────
 
@@ -28,6 +45,7 @@ function mockAiCategory(title) {
     const t = title.toLowerCase();
     if (/phone|laptop|camera|tablet|headphone|tv|computer|printer|speaker|drone/.test(t)) return 'Electronics';
     if (/car|bike|bicycle|scooter|activa|vehicle|cycle|moped/.test(t))                   return 'Vehicles';
+    if (/table|chair|sofa|bed|desk|almirah|wardrobe|shelf|cabinet|stool|furniture/.test(t)) return 'Furniture';
     if (/washing|fridge|microwave|cooker|blender|mixer|oven|toaster|air.?condition/.test(t)) return 'Appliances';
     if (/drill|hammer|ladder|saw|wrench|spanner|screwdriver|tool/.test(t))              return 'Tools';
     if (/book|novel|textbook|comic|magazine/.test(t))                                    return 'Books';
@@ -129,18 +147,71 @@ function PhotoUploader({ photos, setPhotos }) {
 
 // ── Main modal ────────────────────────────────────────────────────────────────
 
-const CreateItemModal = ({ open, onOpenChange, communityId, onSuccess }) => {
+const CreateItemModal = ({
+    open,
+    onOpenChange,
+    communityId,
+    onSuccess,
+    mode = 'create',
+    listingId = null,
+    initialValues = null,
+}) => {
     const [photos, setPhotos] = useState([]);
     const [aiPriceLoading, setAiPriceLoading] = useState(false);
     const [aiPriceSuggestion, setAiPriceSuggestion] = useState(null);
     const [aiCatLoading, setAiCatLoading] = useState(false);
     const [aiCatSuggestion, setAiCatSuggestion] = useState(null);
-    const [availFromMin, setAvailFromMin] = useState('');
+    const isEditMode = mode === 'edit';
+
+    const { data: categoryOptions = ITEM_CATEGORIES } = useQuery({
+        queryKey: ['listingCategories'],
+        queryFn: getListingCategories,
+        staleTime: 1000 * 60 * 5,
+    });
+    const resolvedCategoryOptions = categoryOptions.length ? categoryOptions : ITEM_CATEGORIES;
 
     const form = useForm({
         resolver: zodResolver(marketplaceSchema),
-        defaultValues: { title: '', description: '', category: undefined, type: 'RENT', price: '', condition: undefined, availableFrom: '', availableTo: '' },
+        defaultValues: DEFAULT_FORM_VALUES,
     });
+    const selectedAvailableFrom = form.watch('availableFrom');
+
+    const resetTransientState = () => {
+        setPhotos([]);
+        setAiPriceSuggestion(null);
+        setAiCatSuggestion(null);
+    };
+
+    const handleDialogOpenChange = (nextOpen) => {
+        if (!nextOpen) {
+            resetTransientState();
+            form.reset(DEFAULT_FORM_VALUES);
+        }
+        onOpenChange(nextOpen);
+    };
+
+    useEffect(() => {
+        if (!open) return;
+
+        if (isEditMode && initialValues) {
+            const availableFrom = toDateInputValue(initialValues.availableFrom);
+            const availableTo = toDateInputValue(initialValues.availableTo);
+
+            form.reset({
+                title: initialValues.title ?? '',
+                description: initialValues.description ?? '',
+                category: initialValues.category ?? undefined,
+                type: 'RENT',
+                price: initialValues.price ?? '',
+                condition: initialValues.condition ?? undefined,
+                availableFrom,
+                availableTo,
+            });
+            return;
+        }
+
+        form.reset(DEFAULT_FORM_VALUES);
+    }, [open, isEditMode, initialValues, form]);
 
     const handleSuggestPrice = async () => {
         const title = form.getValues('title');
@@ -179,35 +250,56 @@ const CreateItemModal = ({ open, onOpenChange, communityId, onSuccess }) => {
     };
 
     const onSubmit = async (data) => {
+        const hasNewPhotos = photos.length > 0;
+        const payload = {
+            ...data,
+            communityId,
+            imageFiles: photos.map((photo) => photo.file),
+            images: isEditMode && !hasNewPhotos ? (initialValues?.images ?? []) : undefined,
+        };
+
         try {
-            await createItem({ ...data, communityId });
-            toast.success('Item listed for borrowing!');
-            form.reset();
-            form.reset({ title: '', description: '', category: undefined, type: 'RENT', price: '', condition: undefined, availableFrom: '', availableTo: '' });
-            setPhotos([]);
-            setAiPriceSuggestion(null);
-            setAiCatSuggestion(null);
-            setAvailFromMin('');
-            onOpenChange(false);
+            if (isEditMode) {
+                if (!listingId) {
+                    toast.error('Unable to update listing: missing listing id.');
+                    return;
+                }
+
+                await updateItem(listingId, payload);
+                toast.success('Listing updated successfully!');
+            } else {
+                await createItem(payload);
+                toast.success('Item listed for borrowing!');
+            }
+
+            form.reset(DEFAULT_FORM_VALUES);
+            resetTransientState();
+            handleDialogOpenChange(false);
             if (onSuccess) onSuccess();
-        } catch {
-            toast.error('Failed to list item');
+        } catch (error) {
+            toast.error(error.message || (isEditMode ? 'Failed to update listing' : 'Failed to list item'));
         }
     };
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
+        <Dialog open={open} onOpenChange={handleDialogOpenChange}>
             <DialogContent className="sm:max-w-[620px] max-h-[92vh] overflow-y-auto p-0 gap-0 rounded-2xl">
                 {/* Header */}
                 <DialogHeader className="px-6 pt-6 pb-4 border-b border-gray-100">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                            <span className="material-symbols-outlined text-primary">add_box</span>
+                            <span className="material-symbols-outlined text-primary">
+                                {isEditMode ? 'edit_square' : 'add_box'}
+                            </span>
                         </div>
                         <div>
-                            <DialogTitle className="text-left text-lg">List an Item for Borrowing</DialogTitle>
+                            <DialogTitle className="text-left text-lg">
+                                {isEditMode ? 'Edit Listing' : 'List an Item for Borrowing'}
+                            </DialogTitle>
                             <DialogDescription className="text-left text-xs">
-                                Share with your community &mdash; earn trust, reduce waste.
+                                {isEditMode
+                                    ? 'Update your listing details and availability.'
+                                    : 'Share with your community and reduce waste.'}
                             </DialogDescription>
                         </div>
                     </div>
@@ -218,6 +310,11 @@ const CreateItemModal = ({ open, onOpenChange, communityId, onSuccess }) => {
 
                         {/* Photos */}
                         <PhotoUploader photos={photos} setPhotos={setPhotos} />
+                        {isEditMode && initialValues?.images?.length > 0 && photos.length === 0 && (
+                            <p className="text-xs text-muted-green -mt-3">
+                                Existing photos will be kept unless you upload new ones.
+                            </p>
+                        )}
 
                         {/* Title */}
                         <FormField control={form.control} name="title" render={({ field }) => (
@@ -243,7 +340,7 @@ const CreateItemModal = ({ open, onOpenChange, communityId, onSuccess }) => {
                                                 className="w-full h-10 px-3 pr-8 rounded-xl border border-gray-200 bg-white text-sm text-charcoal focus:outline-none focus:border-primary appearance-none cursor-pointer"
                                             >
                                                 <option value="" disabled>Select category</option>
-                                                {ITEM_CATEGORIES.map((cat) => (
+                                                {resolvedCategoryOptions.map((cat) => (
                                                     <option key={cat} value={cat}>{cat}</option>
                                                 ))}
                                             </select>
@@ -368,10 +465,7 @@ const CreateItemModal = ({ open, onOpenChange, communityId, onSuccess }) => {
                                             <input
                                                 type="date"
                                                 value={field.value}
-                                                onChange={(e) => {
-                                                    field.onChange(e.target.value);
-                                                    setAvailFromMin(e.target.value);
-                                                }}
+                                                onChange={(e) => field.onChange(e.target.value)}
                                                 min={new Date().toISOString().split('T')[0]}
                                                 className="w-full h-9 px-3 rounded-xl border border-gray-200 bg-white text-sm text-charcoal focus:outline-none focus:border-primary cursor-pointer"
                                             />
@@ -386,7 +480,7 @@ const CreateItemModal = ({ open, onOpenChange, communityId, onSuccess }) => {
                                             <input
                                                 type="date"
                                                 {...field}
-                                                min={availFromMin || new Date().toISOString().split('T')[0]}
+                                                min={selectedAvailableFrom || new Date().toISOString().split('T')[0]}
                                                 className="w-full h-9 px-3 rounded-xl border border-gray-200 bg-white text-sm text-charcoal focus:outline-none focus:border-primary cursor-pointer"
                                             />
                                         </FormControl>
@@ -409,7 +503,7 @@ const CreateItemModal = ({ open, onOpenChange, communityId, onSuccess }) => {
                         <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
                             <button
                                 type="button"
-                                onClick={() => onOpenChange(false)}
+                                onClick={() => handleDialogOpenChange(false)}
                                 className="px-5 py-2.5 text-sm font-medium text-charcoal border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
                             >
                                 Cancel
@@ -420,9 +514,15 @@ const CreateItemModal = ({ open, onOpenChange, communityId, onSuccess }) => {
                                 className="px-6 py-2.5 text-sm font-semibold bg-primary hover:bg-primary/90 text-white rounded-xl transition-colors disabled:opacity-60 flex items-center gap-2"
                             >
                                 {form.formState.isSubmitting ? (
-                                    <><span className="material-symbols-outlined text-base animate-spin">progress_activity</span>Listing…</>
+                                    <>
+                                        <span className="material-symbols-outlined text-base animate-spin">progress_activity</span>
+                                        {isEditMode ? 'Saving…' : 'Listing…'}
+                                    </>
                                 ) : (
-                                    <><span className="material-symbols-outlined text-base">check_circle</span>List for Borrowing</>
+                                    <>
+                                        <span className="material-symbols-outlined text-base">check_circle</span>
+                                        {isEditMode ? 'Save Changes' : 'List for Borrowing'}
+                                    </>
                                 )}
                             </button>
                         </div>

@@ -51,7 +51,7 @@ export default function ProfileAvatar({ user, onLogout }) {
                 className="flex items-center gap-2 hover:opacity-80 transition-opacity"
             >
                 {/* Avatar Circle */}
-                <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold text-sm shadow-md">
+                <div className="w-11 h-11 rounded-full bg-primary flex items-center justify-center text-white font-bold text-base shadow-md">
                     {user?.profile?.photo ? (
                         <img
                             src={user.profile.photo}
@@ -64,18 +64,18 @@ export default function ProfileAvatar({ user, onLogout }) {
                 </div>
 
                 {/* Dropdown Arrow */}
-                <span className="material-symbols-outlined text-muted-green text-sm hidden sm:block">
+                <span className="material-symbols-outlined text-muted-green text-base hidden sm:block">
                     {showDropdown ? 'expand_less' : 'expand_more'}
                 </span>
             </button>
 
             {/* Dropdown Menu */}
             {showDropdown && (
-                <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-50 animate-scale-in">
+                <div className="absolute right-0 mt-2 w-60 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-50 animate-scale-in">
                     {/* User Info */}
                     <div className="px-4 py-3 border-b border-gray-100">
-                        <p className="font-semibold text-charcoal">{user?.profile?.name || 'User'}</p>
-                        <p className="text-xs text-muted-green">{user?.email || ''}</p>
+                        <p className="text-base font-semibold text-charcoal">{user?.profile?.name || 'User'}</p>
+                        <p className="text-sm text-muted-green">{user?.email || ''}</p>
                     </div>
 
                     {/* Menu Items */}
@@ -85,9 +85,9 @@ export default function ProfileAvatar({ user, onLogout }) {
                                 setShowDropdown(false);
                                 navigate('/profile');
                             }}
-                            className="w-full px-4 py-2 text-left text-sm text-charcoal hover:bg-gray-50 transition-colors flex items-center gap-3"
+                            className="w-full px-4 py-2.5 text-left text-base text-charcoal hover:bg-gray-50 transition-colors flex items-center gap-3"
                         >
-                            <span className="material-symbols-outlined text-lg">person</span>
+                            <span className="material-symbols-outlined text-xl">person</span>
                             Profile
                         </button>
                         <button
@@ -95,9 +95,9 @@ export default function ProfileAvatar({ user, onLogout }) {
                                 setShowDropdown(false);
                                 navigate('/my-listings');
                             }}
-                            className="w-full px-4 py-2 text-left text-sm text-charcoal hover:bg-gray-50 transition-colors flex items-center gap-3"
+                            className="w-full px-4 py-2.5 text-left text-base text-charcoal hover:bg-gray-50 transition-colors flex items-center gap-3"
                         >
-                            <span className="material-symbols-outlined text-lg">sell</span>
+                            <span className="material-symbols-outlined text-xl">sell</span>
                             My Listings
                         </button>
                         <button
@@ -105,9 +105,9 @@ export default function ProfileAvatar({ user, onLogout }) {
                                 setShowDropdown(false);
                                 navigate('/settings');
                             }}
-                            className="w-full px-4 py-2 text-left text-sm text-charcoal hover:bg-gray-50 transition-colors flex items-center gap-3"
+                            className="w-full px-4 py-2.5 text-left text-base text-charcoal hover:bg-gray-50 transition-colors flex items-center gap-3"
                         >
-                            <span className="material-symbols-outlined text-lg">settings</span>
+                            <span className="material-symbols-outlined text-xl">settings</span>
                             Settings
                         </button>
                     </div>
@@ -116,9 +116,9 @@ export default function ProfileAvatar({ user, onLogout }) {
                     <div className="border-t border-gray-100 pt-1">
                         <button
                             onClick={handleLogout}
-                            className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-3"
+                            className="w-full px-4 py-2.5 text-left text-base text-red-600 hover:bg-red-50 transition-colors flex items-center gap-3"
                         >
-                            <span className="material-symbols-outlined text-lg">logout</span>
+                            <span className="material-symbols-outlined text-xl">logout</span>
                             Logout
                         </button>
                     </div>

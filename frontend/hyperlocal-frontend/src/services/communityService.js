@@ -98,6 +98,7 @@ export const getCommunityById = async (communityId) => {
 /**
  * GET /api/communities/{communityId}/members?page=0&size=20
  * Paginated list of APPROVED members. Requires APPROVED membership.
+ * Response content items: { membershipId, userId, name, email, role, joinedAt, profilePhotoUrl }
  * @returns {Promise<{ content, pageNumber, pageSize, totalElements, totalPages, last }>}
  */
 export const getCommunityMembers = async (communityId, page = 0, size = 20) => {

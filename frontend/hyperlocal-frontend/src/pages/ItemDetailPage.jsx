@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import AppFooter from '../components/ui/AppFooter';
 import HomeNavbar from '../components/ui/HomeNavbar';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { Badge } from '../components/ui/badge';
-import { requestItem } from '../services/marketplaceService';
+import { getItemById, requestItem } from '../services/marketplaceService';
+import { getUserProfileById } from '../services/profileService';
+import { useAuth } from '../context/AuthContext';
 
 // ── Condition colour map ──────────────────────────────────────────────────────
 
@@ -18,25 +22,33 @@ const CONDITION_STYLE = {
 
 const CAT_ICON = {
     'Electronics': 'devices', 'Vehicles': 'directions_car', 'Appliances': 'kitchen',
+    'Furniture': 'chair_alt',
     'Books': 'menu_book', 'Fashion': 'checkroom', 'Tools': 'hardware',
     'Sports': 'sports_soccer', 'Kids': 'child_care', 'Other': 'category',
 };
 
-// ── Star rating ───────────────────────────────────────────────────────────────
+const initialsFromName = (name = '') => {
+    const parts = String(name)
+        .trim()
+        .split(' ')
+        .filter(Boolean);
 
-function Stars({ rating = 5, size = 'sm' }) {
-    const full = Math.floor(rating);
-    const half = rating % 1 >= 0.5;
-    const cls = size === 'lg' ? 'text-base' : 'text-sm';
-    return (
-        <span className="inline-flex items-center gap-0.5">
-            {[...Array(full)].map((_, i) => (
-                <span key={i} className={`material-symbols-outlined text-amber-400 ${cls}`} style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-            ))}
-            {half && <span className={`material-symbols-outlined text-amber-400 ${cls}`} style={{ fontVariationSettings: "'FILL' 1" }}>star_half</span>}
-        </span>
-    );
-}
+    if (parts.length === 0) return 'US';
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+};
+
+const formatMemberSince = (memberSince) => {
+    if (!memberSince) return 'Member since recently';
+
+    const parsedDate = new Date(memberSince);
+    if (Number.isNaN(parsedDate.getTime())) return 'Member since recently';
+
+    return `Member since ${parsedDate.toLocaleDateString('en-US', {
+        month: 'long',
+        year: 'numeric',
+    })}`;
+};
 
 // ── Gallery ───────────────────────────────────────────────────────────────────
 
@@ -128,13 +140,27 @@ function RequestPanel({ item }) {
     const totalCost = (item.price ?? 0) * days;
 
     const handleRequest = async () => {
+        if (!fromDate || !toDate) {
+            toast.info('Please select both from and to dates.');
+            return;
+        }
+
+        if (new Date(toDate) < new Date(fromDate)) {
+            toast.error('To date must be on or after from date.');
+            return;
+        }
+
         setIsRequesting(true);
         try {
-            await requestItem(item.id, message);
+            await requestItem(item.id, {
+                message,
+                fromDate,
+                toDate,
+            });
             toast.success('Borrow request sent! The owner will get back to you.');
             navigate('/discover');
-        } catch {
-            toast.error('Failed to send request. Try again.');
+        } catch (error) {
+            toast.error(error.message || 'Failed to send request. Try again.');
         } finally {
             setIsRequesting(false);
         }
@@ -240,15 +266,49 @@ function RequestPanel({ item }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function ItemDetailPage() {
+    const { id } = useParams();
     const { state } = useLocation();
     const navigate = useNavigate();
-    const item = state?.item;
+    const { user } = useAuth();
+
+    const itemFromState = state?.item ?? null;
+
+    const { data: fetchedItem, isLoading } = useQuery({
+        queryKey: ['marketplaceListing', id],
+        queryFn: () => getItemById(id),
+        enabled: !!id && !itemFromState,
+    });
+
+    const item = itemFromState ?? fetchedItem;
+    const currentUserId = user?.id ?? user?.userId;
+    const ownerId = item?.owner?.userId ?? item?.owner?.id;
+    const isOwner = currentUserId != null && ownerId != null && String(currentUserId) === String(ownerId);
+
+    const { data: ownerProfileData } = useQuery({
+        queryKey: ['ownerPublicProfile', ownerId],
+        queryFn: () => getUserProfileById(ownerId),
+        enabled: !!ownerId && !isOwner,
+        staleTime: 1000 * 60 * 5,
+        retry: 1,
+    });
+
+    if (isLoading && !item) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex flex-col">
+                <HomeNavbar />
+                <div className="flex items-center justify-center flex-1">
+                    <span className="material-symbols-outlined animate-spin text-primary text-4xl">progress_activity</span>
+                </div>
+                <AppFooter />
+            </div>
+        );
+    }
 
     if (!item) {
         return (
-            <div className="min-h-screen bg-gray-50">
+            <div className="min-h-screen bg-gray-50 flex flex-col">
                 <HomeNavbar />
-                <div className="flex flex-col items-center justify-center min-h-[70vh] gap-4 text-center px-4">
+                <div className="flex flex-col items-center justify-center flex-1 gap-4 text-center px-4">
                     <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center mb-2">
                         <span className="material-symbols-outlined text-4xl text-muted-green">search_off</span>
                     </div>
@@ -262,9 +322,18 @@ export default function ItemDetailPage() {
                         Back to Marketplace
                     </button>
                 </div>
+                <AppFooter />
             </div>
         );
     }
+
+    const ownerName = ownerProfileData?.name ?? item.owner?.name ?? 'Community Member';
+    const ownerAvatarUrl = ownerProfileData?.profilePhotoUrl ?? item.owner?.avatarUrl ?? null;
+    const ownerVerified = ownerProfileData?.verified ?? item.owner?.verified ?? false;
+    const ownerAverageRating = Number(ownerProfileData?.averageRating ?? item.owner?.averageRating ?? item.owner?.rating ?? 0);
+    const ownerTotalReviews = Number(ownerProfileData?.totalReviews ?? item.owner?.totalReviews ?? 0);
+    const ownerListingsPosted = Number(ownerProfileData?.listingsPosted ?? item.owner?.itemsListed ?? 0);
+    const ownerMemberSinceLabel = formatMemberSince(ownerProfileData?.memberSince ?? item.owner?.memberSince);
 
     const availWindow = (item.availableFrom && item.availableTo)
         ? `${new Date(item.availableFrom).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} – ${new Date(item.availableTo).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`
@@ -276,7 +345,7 @@ export default function ItemDetailPage() {
 
             {/* ── Breadcrumb bar ─────────────────────────────────── */}
             <div className="pt-16 bg-white border-b border-gray-100">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5">
+                <div className="w-full px-4 sm:px-6 lg:px-8 py-3.5">
                     <nav className="flex items-center gap-1.5 text-sm text-muted-green flex-wrap">
                         <button
                             onClick={() => navigate('/discover')}
@@ -298,7 +367,7 @@ export default function ItemDetailPage() {
             </div>
 
             {/* ── Main Content ───────────────────────────────────── */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24">
+            <div className="w-full px-4 sm:px-6 lg:px-8 py-8 pb-8">
                 <div className="flex flex-col lg:flex-row gap-8 items-start">
 
                     {/* ── Left column ──────────────────────────────── */}
@@ -396,74 +465,72 @@ export default function ItemDetailPage() {
                             </div>
                         )}
 
-                        {/* Owner card */}
-                        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-                            <h2 className="text-base font-bold text-charcoal mb-4 flex items-center gap-2">
-                                <span className="material-symbols-outlined text-primary text-lg">person</span>
-                                About the owner
-                            </h2>
-                            <div className="flex items-center gap-4">
-                                <Avatar className="h-16 w-16 border-2 border-white shadow-md">
-                                    <AvatarImage src={item.owner?.avatarUrl} />
-                                    <AvatarFallback className="bg-primary/10 text-primary font-bold text-lg">
-                                        {item.owner?.avatar ?? 'US'}
-                                    </AvatarFallback>
-                                </Avatar>
-                                <div className="flex-1 min-w-0">
-                                    <p className="font-bold text-charcoal text-base">{item.owner?.name}</p>
-                                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                                        <Stars rating={item.owner?.rating ?? 4.5} size="lg" />
-                                        <span className="text-sm font-semibold text-charcoal">{item.owner?.rating ?? '4.5'}</span>
-                                        <span className="text-xs text-muted-green">·</span>
-                                        <span className="text-xs text-muted-green">{item.owner?.itemsListed ?? 1} item{(item.owner?.itemsListed ?? 1) !== 1 ? 's' : ''} listed</span>
+                        {!isOwner && (
+                            <>
+                                {/* Owner card */}
+                                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                                    <h2 className="text-base font-bold text-charcoal mb-4 flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-primary text-lg">person</span>
+                                        About the owner
+                                    </h2>
+                                    <div className="flex items-center gap-4">
+                                        <Avatar className="h-16 w-16 border-2 border-white shadow-md">
+                                            <AvatarImage src={ownerAvatarUrl} />
+                                            <AvatarFallback className="bg-primary/10 text-primary font-bold text-lg">
+                                                {initialsFromName(ownerName)}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="font-bold text-charcoal text-base">{ownerName}</p>
+                                            <p className="text-xs text-muted-green mt-0.5">{ownerMemberSinceLabel}</p>
+                                            {ownerVerified && (
+                                                <p className="text-xs text-green-600 flex items-center gap-1 mt-1 font-medium">
+                                                    <span className="material-symbols-outlined text-sm">verified</span>
+                                                    Verified Neighbour
+                                                </p>
+                                            )}
+                                        </div>
                                     </div>
-                                    <p className="text-xs text-green-600 flex items-center gap-1 mt-1 font-medium">
-                                        <span className="material-symbols-outlined text-sm">verified</span>
-                                        Verified Neighbour
-                                    </p>
+
+                                    {/* Owner stats */}
+                                    <div className="grid grid-cols-3 gap-3 mt-4 pt-4 border-t border-gray-100">
+                                        {[
+                                            { label: 'Rating', value: ownerAverageRating.toFixed(1), icon: 'star' },
+                                            { label: 'Reviews', value: ownerTotalReviews, icon: 'reviews' },
+                                            { label: 'Listings posted', value: ownerListingsPosted, icon: 'inventory_2' },
+                                        ].map(s => (
+                                            <div key={s.label} className="text-center bg-gray-50 rounded-xl p-3">
+                                                <span className="material-symbols-outlined text-muted-green text-lg">{s.icon}</span>
+                                                <p className="text-base font-bold text-charcoal mt-1">{s.value}</p>
+                                                <p className="text-[10px] text-muted-green">{s.label}</p>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
-                                <button className="text-sm font-semibold text-primary border border-primary/30 rounded-xl px-4 py-2 hover:bg-primary/5 transition-colors flex-shrink-0">
-                                    View profile
-                                </button>
-                            </div>
 
-                            {/* Owner stats */}
-                            <div className="grid grid-cols-3 gap-3 mt-4 pt-4 border-t border-gray-100">
-                                {[
-                                    { label: 'Rating', value: item.owner?.rating ?? '4.5', icon: 'star' },
-                                    { label: 'Items listed', value: item.owner?.itemsListed ?? 1, icon: 'inventory_2' },
-                                    { label: 'Lends done', value: item.owner?.lendsCompleted ?? 8, icon: 'handshake' },
-                                ].map(s => (
-                                    <div key={s.label} className="text-center bg-gray-50 rounded-xl p-3">
-                                        <span className="material-symbols-outlined text-muted-green text-lg">{s.icon}</span>
-                                        <p className="text-base font-bold text-charcoal mt-1">{s.value}</p>
-                                        <p className="text-[10px] text-muted-green">{s.label}</p>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Safety & Guidelines */}
-                        <div className="bg-amber-50 rounded-2xl border border-amber-100 p-5">
-                            <h2 className="text-sm font-bold text-amber-800 flex items-center gap-2 mb-3">
-                                <span className="material-symbols-outlined text-amber-600 text-lg">verified_user</span>
-                                Safety &amp; Guidelines
-                            </h2>
-                            <ul className="space-y-2">
-                                {[
-                                    'Always meet in a safe, public location within your community',
-                                    'Inspect the item thoroughly before accepting it',
-                                    'Return on time and in the same condition it was given',
-                                    'Leave an honest review after borrowing',
-                                    'Report any issues through the platform immediately',
-                                ].map((tip, i) => (
-                                    <li key={i} className="flex items-start gap-2 text-sm text-amber-700">
-                                        <span className="material-symbols-outlined text-amber-500 text-base mt-0.5 flex-shrink-0">check_circle</span>
-                                        {tip}
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
+                                {/* Safety & Guidelines */}
+                                <div className="bg-amber-50 rounded-2xl border border-amber-100 p-5">
+                                    <h2 className="text-sm font-bold text-amber-800 flex items-center gap-2 mb-3">
+                                        <span className="material-symbols-outlined text-amber-600 text-lg">verified_user</span>
+                                        Safety &amp; Guidelines
+                                    </h2>
+                                    <ul className="space-y-2">
+                                        {[
+                                            'Always meet in a safe, public location within your community',
+                                            'Inspect the item thoroughly before accepting it',
+                                            'Return on time and in the same condition it was given',
+                                            'Leave an honest review after borrowing',
+                                            'Report any issues through the platform immediately',
+                                        ].map((tip, i) => (
+                                            <li key={i} className="flex items-start gap-2 text-sm text-amber-700">
+                                                <span className="material-symbols-outlined text-amber-500 text-base mt-0.5 flex-shrink-0">check_circle</span>
+                                                {tip}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            </>
+                        )}
                     </div>
 
                     {/* ── Right column: Sticky request panel ───────── */}
@@ -473,10 +540,24 @@ export default function ItemDetailPage() {
                             {/* Request card */}
                             <div className="bg-white rounded-2xl border border-gray-100 shadow-md p-6">
                                 <div className="mb-5">
-                                    <h2 className="text-xl font-bold text-charcoal">Borrow this item</h2>
-                                    <p className="text-xs text-muted-green mt-1">Your request is sent to the owner for approval</p>
+                                    <h2 className="text-xl font-bold text-charcoal">{isOwner ? 'Your listing' : 'Borrow this item'}</h2>
+                                    <p className="text-xs text-muted-green mt-1">
+                                        {isOwner
+                                            ? 'This item belongs to you. Manage availability or edit details from My Listings.'
+                                            : 'Your request is sent to the owner for approval'}
+                                    </p>
                                 </div>
-                                <RequestPanel item={item} />
+                                {isOwner ? (
+                                    <button
+                                        onClick={() => navigate('/my-listings')}
+                                        className="w-full py-3.5 text-sm font-bold bg-primary hover:bg-primary/90 text-white rounded-2xl transition-colors flex items-center justify-center gap-2 shadow-sm"
+                                    >
+                                        <span className="material-symbols-outlined text-base">inventory_2</span>
+                                        Go to My Listings
+                                    </button>
+                                ) : (
+                                    <RequestPanel item={item} />
+                                )}
                             </div>
 
                             {/* Back button */}
@@ -492,6 +573,7 @@ export default function ItemDetailPage() {
 
                 </div>
             </div>
+            <AppFooter />
         </div>
     );
 }

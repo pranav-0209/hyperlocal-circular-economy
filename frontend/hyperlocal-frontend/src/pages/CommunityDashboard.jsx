@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import AppFooter from '../components/ui/AppFooter';
 import HomeNavbar from '../components/ui/HomeNavbar';
 import ConfirmModal from '../components/ui/ConfirmModal';
 import { getCommunityMembers } from '../services/communityService';
+import { getItems } from '../services/marketplaceService';
 import {
     useCommunityMembers,
     usePendingJoinRequests,
@@ -166,9 +168,22 @@ export default function CommunityDashboard({ community }) {
         enabled: !!community?.id,
         staleTime: 30_000,
     });
+
+    const { data: availableItems = [], isLoading: availableItemsLoading } = useQuery({
+        queryKey: ['communityAvailableItems', community?.id],
+        queryFn: () => getItems({
+            communityId: community.id,
+            status: 'AVAILABLE',
+            size: 6,
+        }),
+        enabled: !!community?.id,
+        staleTime: 30_000,
+    });
+
     const previewMembers = membersData?.content || [];
     const totalMembers   = membersData?.totalElements ?? community?.memberCount ?? 0;
     const hasMore        = totalMembers > PREVIEW_COUNT;
+    const activeItemsCount = availableItems.length;
 
     if (!community) return <div>Loading...</div>;
 
@@ -182,10 +197,10 @@ export default function CommunityDashboard({ community }) {
     const categoryLabel = CATEGORY_LABELS[community.category] || community.category || '';
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-gray-50 flex flex-col">
             <HomeNavbar />
 
-            <main className="pt-20 pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+            <main className="pt-20 pb-8 px-4 sm:px-6 lg:px-8 flex-1">
 
                 {/* Back link */}
                 <button
@@ -243,7 +258,7 @@ export default function CommunityDashboard({ community }) {
                                     <span className="material-symbols-outlined text-lg">inventory_2</span>
                                     <div>
                                         <p className="text-xs text-white/70 leading-none">Active Items</p>
-                                        <p className="font-bold text-lg leading-tight">0</p>
+                                        <p className="font-bold text-lg leading-tight">{activeItemsCount}</p>
                                     </div>
                                 </div>
                             </div>
@@ -485,21 +500,68 @@ export default function CommunityDashboard({ community }) {
                         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
                             <div className="flex items-center justify-between mb-5">
                                 <h2 className="text-base font-bold text-charcoal">Available Items</h2>
-                                <button className="text-sm text-primary hover:underline font-medium">View All</button>
-                            </div>
-                            <div className="flex flex-col items-center justify-center py-14 gap-3 text-center">
-                                <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center">
-                                    <span className="material-symbols-outlined text-primary text-3xl">inventory_2</span>
-                                </div>
-                                <p className="font-medium text-charcoal text-sm">Nothing to borrow yet</p>
-                                <p className="text-xs text-muted-green max-w-xs">
-                                    Be the first to list something — tools, books, appliances, anything!
-                                </p>
-                                <button className="mt-2 px-5 py-2 bg-primary text-white text-sm rounded-xl font-semibold hover:brightness-110 transition-all flex items-center gap-2">
-                                    <span className="material-symbols-outlined text-base">add_circle</span>
-                                    List an Item
+                                <button
+                                    onClick={() => navigate('/discover')}
+                                    className="text-sm text-primary hover:underline font-medium"
+                                >
+                                    View All
                                 </button>
                             </div>
+                            {availableItemsLoading ? (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    {Array.from({ length: 4 }).map((_, i) => (
+                                        <div key={i} className="border border-gray-100 rounded-xl p-3 animate-pulse">
+                                            <div className="h-24 bg-gray-100 rounded-lg mb-3" />
+                                            <div className="h-4 bg-gray-100 rounded w-3/4 mb-2" />
+                                            <div className="h-3 bg-gray-100 rounded w-1/2" />
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : availableItems.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center py-14 gap-3 text-center">
+                                    <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center">
+                                        <span className="material-symbols-outlined text-primary text-3xl">inventory_2</span>
+                                    </div>
+                                    <p className="font-medium text-charcoal text-sm">Nothing to borrow yet</p>
+                                    <p className="text-xs text-muted-green max-w-xs">
+                                        Be the first to list something — tools, books, appliances, anything!
+                                    </p>
+                                    <button
+                                        onClick={() => navigate('/discover')}
+                                        className="mt-2 px-5 py-2 bg-primary text-white text-sm rounded-xl font-semibold hover:brightness-110 transition-all flex items-center gap-2"
+                                    >
+                                        <span className="material-symbols-outlined text-base">add_circle</span>
+                                        List an Item
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    {availableItems.map((item) => (
+                                        <button
+                                            key={item.id}
+                                            onClick={() => navigate(`/discover/item/${item.id}`, { state: { item } })}
+                                            className="text-left border border-gray-100 rounded-xl overflow-hidden hover:shadow-sm hover:border-primary/20 transition-all"
+                                        >
+                                            <div className="h-24 bg-gray-100 overflow-hidden">
+                                                {item.images?.[0] ? (
+                                                    <img src={item.images[0]} alt={item.title} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <div className="w-full h-full flex items-center justify-center text-gray-300">
+                                                        <span className="material-symbols-outlined text-3xl">image</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="p-3">
+                                                <p className="text-sm font-semibold text-charcoal line-clamp-1">{item.title}</p>
+                                                <div className="flex items-center justify-between mt-1.5">
+                                                    <p className="text-xs text-muted-green line-clamp-1">{item.condition}</p>
+                                                    <p className="text-xs font-bold text-primary">₹{item.price}/day</p>
+                                                </div>
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
 
                         {/* Members preview / management */}
@@ -554,7 +616,7 @@ export default function CommunityDashboard({ community }) {
                                                                 confirmLabel: 'Remove',
                                                                 confirmClass: 'bg-red-600 text-white hover:bg-red-700',
                                                                 onConfirm: () => {
-                                                                    removeMutation.mutate(m.userId, {
+                                                                    removeMutation.mutate(m.membershipId, {
                                                                         onSuccess: closeConfirm,
                                                                     });
                                                                 },
@@ -653,7 +715,7 @@ export default function CommunityDashboard({ community }) {
                             <div className="space-y-4">
                                 {[
                                     { icon: 'group',             label: 'Members',         value: community.memberCount ?? '—' },
-                                    { icon: 'inventory_2',       label: 'Active Items',     value: 0 },
+                                    { icon: 'inventory_2',       label: 'Active Items',     value: activeItemsCount },
                                     { icon: 'swap_horiz',        label: 'Completed Shares', value: 0 },
                                     { icon: 'workspace_premium', label: 'Your Role',        value: community.isAdmin ? 'Admin' : 'Member' },
                                 ].map(({ icon, label, value }) => (
@@ -726,6 +788,7 @@ export default function CommunityDashboard({ community }) {
                 onCancel={closeConfirm}
                 loading={policyMutation.isPending || statusMutation.isPending}
             />
+            <AppFooter />
         </div>
     );
 }

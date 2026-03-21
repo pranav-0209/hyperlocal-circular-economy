@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import AppFooter from '../components/ui/AppFooter';
 import HomeNavbar from '../components/ui/HomeNavbar';
 import CommunityDashboard from './CommunityDashboard';
 import CreateItemModal from '../components/marketplace/CreateItemModal';
@@ -82,10 +83,10 @@ export default function DashboardPage() {
   // If user has no communities, show community selection page
   if (!user.communities || user.communities.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex flex-col">
         <HomeNavbar hideNavLinks={true} />
 
-        <main className="pt-24 pb-16 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto">
+        <main className="pt-24 pb-8 px-4 sm:px-6 lg:px-8 flex-1">
 
           {/* Verification Badge */}
           <div className="mb-6 bg-green-50 border border-green-200 rounded-xl p-4 flex items-start gap-3">
@@ -257,6 +258,7 @@ export default function DashboardPage() {
 
         <CreateCommunityModal open={showCreateModal} onOpenChange={setShowCreateModal} />
 
+        <AppFooter />
       </div>
     );
   }
@@ -276,10 +278,10 @@ export default function DashboardPage() {
 
   // User has communities - show dashboard overview
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-50 to-primary/5">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-50 to-primary/5 flex flex-col">
       <HomeNavbar />
 
-      <main className="pt-24 pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+      <main className="pt-24 pb-8 px-4 sm:px-6 lg:px-8 flex-1">
         {/* Welcome Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-charcoal mb-2">
@@ -639,6 +641,7 @@ export default function DashboardPage() {
         communityId={user.communities?.[0]?.id || '1'}
       />
 
+      <AppFooter />
     </div>
   );
 }

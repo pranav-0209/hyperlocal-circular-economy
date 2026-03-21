@@ -17,6 +17,7 @@ const CONDITION_STYLE = {
 // Category icon map
 const CAT_ICON = {
     'Electronics': 'devices', 'Vehicles': 'directions_car', 'Appliances': 'kitchen',
+    'Furniture': 'chair_alt',
     'Books': 'menu_book', 'Fashion': 'checkroom', 'Tools': 'hardware',
     'Sports': 'sports_soccer', 'Kids': 'child_care', 'Other': 'category',
 };
@@ -108,13 +109,27 @@ function RequestPanel({ item, onClose }) {
     const totalCost = (item.price ?? 0) * days;
 
     const handleRequest = async () => {
+        if (!fromDate || !toDate) {
+            toast.info('Please select both from and to dates.');
+            return;
+        }
+
+        if (new Date(toDate) < new Date(fromDate)) {
+            toast.error('To date must be on or after from date.');
+            return;
+        }
+
         setIsRequesting(true);
         try {
-            await requestItem(item.id, message);
+            await requestItem(item.id, {
+                message,
+                fromDate,
+                toDate,
+            });
             toast.success('Borrow request sent! The owner will get back to you.');
             onClose();
-        } catch {
-            toast.error('Failed to send request. Try again.');
+        } catch (error) {
+            toast.error(error.message || 'Failed to send request. Try again.');
         } finally {
             setIsRequesting(false);
         }

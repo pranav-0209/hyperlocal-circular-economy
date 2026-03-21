@@ -1,10 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useAuth } from '../../context/AuthContext';
 
 const ItemCard = ({ item, onRequest }) => {
+    const { user } = useAuth();
     const isFree = item.type === 'GIFT';
+    const [imageFailed, setImageFailed] = useState(false);
+    const hasImage = Boolean(item.images?.[0]) && !imageFailed;
+    const currentUserId = user?.id ?? user?.userId;
+    const ownerId = item?.owner?.userId ?? item?.owner?.id;
+    const isOwner = currentUserId != null && ownerId != null && String(currentUserId) === String(ownerId);
 
     const getTypeColor = (type) => {
         switch (type) {
@@ -24,11 +31,12 @@ const ItemCard = ({ item, onRequest }) => {
             className="group bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-all duration-300 flex flex-col h-full cursor-pointer"
         >
             {/* Image Container */}
-            <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
-                {item.images && item.images.length > 0 ? (
+            <div className="relative aspect-4/3 overflow-hidden bg-gray-100">
+                {hasImage ? (
                     <img
                         src={item.images[0]}
                         alt={item.title}
+                        onError={() => setImageFailed(true)}
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                 ) : (
@@ -76,17 +84,20 @@ const ItemCard = ({ item, onRequest }) => {
                         </Avatar>
                         <div className="flex flex-col">
                             <span className="text-xs font-medium text-charcoal">{item.owner?.name}</span>
-                            <span className="text-[10px] text-muted-green">{item.condition}</span>
+                            <span className="text-[10px] text-muted-green">{isOwner ? 'Your listing' : item.condition}</span>
                         </div>
                     </div>
 
                     {/* Action Button */}
                     <Button
                         size="sm"
-                        className="rounded-full px-4 h-8 bg-black hover:bg-gray-800 text-white shadow-none"
-                        onClick={() => onRequest(item)}
+                        className={`rounded-full px-4 h-8 shadow-none ${isOwner ? 'bg-primary/10 hover:bg-primary/15 text-primary' : 'bg-black hover:bg-gray-800 text-white'}`}
+                        onClick={(event) => {
+                            event.stopPropagation();
+                            onRequest(item);
+                        }}
                     >
-                        Request
+                        {isOwner ? 'Manage' : 'Request'}
                     </Button>
                 </div>
             </div>

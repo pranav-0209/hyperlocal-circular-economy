@@ -8,7 +8,7 @@ const LandingPage = () => {
   return (
     <div className="bg-background-light text-charcoal min-h-screen">
       {/* Header */}
-      <header className="sticky top-0 z-50 w-full border-b border-gray-200 bg-background-light/80 backdrop-blur-md px-4 sm:px-6 lg:px-8 py-5">
+      <header className="sticky top-0 z-50 w-full border-b border-gray-200 bg-background-light/80 backdrop-blur-md px-2 sm:px-4 lg:px-6 py-5">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="bg-primary p-2 rounded-lg">
@@ -72,7 +72,7 @@ const LandingPage = () => {
       {/* Rest of your component remains exactly the same */}
       <main className="flex flex-col items-center bg-background-light">
         {/* Hero */}
-        <section className="w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-12 lg:py-20 mx-auto">
+        <section className="w-full max-w-7xl px-2 sm:px-4 lg:px-6 py-12 lg:py-20 mx-auto">
           <div className="relative overflow-hidden rounded-2xl lg:rounded-3xl flex items-center justify-center p-8 lg:p-16" style={{ minHeight: '500px' }}>
             <style>{`
               @media (min-width: 1024px) {
@@ -111,7 +111,7 @@ const LandingPage = () => {
         </section>
 
         {/* Stats */}
-        <section className="w-full max-w-7xl px-4 sm:px-6 lg:px-8 mx-auto grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 py-12 lg:py-16 border-b border-gray-200">
+        <section className="w-full max-w-7xl px-2 sm:px-4 lg:px-6 mx-auto grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 py-12 lg:py-16 border-b border-gray-200">
           {[
             { label: "Active Members", value: "15k+" },
             { label: "CO2 Prevented", value: "40t" },
@@ -130,7 +130,7 @@ const LandingPage = () => {
         {/* How it works */}
         <section
           id="how-it-works"
-          className="w-full max-w-7xl px-4 sm:px-6 lg:px-8 mx-auto py-16 lg:py-24"
+          className="w-full max-w-7xl px-2 sm:px-4 lg:px-6 mx-auto py-16 lg:py-24"
         >
           <div className="flex flex-col items-center text-charcoal text-center mb-16 space-y-4">
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight">
@@ -190,7 +190,7 @@ const LandingPage = () => {
         </section>
 
         {/* Features */}
-        <section className="w-full bg-primary/5 py-16 lg:py-24 px-4 sm:px-6 lg:px-8">
+        <section className="w-full bg-primary/5 py-16 lg:py-24 px-2 sm:px-4 lg:px-6">
           <div className="max-w-7xl mx-auto">
             <div className="mb-12 sm:mb-16">
               <span className="text-primary font-bold text-xs tracking-widest uppercase">
@@ -299,7 +299,7 @@ const LandingPage = () => {
         </section>
 
         {/* CTA */}
-        <section className="w-full bg-primary/5 px-4 sm:px-6 lg:px-8 py-16 lg:py-24">
+        <section className="w-full bg-primary/5 px-2 sm:px-4 lg:px-6 py-16 lg:py-24">
           <div className="max-w-7xl mx-auto bg-charcoal text-white rounded-2xl lg:rounded-3xl p-8 sm:p-12 lg:p-16 relative overflow-hidden">
             <div className="absolute top-0 right-0 p-10 opacity-10">
               <span className="material-symbols-outlined text-[10rem]">eco</span>
@@ -328,7 +328,7 @@ const LandingPage = () => {
       </main>
 
       {/* Footer */}
-      <footer className="w-full bg-gray-50 pt-16 pb-8 px-4 sm:px-6 lg:px-8">
+      <footer className="w-full bg-gray-50 pt-16 pb-8 px-2 sm:px-4 lg:px-6">
         <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-12 mb-12 lg:mb-16">
           <div className="space-y-6">
             <div className="flex items-center gap-3">
