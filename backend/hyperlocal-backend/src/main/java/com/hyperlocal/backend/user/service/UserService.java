@@ -2,6 +2,7 @@ package com.hyperlocal.backend.user.service;
 
 import com.hyperlocal.backend.common.exception.CustomExceptions;
 import com.hyperlocal.backend.common.storage.FileStorageService;
+import com.hyperlocal.backend.marketplace.repository.ListingRepository;
 import com.hyperlocal.backend.security.JwtService;
 import com.hyperlocal.backend.user.dto.*;
 import com.hyperlocal.backend.user.enums.ProfileStep;
@@ -26,6 +27,63 @@ public class UserService {
     private final JwtService jwtService;
     private final ProfileCompletionService profileCompletionService;
     private final FileStorageService fileStorageService;
+    private final ListingRepository listingRepository;
+
+    // ── Profile endpoints ──────────────────────────────────────────────────────
+
+    /** GET /api/profile/me — full profile for the authenticated user. */
+    public ProfileResponseDto getMyProfile() {
+        String email = extractAuthenticatedEmail();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(CustomExceptions.UserNotFoundException::new);
+        return buildMyProfileResponse(user);
+    }
+
+    /** GET /api/profile/{userId} — lean public profile for any user. */
+    public PublicProfileResponseDto getPublicProfile(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(CustomExceptions.UserNotFoundException::new);
+
+        if (user.getVerificationStatus() != VerificationStatus.VERIFIED) {
+            throw new CustomExceptions.UserNotFoundException();
+        }
+
+        long listingsPosted = listingRepository.findByOwnerIdOrderByCreatedAtDesc(user.getId()).size();
+
+        return PublicProfileResponseDto.builder()
+                .userId(user.getId())
+                .name(user.getName())
+                .profilePhotoUrl(user.getProfilePhotoUrl())
+                .verified(user.getVerificationStatus() == VerificationStatus.VERIFIED)
+                .memberSince(user.getCreatedAt())
+                .averageRating(user.getAverageRating())
+                .totalReviews(user.getTotalReviews())
+                .listingsPosted(listingsPosted)
+                .build();
+    }
+
+    private ProfileResponseDto buildMyProfileResponse(User user) {
+        long listingsPosted = listingRepository.findByOwnerIdOrderByCreatedAtDesc(user.getId()).size();
+
+        return ProfileResponseDto.builder()
+                .userId(user.getId())
+                .name(user.getName())
+                .email(user.getEmail())
+                .phone(user.getPhone())
+                .address(user.getAddress())
+                .bio(user.getAboutMe())
+                .profilePhotoUrl(user.getProfilePhotoUrl())
+                .verified(user.getVerificationStatus() == VerificationStatus.VERIFIED)
+                .memberSince(user.getCreatedAt())
+                .averageRating(user.getAverageRating())
+                .totalReviews(user.getTotalReviews())
+                .stats(ProfileResponseDto.ProfileStatsDto.builder()
+                        .listingsPosted(listingsPosted)
+                        .build())
+                .joinedCommunityIds(user.getJoinedCommunityIds())
+                .createdCommunityIds(user.getCreatedCommunityIds())
+                .build();
+    }
 
     @Transactional
     public RegisterResponseDto registerUser(RegisterRequestDto dto) {

@@ -160,7 +160,7 @@ public class CommunityController {
 
     // ── Member management ─────────────────────────────────────────────────────
 
-    /** DELETE /api/communities/{id}/members/{memberId} — remove a member (admin only) */
+    /** DELETE /api/communities/{id}/members/{membershipId} — remove a member (admin only) */
     @Operation(summary = "Remove a member from the community (admin only)")
     @DeleteMapping("/{communityId}/members/{membershipId}")
     public ResponseEntity<Void> removeMember(

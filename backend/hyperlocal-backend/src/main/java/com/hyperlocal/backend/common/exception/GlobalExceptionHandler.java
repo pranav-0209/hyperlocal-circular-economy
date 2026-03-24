@@ -195,6 +195,42 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.FORBIDDEN, ex.getMessage(), request.getRequestURI());
     }
 
+    @ExceptionHandler(CustomExceptions.BorrowRequestNotFoundException.class)
+    public ResponseEntity<ErrorResponseDto> handleBorrowRequestNotFound(
+            CustomExceptions.BorrowRequestNotFoundException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler(CustomExceptions.BorrowRequestAccessDeniedException.class)
+    public ResponseEntity<ErrorResponseDto> handleBorrowRequestAccessDenied(
+            CustomExceptions.BorrowRequestAccessDeniedException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.FORBIDDEN, ex.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler(CustomExceptions.BorrowRequestInvalidStateException.class)
+    public ResponseEntity<ErrorResponseDto> handleBorrowRequestInvalidState(
+            CustomExceptions.BorrowRequestInvalidStateException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.CONFLICT, ex.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler(CustomExceptions.BorrowRequestDateConflictException.class)
+    public ResponseEntity<ErrorResponseDto> handleBorrowRequestDateConflict(
+            CustomExceptions.BorrowRequestDateConflictException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.CONFLICT, ex.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler(CustomExceptions.InvalidBorrowRequestDateException.class)
+    public ResponseEntity<ErrorResponseDto> handleInvalidBorrowRequestDate(
+            CustomExceptions.InvalidBorrowRequestDateException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler(CustomExceptions.ListingUnavailableForBorrowException.class)
+    public ResponseEntity<ErrorResponseDto> handleListingUnavailableForBorrow(
+            CustomExceptions.ListingUnavailableForBorrowException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.CONFLICT, ex.getMessage(), request.getRequestURI());
+    }
+
     // Handle validation errors for request DTOs
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponseDto> handleValidation(MethodArgumentNotValidException ex,

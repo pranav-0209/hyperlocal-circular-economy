@@ -149,4 +149,43 @@ public class CustomExceptions {
             super("You must be an approved member of the community to create a listing in it.");
         }
     }
+
+    public static class BorrowRequestNotFoundException extends RuntimeException {
+        public BorrowRequestNotFoundException() {
+            super("Borrow request not found.");
+        }
+    }
+
+    public static class BorrowRequestAccessDeniedException extends RuntimeException {
+        public BorrowRequestAccessDeniedException() {
+            super("You are not allowed to access this borrow request.");
+        }
+        public BorrowRequestAccessDeniedException(String message) {
+            super(message);
+        }
+    }
+
+    public static class BorrowRequestInvalidStateException extends RuntimeException {
+        public BorrowRequestInvalidStateException(String message) {
+            super(message);
+        }
+    }
+
+    public static class BorrowRequestDateConflictException extends RuntimeException {
+        public BorrowRequestDateConflictException(String message) {
+            super(message);
+        }
+    }
+
+    public static class InvalidBorrowRequestDateException extends RuntimeException {
+        public InvalidBorrowRequestDateException(String message) {
+            super(message);
+        }
+    }
+
+    public static class ListingUnavailableForBorrowException extends RuntimeException {
+        public ListingUnavailableForBorrowException() {
+            super("This listing is currently unavailable for borrow requests.");
+        }
+    }
 }

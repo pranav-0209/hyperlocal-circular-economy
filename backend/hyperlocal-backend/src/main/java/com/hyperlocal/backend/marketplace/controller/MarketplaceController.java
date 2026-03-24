@@ -44,32 +44,32 @@ public class MarketplaceController {
     @Operation(summary = "Create a listing")
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ListingResponse> createListing(
-            @Valid @ModelAttribute CreateListingRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(marketplaceService.createListing(request));
-    }
+                @Valid @ModelAttribute CreateListingRequest request) {
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(marketplaceService.createListing(request));
+        }
 
-    /**
-     * GET /api/marketplace/listings
-     * Browse listings scoped to the current user's communities.
-     * Optional filters: search, category, status, communityId, page, size.
-     */
-    @Operation(summary = "Browse listings (scoped to user's communities)")
-    @GetMapping
-    public ResponseEntity<PagedResponseDto<ListingResponse>> getListings(
-            @RequestParam(required = false) String search,
-            @RequestParam(required = false) ListingCategory category,
-            @RequestParam(required = false) ListingStatus status,
-            @RequestParam(required = false) Long communityId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+        /**
+         * GET /api/marketplace/listings
+         * Browse listings scoped to the current user's communities.
+         * Optional filters: search, category, status, communityId, page, size.
+         */
+        @Operation(summary = "Browse listings (scoped to user's communities)")
+        @GetMapping
+        public ResponseEntity<PagedResponseDto<ListingResponse>> getListings(
+                @RequestParam(required = false) String search,
+                @RequestParam(required = false) ListingCategory category,
+                @RequestParam(required = false) ListingStatus status,
+                @RequestParam(required = false) Long communityId,
+                @RequestParam(defaultValue = "0") int page,
+                @RequestParam(defaultValue = "20") int size) {
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        return ResponseEntity.ok(
-                marketplaceService.getListings(search, category, status, communityId, pageable));
-    }
+            Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+            return ResponseEntity.ok(
+                    marketplaceService.getListings(search, category, status, communityId, pageable));
+        }
 
-    /**
+        /**
      * GET /api/marketplace/listings/me
      * Get current user's own listings. Optional status filter.
      * NOTE: this must be declared BEFORE /{listingId} to avoid path ambiguity.

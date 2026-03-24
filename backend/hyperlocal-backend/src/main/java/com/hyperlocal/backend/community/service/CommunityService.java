@@ -340,6 +340,7 @@ public class CommunityService {
         Page<CommunityMemberResponse> responsePage = membersPage.map(member -> {
             User user = usersById.get(member.getUserId());
             return CommunityMemberResponse.builder()
+                    .membershipId(member.getId())
                     .userId(member.getUserId())
                     .name(user != null ? user.getName() : "Unknown")
                     .email(user != null ? user.getEmail() : null)

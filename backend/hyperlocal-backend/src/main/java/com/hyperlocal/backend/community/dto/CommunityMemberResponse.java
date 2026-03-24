@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 @Builder
 public class CommunityMemberResponse {
 
+    private Long membershipId;
     private Long userId;
     private String name;
     private String email;
