@@ -56,7 +56,7 @@ public class MarketplaceController {
          */
         @Operation(summary = "Browse listings (scoped to user's communities)")
         @GetMapping
-        public ResponseEntity<PagedResponseDto<ListingResponse>> getListings(
+        public ResponseEntity<PagedResponseDto<ListingSummaryResponse>> getListings(
                 @RequestParam(required = false) String search,
                 @RequestParam(required = false) ListingCategory category,
                 @RequestParam(required = false) ListingStatus status,

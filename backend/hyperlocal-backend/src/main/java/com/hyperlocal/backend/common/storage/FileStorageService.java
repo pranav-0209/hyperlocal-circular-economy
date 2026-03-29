@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -68,6 +69,32 @@ public class FileStorageService {
         return "/uploads/documents/" + fileName;
     }
 
+    public void deleteVerificationDocuments(Long userId) {
+        Path documentsDir = Paths.get(uploadDir, "documents");
+        if (!Files.exists(documentsDir)) {
+            return;
+        }
+
+        String govIdPrefix = "gov_id_" + userId + "_";
+        String addressPrefix = "address_proof_" + userId + "_";
+
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(documentsDir)) {
+            for (Path filePath : stream) {
+                if (!Files.isRegularFile(filePath)) {
+                    continue;
+                }
+
+                String fileName = filePath.getFileName().toString();
+                if (fileName.startsWith(govIdPrefix) || fileName.startsWith(addressPrefix)) {
+                    Files.deleteIfExists(filePath);
+                }
+            }
+        } catch (IOException e) {
+            throw new CustomExceptions.DocumentCleanupException(
+                    "Failed to cleanup verification documents for user " + userId, e);
+        }
+    }
+
     private void validateFile(MultipartFile file, List<String> allowedExtensions, String fileType) {
         if (file == null || file.isEmpty()) {
             throw new CustomExceptions.EmptyFileException();
@@ -93,4 +120,3 @@ public class FileStorageService {
         return dotIndex > 0 ? fileName.substring(dotIndex) : "";
     }
 }
-

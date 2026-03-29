@@ -7,6 +7,7 @@ import com.hyperlocal.backend.admin.dto.VerificationRequestDto;
 import com.hyperlocal.backend.admin.dto.VerificationResponseDto;
 import com.hyperlocal.backend.common.dto.PagedResponseDto;
 import com.hyperlocal.backend.common.exception.CustomExceptions;
+import com.hyperlocal.backend.common.storage.FileStorageService;
 import com.hyperlocal.backend.user.entity.User;
 import com.hyperlocal.backend.user.enums.ProfileStep;
 import com.hyperlocal.backend.user.enums.VerificationStatus;
@@ -26,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class SuperAdminService {
 
     private final UserRepository userRepository;
+    private final FileStorageService fileStorageService;
 
     @Value("${server.port:8080}")
     private String serverPort;
@@ -135,7 +137,10 @@ public class SuperAdminService {
         user.setProfileCompletionPercentage(ProfileStep.DOCUMENT_VERIFICATION.getPercentage());
         user.setRejectionReason(rejectionReason);
 
-        // Clear the uploaded documents so user can re-upload
+        // Remove all prior verification files so user must submit fresh documents.
+        fileStorageService.deleteVerificationDocuments(user.getId());
+
+        // Clear the uploaded document references so user can re-upload
         user.setGovernmentIdUrl(null);
         user.setAddressProofUrl(null);
 

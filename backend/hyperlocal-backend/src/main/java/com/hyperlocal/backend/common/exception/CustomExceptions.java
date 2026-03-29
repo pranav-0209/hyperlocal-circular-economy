@@ -74,6 +74,12 @@ public class CustomExceptions {
         }
     }
 
+    public static class DocumentCleanupException extends RuntimeException {
+        public DocumentCleanupException(String message, Throwable cause) {
+            super(message, cause);
+        }
+    }
+
     // ── Community exceptions ─────────────────────────────────────────────────
 
     public static class CommunityNotFoundException extends RuntimeException {

@@ -80,7 +80,7 @@ public class MarketplaceService {
     // ── Browse (scoped to user's communities) ────────────────────────────────
 
     @Transactional
-    public PagedResponseDto<ListingResponse> getListings(
+    public PagedResponseDto<ListingSummaryResponse> getListings(
             String search, ListingCategory category, ListingStatus status,
             Long communityId, Pageable pageable) {
 
@@ -123,11 +123,11 @@ public class MarketplaceService {
                 .collect(Collectors.toMap(Community::getId, c -> c));
 
         // Build responses inside the transaction (Hibernate session still open)
-        List<ListingResponse> responses = listings.stream()
-                .map(l -> buildListingResponse(l, usersById.get(l.getOwnerId()), communitiesById.get(l.getCommunityId())))
+        List<ListingSummaryResponse> responses = listings.stream()
+                .map(l -> buildListingSummaryResponse(l, usersById.get(l.getOwnerId()), communitiesById.get(l.getCommunityId())))
                 .collect(Collectors.toList());
 
-        Page<ListingResponse> responsePage = new PageImpl<>(responses, pageable, totalElements);
+        Page<ListingSummaryResponse> responsePage = new PageImpl<>(responses, pageable, totalElements);
         return PagedResponseDto.from(responsePage);
     }
 
@@ -301,6 +301,39 @@ public class MarketplaceService {
                 .availableTo(listing.getAvailableTo())
                 .createdAt(listing.getCreatedAt())
                 .updatedAt(listing.getUpdatedAt())
+                .build();
+    }
+
+    private ListingSummaryResponse buildListingSummaryResponse(Listing listing, User owner, Community community) {
+        ListingOwnerDto ownerDto = null;
+        if (owner != null) {
+            ownerDto = ListingOwnerDto.builder()
+                    .userId(owner.getId())
+                    .name(owner.getName())
+                    .profilePhotoUrl(owner.getProfilePhotoUrl())
+                    .averageRating(owner.getAverageRating())
+                    .totalReviews(owner.getTotalReviews())
+                    .verified(owner.getVerificationStatus() == VerificationStatus.VERIFIED)
+                    .build();
+        }
+
+        String thumbnailUrl = null;
+        if (listing.getImages() != null && !listing.getImages().isEmpty()) {
+            thumbnailUrl = listing.getImages().get(0);
+        }
+
+        return ListingSummaryResponse.builder()
+                .id(listing.getId())
+                .title(listing.getTitle())
+                .category(listing.getCategory())
+                .price(listing.getPrice())
+                .condition(listing.getCondition())
+                .thumbnailUrl(thumbnailUrl)
+                .status(listing.getStatus())
+                .communityId(listing.getCommunityId())
+                .communityName(community != null ? community.getName() : null)
+                .owner(ownerDto)
+                .createdAt(listing.getCreatedAt())
                 .build();
     }
 
