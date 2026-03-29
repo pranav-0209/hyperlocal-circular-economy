@@ -19,6 +19,7 @@ import {
     useUpdateCommunityStatus,
 } from '../hooks/useCommunityMutations';
 import { updateCommunitySchema, COMMUNITY_CATEGORIES } from '../schemas/communitySchemas';
+import { ROUTES } from '../constants';
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -501,7 +502,7 @@ export default function CommunityDashboard({ community }) {
                             <div className="flex items-center justify-between mb-5">
                                 <h2 className="text-base font-bold text-charcoal">Available Items</h2>
                                 <button
-                                    onClick={() => navigate('/discover')}
+                                    onClick={() => navigate(`${ROUTES.DISCOVER}?communityId=${community.id}`)}
                                     className="text-sm text-primary hover:underline font-medium"
                                 >
                                     View All
@@ -527,7 +528,7 @@ export default function CommunityDashboard({ community }) {
                                         Be the first to list something — tools, books, appliances, anything!
                                     </p>
                                     <button
-                                        onClick={() => navigate('/discover')}
+                                        onClick={() => navigate(`${ROUTES.DISCOVER}?communityId=${community.id}`)}
                                         className="mt-2 px-5 py-2 bg-primary text-white text-sm rounded-xl font-semibold hover:brightness-110 transition-all flex items-center gap-2"
                                     >
                                         <span className="material-symbols-outlined text-base">add_circle</span>

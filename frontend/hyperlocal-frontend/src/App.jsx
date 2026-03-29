@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { Routes, Route, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute, VerificationRequiredRoute, AdminRoute } from './components/ProtectedRoute';
@@ -23,6 +23,9 @@ const DiscoverPage = lazy(() => import('./pages/DiscoverPage'));
 const ItemDetailPage = lazy(() => import('./pages/ItemDetailPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const MyListingsPage = lazy(() => import('./pages/MyListingsPage'));
+const MarketplaceActivityPage = lazy(() => import('./pages/MarketplaceActivityPage'));
+const MarketplaceRequestsPage = lazy(() => import('./pages/MarketplaceRequestsPage'));
+const MarketplaceExchangesPage = lazy(() => import('./pages/MarketplaceExchangesPage'));
 
 // Verification flow pages
 const VerifyProfilePage = lazy(() => import('./pages/verification/VerifyProfilePage'));
@@ -148,6 +151,38 @@ function App() {
                 element={
                   <VerificationRequiredRoute>
                     <MyListingsPage />
+                  </VerificationRequiredRoute>
+                }
+              />
+
+              {/* Legacy My Listings URL redirect */}
+              <Route
+                path={ROUTES.LEGACY_MY_LISTINGS}
+                element={<Navigate to={ROUTES.MY_LISTINGS} replace />}
+              />
+
+              {/* Marketplace Activity workspace routes */}
+              <Route
+                path={ROUTES.MARKETPLACE_ACTIVITY}
+                element={
+                  <VerificationRequiredRoute>
+                    <MarketplaceActivityPage />
+                  </VerificationRequiredRoute>
+                }
+              />
+              <Route
+                path={ROUTES.MARKETPLACE_REQUESTS}
+                element={
+                  <VerificationRequiredRoute>
+                    <MarketplaceRequestsPage />
+                  </VerificationRequiredRoute>
+                }
+              />
+              <Route
+                path={ROUTES.MARKETPLACE_EXCHANGES}
+                element={
+                  <VerificationRequiredRoute>
+                    <MarketplaceExchangesPage />
                   </VerificationRequiredRoute>
                 }
               />

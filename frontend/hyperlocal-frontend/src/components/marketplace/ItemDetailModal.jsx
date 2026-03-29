@@ -3,7 +3,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { toast } from 'sonner';
-import { requestItem } from '../../services/marketplaceService';
+import { getListingAvailability, requestItem } from '../../services/marketplaceService';
 
 // Condition colour map
 const CONDITION_STYLE = {
@@ -121,6 +121,16 @@ function RequestPanel({ item, onClose }) {
 
         setIsRequesting(true);
         try {
+            const availability = await getListingAvailability(item.id, {
+                fromDate,
+                toDate,
+            });
+
+            if (!availability?.available) {
+                toast.error(availability?.message || 'This listing is not available for the selected dates.');
+                return;
+            }
+
             await requestItem(item.id, {
                 message,
                 fromDate,

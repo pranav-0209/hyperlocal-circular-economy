@@ -26,8 +26,9 @@ import { toast } from 'sonner';
  * Keeps AuthContext in sync whenever the query data changes.
  * Auto-polls every 30s and fires toast notifications when join request status changes.
  */
-export function useMyCommunities() {
+export function useMyCommunities(options = {}) {
     const { user, updateUser } = useAuth();
+    const { refetchInterval = 30_000 } = options;
 
     // Track the previous snapshot of pending communities so we can diff on each fetch.
     // Shape: Map<communityId, communityName>
@@ -79,8 +80,8 @@ export function useMyCommunities() {
         staleTime: 0,
         refetchOnMount: true,
         refetchOnWindowFocus: true,
-        // Poll every 30 seconds so pending users are notified without refreshing
-        refetchInterval: 30_000,
+        // Poll every 30 seconds by default so pending users are notified without refreshing
+        refetchInterval,
     });
 }
 

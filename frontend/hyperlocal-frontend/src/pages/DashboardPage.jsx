@@ -1,14 +1,22 @@
 ﻿import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { toast } from 'sonner';
 import AppFooter from '../components/ui/AppFooter';
 import HomeNavbar from '../components/ui/HomeNavbar';
 import CommunityDashboard from './CommunityDashboard';
 import CreateItemModal from '../components/marketplace/CreateItemModal';
-import { getMyListings, getRecentRequests } from '../services/marketplaceService';
+import {
+  approveBorrowRequest,
+  cancelBorrowRequest,
+  getIncomingRequests,
+  getMyListings,
+  getMySentRequests,
+  rejectBorrowRequest,
+} from '../services/marketplaceService';
 import { useJoinCommunity, useMyCommunities } from '../hooks/useCommunityMutations';
 import { joinCommunitySchema } from '../schemas/communitySchemas';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -17,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
 import CreateCommunityModal from '../components/ui/CreateCommunityModal';
+import { ROUTES } from '../constants';
 
 /**
  * DashboardPage (/dashboard)
@@ -26,15 +35,11 @@ import CreateCommunityModal from '../components/ui/CreateCommunityModal';
  */
 export default function DashboardPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const communityId = searchParams.get('community');
-
-  // Fetch real communities from backend (keeps AuthContext in sync).
-  // We track isFetching (not just isLoading) so that when the user has communities
-  // (hasCommunities=true from login response) we never flash the "Select your path"
-  // screen while the background fetch is still in-flight.
-  const { isLoading: communitiesLoading, isFetching: communitiesFetching } = useMyCommunities();
+  const [requestsTab, setRequestsTab] = useState('incoming');
 
   // React Query mutations
   const joinMutation = useJoinCommunity();
@@ -43,6 +48,12 @@ export default function DashboardPage() {
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(() => searchParams.get('showCreate') === 'true');
   const [showCreateItemModal, setShowCreateItemModal] = useState(false);
+
+  // Fetch real communities from backend (keeps AuthContext in sync).
+  // Pause polling while create listing modal is open to avoid periodic UI flicker.
+  const { isLoading: communitiesLoading } = useMyCommunities({
+    refetchInterval: showCreateItemModal ? false : 30_000,
+  });
 
   // React Hook Form instances
   const joinForm = useForm({
@@ -57,11 +68,99 @@ export default function DashboardPage() {
     enabled: !!user,
   });
 
-  const { data: recentRequests = [] } = useQuery({
-    queryKey: ['recentRequests'],
-    queryFn: getRecentRequests,
+  const { data: incomingRequests = [] } = useQuery({
+    queryKey: ['incomingRequests'],
+    queryFn: () => getIncomingRequests({ page: 0, size: 8 }),
     enabled: !!user,
   });
+
+  const { data: sentRequests = [] } = useQuery({
+    queryKey: ['sentRequests'],
+    queryFn: () => getMySentRequests({ page: 0, size: 8 }),
+    enabled: !!user,
+  });
+
+  const invalidateRequestQueries = () => {
+    queryClient.invalidateQueries({ queryKey: ['incomingRequests'] });
+    queryClient.invalidateQueries({ queryKey: ['sentRequests'] });
+    queryClient.invalidateQueries({ queryKey: ['recentRequests'] });
+  };
+
+  const approveMutation = useMutation({
+    mutationFn: (requestId) => approveBorrowRequest(requestId),
+    onSuccess: () => {
+      toast.success('Request approved.');
+      invalidateRequestQueries();
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to approve request.');
+    },
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: (requestId) => rejectBorrowRequest(requestId),
+    onSuccess: () => {
+      toast.success('Request rejected.');
+      invalidateRequestQueries();
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to reject request.');
+    },
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: (requestId) => cancelBorrowRequest(requestId),
+    onSuccess: () => {
+      toast.success('Request cancelled.');
+      invalidateRequestQueries();
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to cancel request.');
+    },
+  });
+
+  const formatRequestDate = (dateValue) => {
+    if (!dateValue) return '';
+    const parsed = new Date(dateValue);
+    if (Number.isNaN(parsed.getTime())) return '';
+    return parsed.toLocaleDateString('en-US', {
+      day: 'numeric',
+      month: 'short',
+    });
+  };
+
+  const formatListingPrice = (priceValue) => {
+    const parsed = Number(priceValue);
+    if (!Number.isFinite(parsed) || parsed <= 0) return 'Free';
+    return `\u20B9${parsed.toLocaleString('en-IN')}`;
+  };
+
+  const getEffectiveRequestStatus = (request) => {
+    const normalized = String(request?.status || '').toUpperCase();
+    const exchangeStatus = String(request?.exchangeStatus || '').toUpperCase();
+
+    if (normalized === 'COMPLETED') return 'COMPLETED';
+    if (exchangeStatus === 'COMPLETED') return 'COMPLETED';
+    if (normalized === 'APPROVED' && (request?.completedAt || request?.returnedAt || request?.actualReturnDate)) {
+      return 'COMPLETED';
+    }
+    return normalized || 'PENDING';
+  };
+
+  const requestBadgeStyle = (status) => {
+    const normalized = String(status || '').toUpperCase();
+    if (normalized === 'PENDING') return 'border-amber-200 text-amber-700 bg-amber-50';
+    if (normalized === 'APPROVED') return 'border-green-200 text-green-700 bg-green-50';
+    if (normalized === 'COMPLETED') return 'border-blue-200 text-blue-700 bg-blue-50';
+    if (normalized === 'CANCELLED' || normalized === 'REJECTED') return 'border-gray-200 text-gray-600 bg-gray-50';
+    return 'border-gray-200 text-charcoal bg-gray-50';
+  };
+
+  const activeRequests = requestsTab === 'incoming' ? incomingRequests : sentRequests;
+  const previewRequests = activeRequests.slice(0, 3);
+  const previewListings = myListings.slice(0, 4);
+  const showCreateListingCard = previewListings.length > 0 && previewListings.length % 2 === 1;
+  const pendingRequestCount = incomingRequests.filter((request) => request.status === 'PENDING').length;
 
   const handleJoinCommunity = (data) => {
     joinMutation.mutate(data.code, {
@@ -72,11 +171,9 @@ export default function DashboardPage() {
     });
   };
 
-  // Block render while:
-  // â€¢ initial load (no cache yet)
-  // â€¢ OR user told us at login they have communities (hasCommunities) but the
-  //   fresh fetch hasn't landed yet â€” prevents wrong screen from flashing
-  if (!user || communitiesLoading || (user.hasCommunities && communitiesFetching)) {
+  // Block render only for initial load. Avoid blocking on background refetches,
+  // which can remount the page and cause form/modal flicker.
+  if (!user || communitiesLoading) {
     return <div>Loading...</div>;
   }
 
@@ -378,37 +475,106 @@ export default function DashboardPage() {
             {/* Recent Requests Card */}
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold text-charcoal">Recent Requests</h2>
-                <button className="text-sm text-primary hover:underline font-medium">
+                <h2 className="text-lg font-bold text-charcoal">Borrow Requests</h2>
+                <button
+                  type="button"
+                  onClick={() => navigate(ROUTES.MARKETPLACE_REQUESTS)}
+                  className="text-sm text-primary hover:underline font-medium"
+                >
                   View All
                 </button>
               </div>
 
-              {recentRequests.length > 0 ? (
+              <div className="inline-flex rounded-xl bg-gray-100 p-1 gap-1 mb-4">
+                <button
+                  type="button"
+                  onClick={() => setRequestsTab('incoming')}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${requestsTab === 'incoming' ? 'bg-white text-charcoal shadow-sm' : 'text-muted-green hover:text-charcoal'}`}
+                >
+                  Incoming
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRequestsTab('sent')}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${requestsTab === 'sent' ? 'bg-white text-charcoal shadow-sm' : 'text-muted-green hover:text-charcoal'}`}
+                >
+                  Sent
+                </button>
+              </div>
+
+              {activeRequests.length > 0 ? (
                 <div className="space-y-3">
-                  {recentRequests.map((req) => (
-                    <div key={req.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-white border border-gray-200 rounded-full flex items-center justify-center text-lg">
-                          ðŸŽ
+                  {previewRequests.map((req) => {
+                    const requestStatus = getEffectiveRequestStatus(req);
+                    const displayStatus = requestsTab === 'incoming' && requestStatus === 'APPROVED'
+                      ? 'COMPLETED'
+                      : requestStatus;
+
+                    return (
+                      <div key={req.id} className="flex flex-col gap-3 p-3 bg-gray-50 rounded-xl">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-white border border-gray-200 rounded-full flex items-center justify-center text-lg">
+                            <span className="material-symbols-outlined text-muted-green text-base">handshake</span>
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold text-charcoal">
+                              {requestsTab === 'incoming'
+                                ? `${req.requesterName || 'Community Member'} requested `
+                                : 'You requested '}
+                              <span className="font-bold">{req.listingTitle || 'Listing'}</span>
+                            </p>
+                            <p className="text-xs text-muted-green">{formatRequestDate(req.createdAt)}</p>
+                          </div>
+                          <span
+                            className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold pointer-events-none select-none cursor-default ${requestBadgeStyle(displayStatus)}`}
+                          >
+                            {displayStatus}
+                          </span>
                         </div>
-                        <div>
-                          <p className="text-sm font-semibold text-charcoal">
-                            {req.requestor} requested <span className="font-bold">{req.title}</span>
-                          </p>
-                          <p className="text-xs text-muted-green">{req.date}</p>
-                        </div>
+
+                        {requestsTab === 'incoming' && requestStatus === 'PENDING' && (
+                          <div className="flex items-center gap-2 justify-end">
+                            <button
+                              type="button"
+                              onClick={() => rejectMutation.mutate(req.id)}
+                              disabled={rejectMutation.isPending && rejectMutation.variables === req.id}
+                              className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-red-200 text-red-700 bg-red-50 hover:bg-red-100 disabled:opacity-60"
+                            >
+                              {rejectMutation.isPending && rejectMutation.variables === req.id ? 'Rejecting...' : 'Reject'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => approveMutation.mutate(req.id)}
+                              disabled={approveMutation.isPending && approveMutation.variables === req.id}
+                              className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-primary text-white hover:bg-primary/90 disabled:opacity-60"
+                            >
+                              {approveMutation.isPending && approveMutation.variables === req.id ? 'Approving...' : 'Approve'}
+                            </button>
+                          </div>
+                        )}
+
+                        {requestsTab === 'sent' && requestStatus === 'PENDING' && (
+                          <div className="flex items-center gap-2 justify-end">
+                            <button
+                              type="button"
+                              onClick={() => cancelMutation.mutate(req.id)}
+                              disabled={cancelMutation.isPending && cancelMutation.variables === req.id}
+                              className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 text-charcoal bg-white hover:bg-gray-100 disabled:opacity-60"
+                            >
+                              {cancelMutation.isPending && cancelMutation.variables === req.id ? 'Cancelling...' : 'Cancel Request'}
+                            </button>
+                          </div>
+                        )}
                       </div>
-                      <Badge variant={req.status === 'PENDING' ? 'outline' : 'secondary'} className="text-xs">
-                        {req.status}
-                      </Badge>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="text-center py-8">
                   <span className="material-symbols-outlined text-gray-300 text-5xl mb-3">inbox</span>
-                  <p className="text-muted-green">No recent requests</p>
+                  <p className="text-muted-green">
+                    {requestsTab === 'incoming' ? 'No incoming requests' : 'No sent requests'}
+                  </p>
                 </div>
               )}
             </div>
@@ -417,43 +583,52 @@ export default function DashboardPage() {
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-bold text-charcoal">My Listings</h2>
-                <button className="text-sm text-primary hover:underline font-medium">
+                <button
+                  type="button"
+                  onClick={() => navigate(ROUTES.MY_LISTINGS)}
+                  className="text-sm text-primary hover:underline font-medium"
+                >
                   View All
                 </button>
               </div>
 
               {myListings.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {myListings.slice(0, 4).map((item) => (
-                    <div key={item.id} className="border border-gray-100 rounded-xl p-3 flex gap-3 hover:bg-gray-50 transition-colors cursor-pointer">
-                      <div className="w-16 h-16 bg-gray-200 rounded-lg overflow-hidden shrink-0">
+                  {previewListings.map((item) => (
+                    <div
+                      key={item.id}
+                      className="group border border-gray-100 rounded-xl p-3.5 flex items-center gap-3 bg-gray-50/70 hover:bg-white hover:border-primary/20 hover:shadow-sm transition-all cursor-pointer"
+                    >
+                      <div className="w-16 h-16 rounded-xl overflow-hidden shrink-0 bg-gradient-to-br from-gray-100 to-gray-200 border border-gray-200">
                         {item.images && item.images[0] ? (
                           <img src={item.images[0]} alt={item.title} className="w-full h-full object-cover" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-gray-400">
-                            <span className="material-symbols-outlined">image</span>
+                            <span className="material-symbols-outlined text-xl">image</span>
                           </div>
                         )}
                       </div>
                       <div className="flex flex-col justify-center min-w-0">
-                        <h4 className="font-semibold text-sm text-charcoal truncate">{item.title}</h4>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Badge variant="secondary" className="text-[10px] px-1.5 h-5">{item.type}</Badge>
-                          <span className="text-xs text-muted-green font-medium">
-                            {item.price ? `â‚¹${item.price}` : 'Free'}
+                        <h4 className="font-semibold text-sm text-charcoal truncate group-hover:text-primary transition-colors">{item.title}</h4>
+                        <div className="flex items-center gap-2 mt-1.5">
+                          <Badge variant="secondary" className="text-[10px] px-1.5 h-5 uppercase tracking-wide">{item.type}</Badge>
+                          <span className="text-sm text-charcoal font-semibold">
+                            {formatListingPrice(item.price)}
                           </span>
                         </div>
                       </div>
                     </div>
                   ))}
-                  {/* Add New Card */}
-                  <button
-                    onClick={() => setShowCreateItemModal(true)}
-                    className="border border-dashed border-gray-200 rounded-xl p-3 flex flex-col items-center justify-center gap-2 hover:bg-gray-50 transition-colors text-muted-green hover:text-primary h-[88px]"
-                  >
-                    <span className="material-symbols-outlined">add_circle</span>
-                    <span className="text-xs font-bold">List New Item</span>
-                  </button>
+
+                  {showCreateListingCard && (
+                    <button
+                      onClick={() => setShowCreateItemModal(true)}
+                      className="border border-dashed border-gray-200 rounded-xl p-3.5 flex flex-col items-center justify-center gap-2 hover:bg-gray-50 transition-colors text-muted-green hover:text-primary h-[94px]"
+                    >
+                      <span className="material-symbols-outlined">add_circle</span>
+                      <span className="text-xs font-bold">Create New Listing</span>
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="text-center py-8">
@@ -560,7 +735,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-green">Pending Requests</span>
-                  <span className="font-bold text-charcoal">{recentRequests.filter(r => r.status === 'PENDING').length}</span>
+                  <span className="font-bold text-charcoal">{pendingRequestCount}</span>
                 </div>
               </div>
             </div>
@@ -638,7 +813,6 @@ export default function DashboardPage() {
       <CreateItemModal
         open={showCreateItemModal}
         onOpenChange={setShowCreateItemModal}
-        communityId={user.communities?.[0]?.id || '1'}
       />
 
       <AppFooter />

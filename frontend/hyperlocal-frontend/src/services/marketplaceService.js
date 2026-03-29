@@ -98,7 +98,10 @@ export const normalizeListing = (listing = {}) => ({
     type: 'RENT',
     price: Number(listing.price ?? 0),
     condition: fromApiCondition(listing.condition),
-    images: Array.isArray(listing.images) ? listing.images : [],
+    images: Array.isArray(listing.images)
+        ? listing.images
+        : (listing.thumbnailUrl ? [listing.thumbnailUrl] : []),
+    thumbnailUrl: listing.thumbnailUrl ?? (Array.isArray(listing.images) ? listing.images[0] ?? null : null),
     status: listing.status ?? 'AVAILABLE',
     communityId: listing.communityId != null ? String(listing.communityId) : '',
     communityName: listing.communityName ?? '',
@@ -162,6 +165,25 @@ const normalizeRecentRequest = (request = {}) => ({
         : '',
 });
 
+const normalizeBorrowRequest = (request = {}) => ({
+    id: String(request.id ?? request.requestId ?? ''),
+    listingId: String(request.listingId ?? request.itemId ?? ''),
+    listingTitle: request.listingTitle ?? request.itemTitle ?? request.title ?? '',
+    requesterId: String(request.requesterId ?? request.borrowerId ?? ''),
+    requesterName: request.requesterName ?? request.borrowerName ?? request.requestor ?? 'Community Member',
+    ownerId: String(request.ownerId ?? ''),
+    status: request.status ?? 'PENDING',
+    startDate: request.startDate ?? request.fromDate ?? '',
+    endDate: request.endDate ?? request.toDate ?? '',
+    message: request.message ?? '',
+    exchangeStatus: request.exchangeStatus ?? '',
+    completedAt: request.completedAt ?? null,
+    returnedAt: request.returnedAt ?? null,
+    actualReturnDate: request.actualReturnDate ?? null,
+    createdAt: request.createdAt ?? '',
+    updatedAt: request.updatedAt ?? '',
+});
+
 /**
  * GET /api/marketplace/listings
  */
@@ -184,9 +206,11 @@ export const getItems = async ({
         },
     });
 
-    const listings = Array.isArray(response.data?.content)
-        ? response.data.content
-        : [];
+    const listings = Array.isArray(response.data)
+        ? response.data
+        : Array.isArray(response.data?.content)
+            ? response.data.content
+            : [];
 
     return listings.map(normalizeListing);
 };
@@ -252,7 +276,11 @@ export const getMyListings = async (status) => {
         params: status && status !== 'All' ? { status } : {},
     });
 
-    const listings = Array.isArray(response.data) ? response.data : [];
+    const listings = Array.isArray(response.data)
+        ? response.data
+        : Array.isArray(response.data?.content)
+            ? response.data.content
+            : [];
     return listings.map(normalizeListing);
 };
 
@@ -271,16 +299,123 @@ export const getListingCategories = async () => {
 };
 
 /**
- * POST /api/marketplace/listings/{listingId}/request
- *
- * This endpoint is expected by the item detail request flow.
+ * POST /api/marketplace/requests
+ */
+export const createBorrowRequest = async (payload) => {
+    const requestBody = {
+        listingId: payload.listingId,
+        startDate: payload.startDate ?? payload.fromDate,
+        endDate: payload.endDate ?? payload.toDate,
+        message: payload.message,
+    };
+
+    const response = await api.post('/api/marketplace/requests', requestBody);
+    return normalizeBorrowRequest(response.data);
+};
+
+/**
+ * Backward-compatible wrapper used by current item detail flows.
  */
 export const requestItem = async (listingId, payload) => {
-    const requestBody = typeof payload === 'string'
-        ? { message: payload }
-        : { ...payload };
+    const requestPayload = typeof payload === 'string'
+        ? { listingId, message: payload }
+        : { listingId, ...payload };
 
-    const response = await api.post(`/api/marketplace/listings/${listingId}/request`, requestBody);
+    return createBorrowRequest(requestPayload);
+};
+
+/**
+ * GET /api/marketplace/requests/me
+ */
+export const getMySentRequests = async ({ page = 0, size = 20 } = {}) => {
+    const response = await api.get('/api/marketplace/requests/me', {
+        params: { page, size },
+    });
+
+    const requests = Array.isArray(response.data)
+        ? response.data
+        : Array.isArray(response.data?.content)
+            ? response.data.content
+            : [];
+
+    return requests.map(normalizeBorrowRequest);
+};
+
+/**
+ * GET /api/marketplace/requests/incoming
+ */
+export const getIncomingRequests = async ({ status, page = 0, size = 20 } = {}) => {
+    const response = await api.get('/api/marketplace/requests/incoming', {
+        params: {
+            ...(status ? { status } : {}),
+            page,
+            size,
+        },
+    });
+
+    const requests = Array.isArray(response.data)
+        ? response.data
+        : Array.isArray(response.data?.content)
+            ? response.data.content
+            : [];
+
+    return requests.map(normalizeBorrowRequest);
+};
+
+/**
+ * GET /api/marketplace/requests/{requestId}
+ */
+export const getBorrowRequestById = async (requestId) => {
+    const response = await api.get(`/api/marketplace/requests/${requestId}`);
+    return normalizeBorrowRequest(response.data);
+};
+
+/**
+ * PATCH /api/marketplace/requests/{requestId}/approve
+ */
+export const approveBorrowRequest = async (requestId) => {
+    const response = await api.patch(`/api/marketplace/requests/${requestId}/approve`);
+    return normalizeBorrowRequest(response.data);
+};
+
+/**
+ * PATCH /api/marketplace/requests/{requestId}/reject
+ */
+export const rejectBorrowRequest = async (requestId, reason) => {
+    const response = await api.patch(
+        `/api/marketplace/requests/${requestId}/reject`,
+        reason ? { reason } : undefined
+    );
+    return normalizeBorrowRequest(response.data);
+};
+
+/**
+ * PATCH /api/marketplace/requests/{requestId}/complete
+ */
+export const completeBorrowRequest = async (requestId) => {
+    const response = await api.patch(`/api/marketplace/requests/${requestId}/complete`);
+    return normalizeBorrowRequest(response.data);
+};
+
+/**
+ * PATCH /api/marketplace/requests/{requestId}/cancel
+ */
+export const cancelBorrowRequest = async (requestId) => {
+    const response = await api.patch(`/api/marketplace/requests/${requestId}/cancel`);
+    return normalizeBorrowRequest(response.data);
+};
+
+/**
+ * GET /api/marketplace/requests/listings/{listingId}/availability
+ */
+export const getListingAvailability = async (listingId, { fromDate, toDate } = {}) => {
+    const hasCompleteRange = Boolean(fromDate && toDate);
+
+    const response = await api.get(`/api/marketplace/requests/listings/${listingId}/availability`, {
+        params: hasCompleteRange
+            ? { fromDate, toDate }
+            : undefined,
+    });
     return response.data;
 };
 
@@ -290,15 +425,7 @@ export const requestItem = async (listingId, payload) => {
  */
 export const getRecentRequests = async () => {
     try {
-        const response = await api.get('/api/marketplace/requests/me', {
-            params: { limit: 5 },
-        });
-
-        const requests = Array.isArray(response.data)
-            ? response.data
-            : Array.isArray(response.data?.content)
-                ? response.data.content
-                : [];
+        const requests = await getIncomingRequests({ status: 'PENDING', page: 0, size: 5 });
 
         return requests.map(normalizeRecentRequest);
     } catch (error) {

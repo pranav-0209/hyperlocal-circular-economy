@@ -23,7 +23,11 @@ export const ROUTES = {
     MY_COMMUNITIES: '/my-communities',
     DISCOVER: '/discover',
     ITEM_DETAIL: '/discover/item/:id',
-    MY_LISTINGS: '/my-listings',
+    MARKETPLACE_ACTIVITY: '/marketplace/activity',
+    MY_LISTINGS: '/marketplace/listings',
+    LEGACY_MY_LISTINGS: '/my-listings',
+    MARKETPLACE_REQUESTS: '/marketplace/requests',
+    MARKETPLACE_EXCHANGES: '/marketplace/exchanges',
     PROFILE: '/profile',
 
     // Admin routes

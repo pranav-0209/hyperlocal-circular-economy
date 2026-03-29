@@ -1,18 +1,32 @@
-import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import AppFooter from '../components/ui/AppFooter';
 import HomeNavbar from '../components/ui/HomeNavbar';
 import MarketplaceGrid from '../components/marketplace/MarketplaceGrid';
 import CreateItemModal from '../components/marketplace/CreateItemModal';
 import { getItems, getListingCategories } from '../services/marketplaceService';
+import { getMyCommunities } from '../services/communityService';
 import { ITEM_CATEGORIES } from '../schemas/marketplaceSchema';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '../components/ui/select';
 
 const SORT_OPTIONS = [
     { label: 'Newest first', value: 'newest' },
     { label: 'Price: Low to High', value: 'price_asc' },
     { label: 'Price: High to Low', value: 'price_desc' },
 ];
+
+const COMMUNITY_FILTER_ALL = 'ALL_COMMUNITIES';
+const TOOLBAR_SELECT_CONTENT_CLASS =
+    'z-[250] border border-gray-200 bg-white/95 backdrop-blur-sm shadow-xl rounded-xl p-1';
+const TOOLBAR_SELECT_ITEM_CLASS =
+    'rounded-lg px-2.5 py-2 text-sm font-medium text-charcoal transition-colors hover:bg-gray-50 hover:!text-primary focus:bg-gray-50 focus:text-primary data-[state=checked]:bg-primary/10 data-[state=checked]:text-primary data-[state=checked]:font-semibold';
 
 const CATEGORY_ICONS = {
     'All': 'category',
@@ -33,6 +47,7 @@ const CATEGORY_ICONS = {
  * Browse all items with hero search, type tabs, category pills, and sort
  */
 export default function DiscoverPage() {
+    const [searchParams, setSearchParams] = useSearchParams();
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('All');
     const [sortBy, setSortBy] = useState('newest');
@@ -40,11 +55,75 @@ export default function DiscoverPage() {
 
     const navigate = useNavigate();
 
+    const syncCommunitySearchParam = useCallback((communityId) => {
+        setSearchParams((prevParams) => {
+            const nextParams = new URLSearchParams(prevParams);
+
+            if (communityId === COMMUNITY_FILTER_ALL) {
+                nextParams.delete('communityId');
+            } else {
+                nextParams.set('communityId', communityId);
+            }
+
+            return nextParams;
+        }, { replace: true });
+    }, [setSearchParams]);
+
+    const { data: communities = [], isLoading: communitiesLoading } = useQuery({
+        queryKey: ['communities', 'discover-filter'],
+        queryFn: getMyCommunities,
+        staleTime: 1000 * 60,
+    });
+
+    const communityOptions = useMemo(() => {
+        const eligibleCommunities = communities
+            .filter((community) => community.membershipStatus === 'APPROVED' && community.status === 'ACTIVE')
+            .sort((a, b) => {
+                const adminFirst = Number(b.isAdmin) - Number(a.isAdmin);
+                if (adminFirst !== 0) return adminFirst;
+                return a.name.localeCompare(b.name);
+            })
+            .map((community) => ({
+                id: community.id,
+                name: community.name,
+                role: community.isAdmin ? 'Owner' : 'Member',
+            }));
+
+        return [
+            { id: COMMUNITY_FILTER_ALL, name: 'All Communities', role: null },
+            ...eligibleCommunities,
+        ];
+    }, [communities]);
+
+    const selectedCommunityId = searchParams.get('communityId') || COMMUNITY_FILTER_ALL;
+
+    const selectedCommunityValue = communityOptions.some((community) => community.id === selectedCommunityId)
+        ? selectedCommunityId
+        : COMMUNITY_FILTER_ALL;
+
+    const selectedCommunity = useMemo(
+        () => communityOptions.find((community) => community.id === selectedCommunityValue),
+        [communityOptions, selectedCommunityValue]
+    );
+
+    useEffect(() => {
+        if (communitiesLoading || selectedCommunityId === COMMUNITY_FILTER_ALL) {
+            return;
+        }
+
+        const isKnownCommunity = communityOptions.some((community) => community.id === selectedCommunityId);
+        if (!isKnownCommunity) {
+            syncCommunitySearchParam(COMMUNITY_FILTER_ALL);
+        }
+    }, [communitiesLoading, communityOptions, selectedCommunityId, syncCommunitySearchParam]);
+
     const { data: items = [], isLoading, refetch } = useQuery({
-        queryKey: ['marketplaceItems', searchQuery, selectedCategory],
+        queryKey: ['marketplaceItems', searchQuery, selectedCategory, selectedCommunityId],
         queryFn: () => getItems({
             search: searchQuery,
             category: selectedCategory === 'All' ? undefined : selectedCategory,
+            communityId: selectedCommunityId === COMMUNITY_FILTER_ALL ? undefined : selectedCommunityId,
+            status: 'AVAILABLE',
         }),
     });
 
@@ -57,18 +136,27 @@ export default function DiscoverPage() {
     const categories = ['All', ...(categoryOptions.length ? categoryOptions : ITEM_CATEGORIES)];
 
     const sortedItems = useMemo(() => {
-        const copy = [...items];
+        // Defensive filtering in case backend returns mixed statuses.
+        const copy = items.filter((item) => item.status === 'AVAILABLE');
         if (sortBy === 'price_asc') return copy.sort((a, b) => (a.price ?? 0) - (b.price ?? 0));
         if (sortBy === 'price_desc') return copy.sort((a, b) => (b.price ?? 0) - (a.price ?? 0));
         return copy.sort((a, b) => new Date(b.createdAt ?? 0) - new Date(a.createdAt ?? 0));
     }, [items, sortBy]);
 
-    const hasActiveFilters = selectedCategory !== 'All' || searchQuery;
+    const hasActiveFilters =
+        selectedCategory !== 'All' ||
+        Boolean(searchQuery) ||
+        selectedCommunityId !== COMMUNITY_FILTER_ALL;
+
+    const handleCommunityFilterChange = (communityId) => {
+        syncCommunitySearchParam(communityId);
+    };
 
     const clearFilters = () => {
         setSearchQuery('');
         setSelectedCategory('All');
         setSortBy('newest');
+        syncCommunitySearchParam(COMMUNITY_FILTER_ALL);
     };
 
     const openDetail = (item) => {
@@ -291,31 +379,62 @@ export default function DiscoverPage() {
                                         <span>
                                             <span className="font-bold text-charcoal">{sortedItems.length}</span> result{sortedItems.length !== 1 ? 's' : ''}
                                             {selectedCategory !== 'All' && <span> in <strong className="text-charcoal">{selectedCategory}</strong></span>}
+                                            {selectedCommunity && selectedCommunity.id !== COMMUNITY_FILTER_ALL && (
+                                                <span> from <strong className="text-charcoal">{selectedCommunity.name}</strong></span>
+                                            )}
                                         </span>
                                     )}
                                 </p>
                                 {hasActiveFilters && (
                                     <button
                                         onClick={clearFilters}
-                                        className="inline-flex items-center gap-1 text-xs text-primary font-medium hover:underline"
+                                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-xs font-semibold text-muted-green transition-all duration-200 hover:border-primary/20 hover:bg-gray-100 hover:text-primary"
                                     >
-                                        <span className="material-symbols-outlined text-sm">close</span>
+                                        <span className="material-symbols-outlined text-base leading-none">close</span>
                                         Clear filters
                                     </button>
                                 )}
                             </div>
 
-                            <div className="flex items-center gap-2 flex-shrink-0">
-                                <span className="hidden sm:inline text-xs text-muted-green font-medium">Sort:</span>
-                                <select
-                                    value={sortBy}
-                                    onChange={(e) => setSortBy(e.target.value)}
-                                    className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:border-primary cursor-pointer text-charcoal"
-                                >
-                                    {SORT_OPTIONS.map((o) => (
-                                        <option key={o.value} value={o.value}>{o.label}</option>
-                                    ))}
-                                </select>
+                            <div className="flex items-center gap-2 flex-shrink-0 flex-wrap sm:flex-nowrap">
+                                <div className="w-44 sm:w-48">
+                                    <Select value={selectedCommunityValue} onValueChange={handleCommunityFilterChange}>
+                                        <SelectTrigger className="h-9 rounded-lg border-gray-200 bg-white text-sm">
+                                            <SelectValue placeholder={communitiesLoading ? 'Loading communities...' : 'All Communities'} />
+                                        </SelectTrigger>
+                                        <SelectContent className={TOOLBAR_SELECT_CONTENT_CLASS} position="popper">
+                                            {communityOptions.map((community) => (
+                                                <SelectItem key={community.id} value={community.id} hideIndicator className={TOOLBAR_SELECT_ITEM_CLASS}>
+                                                    <div className="grid w-full min-w-0 grid-cols-[1fr_auto] items-center gap-3">
+                                                        <span className="block min-w-0 truncate text-left">{community.name}</span>
+                                                        {community.role && (
+                                                            <span className={`justify-self-end text-[10px] font-semibold uppercase tracking-wide ${
+                                                                community.role === 'Owner' ? 'text-primary' : 'text-muted-green'
+                                                            }`}>
+                                                                {community.role}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="w-40 sm:w-44">
+                                    <Select value={sortBy} onValueChange={setSortBy}>
+                                        <SelectTrigger className="h-9 rounded-lg border-gray-200 bg-white text-sm">
+                                            <SelectValue placeholder="Sort items" />
+                                        </SelectTrigger>
+                                        <SelectContent className={TOOLBAR_SELECT_CONTENT_CLASS} position="popper">
+                                            {SORT_OPTIONS.map((option) => (
+                                                <SelectItem key={option.value} value={option.value} hideIndicator className={TOOLBAR_SELECT_ITEM_CLASS}>
+                                                    {option.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                             </div>
                         </div>
 
@@ -334,7 +453,6 @@ export default function DiscoverPage() {
             <CreateItemModal
                 open={isCreateModalOpen}
                 onOpenChange={setIsCreateModalOpen}
-                communityId="1"
                 onSuccess={() => refetch()}
             />
             <AppFooter />

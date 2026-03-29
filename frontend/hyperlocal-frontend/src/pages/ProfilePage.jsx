@@ -335,6 +335,7 @@ export default function ProfilePage() {
                         {/* Quick links */}
                         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 space-y-1">
                             {[
+                                { label: 'My Activity', icon: 'timeline', path: ROUTES.MARKETPLACE_ACTIVITY },
                                 { label: 'My Listings', icon: 'sell', path: ROUTES.MY_LISTINGS },
                                 { label: 'Marketplace', icon: 'store', path: ROUTES.DISCOVER },
                                 { label: 'Dashboard', icon: 'dashboard', path: ROUTES.DASHBOARD },

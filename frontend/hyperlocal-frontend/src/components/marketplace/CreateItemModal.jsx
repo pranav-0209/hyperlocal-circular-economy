@@ -1,16 +1,21 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { DayPicker } from 'react-day-picker';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { marketplaceSchema, ITEM_CATEGORIES, CONDITIONS } from '../../schemas/marketplaceSchema';
 import { createItem, getListingCategories, updateItem } from '../../services/marketplaceService';
+import { getMyCommunities } from '../../services/communityService';
 import { toast } from 'sonner';
+import 'react-day-picker/style.css';
 
 const DEFAULT_FORM_VALUES = {
+    communityId: undefined,
     title: '',
     description: '',
     category: undefined,
@@ -20,6 +25,165 @@ const DEFAULT_FORM_VALUES = {
     availableFrom: '',
     availableTo: '',
 };
+
+const EMPTY_COMMUNITIES = [];
+const DROPDOWN_CONTENT_CLASS = 'z-[500] border-gray-200 bg-white/95 backdrop-blur-sm shadow-xl';
+const DROPDOWN_ITEM_CLASS = 'py-3 pr-3 text-charcoal transition-colors duration-150 hover:bg-gray-50 data-[highlighted]:bg-gray-50 focus:bg-gray-50 hover:!text-primary data-[highlighted]:!text-primary focus:!text-primary';
+
+const toCalendarDate = (value) => {
+    if (!value) return undefined;
+    const parsed = new Date(`${value}T00:00:00`);
+    return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+};
+
+const toIsoDate = (date) => {
+    if (!date) return '';
+
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
+const formatCalendarDate = (value) => {
+    if (!value) return 'dd-mm-yyyy';
+    const parsed = toCalendarDate(value);
+    if (!parsed) return 'dd-mm-yyyy';
+
+    return parsed.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+    });
+};
+
+function DatePickerInput({ value, onChange, minDate, placeholder = 'dd-mm-yyyy' }) {
+    const [open, setOpen] = useState(false);
+    const [month, setMonth] = useState(() => toCalendarDate(value) ?? toCalendarDate(minDate) ?? new Date());
+    const wrapperRef = useRef(null);
+
+    const selectedDate = toCalendarDate(value);
+    const minCalendarDate = toCalendarDate(minDate);
+
+    useEffect(() => {
+        if (!open) return undefined;
+
+        const handleClickOutside = (event) => {
+            if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+                setOpen(false);
+            }
+        };
+
+        const handleEscape = (event) => {
+            if (event.key === 'Escape') {
+                setOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        document.addEventListener('keydown', handleEscape);
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('keydown', handleEscape);
+        };
+    }, [open]);
+
+    return (
+        <div className="relative" ref={wrapperRef}>
+            <button
+                type="button"
+                onClick={() => {
+                    if (!open) {
+                        setMonth(selectedDate ?? minCalendarDate ?? new Date());
+                    }
+                    setOpen((prev) => !prev);
+                }}
+                className={`w-full h-10 px-3 rounded-xl border bg-white text-sm text-left flex items-center justify-between transition-colors ${
+                    open
+                        ? 'border-primary ring-2 ring-primary/20'
+                        : 'border-gray-200 hover:border-primary/40'
+                }`}
+            >
+                <span className={value ? 'text-charcoal' : 'text-muted-green'}>
+                    {value ? formatCalendarDate(value) : placeholder}
+                </span>
+                <span className="material-symbols-outlined text-muted-green text-base">calendar_month</span>
+            </button>
+
+            {open && (
+                <div className="absolute left-0 top-[calc(100%+8px)] z-[560] rounded-2xl border border-gray-200 bg-gray-50 shadow-xl px-4 py-3 w-[288px]">
+                    <div className="mb-0 px-1 pb-4 flex items-center justify-between">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                const next = new Date(month.getFullYear(), month.getMonth() - 1, 1);
+                                setMonth(next);
+                            }}
+                            className="h-8 w-8 rounded-lg border border-gray-200 bg-white text-charcoal hover:border-primary hover:text-primary transition-colors flex items-center justify-center"
+                            aria-label="Previous month"
+                        >
+                            <span className="material-symbols-outlined text-lg leading-none">chevron_left</span>
+                        </button>
+
+                        <p className="text-sm font-semibold text-charcoal">
+                            {month.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                        </p>
+
+                        <button
+                            type="button"
+                            onClick={() => {
+                                const next = new Date(month.getFullYear(), month.getMonth() + 1, 1);
+                                setMonth(next);
+                            }}
+                            className="h-8 w-8 rounded-lg border border-gray-200 bg-white text-charcoal hover:border-primary hover:text-primary transition-colors flex items-center justify-center"
+                            aria-label="Next month"
+                        >
+                            <span className="material-symbols-outlined text-lg leading-none">chevron_right</span>
+                        </button>
+                    </div>
+
+                    <DayPicker
+                        mode="single"
+                        selected={selectedDate}
+                        defaultMonth={selectedDate ?? minCalendarDate ?? new Date()}
+                        month={month}
+                        onMonthChange={setMonth}
+                        onSelect={(date) => {
+                            if (!date) return;
+                            onChange(toIsoDate(date));
+                            setOpen(false);
+                        }}
+                        disabled={minCalendarDate ? { before: minCalendarDate } : undefined}
+                        showOutsideDays
+                        hideNavigation
+                        className="text-sm"
+                        classNames={{
+                            months: 'flex',
+                            month: 'space-y-0 w-full',
+                            month_caption: 'hidden',
+                            caption: 'hidden',
+                            caption_label: 'hidden',
+                            nav: 'hidden',
+                            button_previous: 'hidden',
+                            button_next: 'hidden',
+                            week: 'flex',
+                            weekdays: 'flex justify-between text-xs text-muted-green font-semibold px-0.5',
+                            weekday: 'w-9 text-center',
+                            week_number: 'hidden',
+                            day: 'h-9 w-9 rounded-lg',
+                            day_button: 'h-9 w-9 rounded-lg border border-transparent bg-transparent text-xs font-semibold text-charcoal transition-colors hover:bg-primary/10 hover:text-primary',
+                            day_today: 'ring-1 ring-primary/35 text-primary',
+                            day_selected: 'bg-blue-100 border-blue-300 text-blue-700 shadow-sm hover:bg-blue-100 hover:text-blue-700',
+                            day_outside: 'text-gray-300',
+                            day_disabled: 'border-transparent bg-transparent text-gray-300 cursor-not-allowed hover:bg-transparent hover:text-gray-300',
+                        }}
+                    />
+                </div>
+            )}
+        </div>
+    );
+}
 
 const toDateInputValue = (value) => {
     if (!value) return '';
@@ -150,7 +314,6 @@ function PhotoUploader({ photos, setPhotos }) {
 const CreateItemModal = ({
     open,
     onOpenChange,
-    communityId,
     onSuccess,
     mode = 'create',
     listingId = null,
@@ -161,6 +324,7 @@ const CreateItemModal = ({
     const [aiPriceSuggestion, setAiPriceSuggestion] = useState(null);
     const [aiCatLoading, setAiCatLoading] = useState(false);
     const [aiCatSuggestion, setAiCatSuggestion] = useState(null);
+    const wasOpenRef = useRef(false);
     const isEditMode = mode === 'edit';
 
     const { data: categoryOptions = ITEM_CATEGORIES } = useQuery({
@@ -169,6 +333,28 @@ const CreateItemModal = ({
         staleTime: 1000 * 60 * 5,
     });
     const resolvedCategoryOptions = categoryOptions.length ? categoryOptions : ITEM_CATEGORIES;
+
+    const { data: joinedAndCreatedCommunitiesData, isLoading: communitiesLoading } = useQuery({
+        queryKey: ['communities', 'me', 'create-listing'],
+        queryFn: getMyCommunities,
+        staleTime: 1000 * 60,
+        enabled: open,
+    });
+    const joinedAndCreatedCommunities = joinedAndCreatedCommunitiesData ?? EMPTY_COMMUNITIES;
+
+    const selectableCommunities = useMemo(() => (
+        joinedAndCreatedCommunities
+            .filter((community) => community.membershipStatus === 'APPROVED' && community.status === 'ACTIVE')
+            .map((community) => ({
+                id: String(community.id),
+                name: community.name,
+                role: community.isAdmin ? 'OWNER' : 'MEMBER',
+            }))
+            .sort((a, b) => {
+                if (a.role !== b.role) return a.role === 'OWNER' ? -1 : 1;
+                return a.name.localeCompare(b.name);
+            })
+    ), [joinedAndCreatedCommunities]);
 
     const form = useForm({
         resolver: zodResolver(marketplaceSchema),
@@ -191,13 +377,22 @@ const CreateItemModal = ({
     };
 
     useEffect(() => {
-        if (!open) return;
+        if (!open) {
+            wasOpenRef.current = false;
+            return;
+        }
+
+        if (wasOpenRef.current) return;
+        wasOpenRef.current = true;
 
         if (isEditMode && initialValues) {
             const availableFrom = toDateInputValue(initialValues.availableFrom);
             const availableTo = toDateInputValue(initialValues.availableTo);
 
             form.reset({
+                communityId: initialValues.communityId
+                    ? String(initialValues.communityId)
+                    : selectableCommunities[0]?.id,
                 title: initialValues.title ?? '',
                 description: initialValues.description ?? '',
                 category: initialValues.category ?? undefined,
@@ -210,8 +405,26 @@ const CreateItemModal = ({
             return;
         }
 
-        form.reset(DEFAULT_FORM_VALUES);
-    }, [open, isEditMode, initialValues, form]);
+        form.reset({
+            ...DEFAULT_FORM_VALUES,
+            communityId: undefined,
+        });
+    }, [open, isEditMode, initialValues, form, selectableCommunities]);
+
+    useEffect(() => {
+        if (!open || isEditMode || selectableCommunities.length === 0) return;
+
+        const currentCommunityId = form.getValues('communityId');
+        const currentSelectionIsValid = selectableCommunities.some((community) => community.id === currentCommunityId);
+
+        if (!currentSelectionIsValid) {
+            form.setValue('communityId', selectableCommunities[0]?.id, {
+                shouldValidate: true,
+                shouldDirty: false,
+                shouldTouch: false,
+            });
+        }
+    }, [open, isEditMode, selectableCommunities, form]);
 
     const handleSuggestPrice = async () => {
         const title = form.getValues('title');
@@ -253,7 +466,6 @@ const CreateItemModal = ({
         const hasNewPhotos = photos.length > 0;
         const payload = {
             ...data,
-            communityId,
             imageFiles: photos.map((photo) => photo.file),
             images: isEditMode && !hasNewPhotos ? (initialValues?.images ?? []) : undefined,
         };
@@ -316,6 +528,63 @@ const CreateItemModal = ({
                             </p>
                         )}
 
+                        {/* Community */}
+                        <FormField control={form.control} name="communityId" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>
+                                    Community <span className="text-red-500">*</span>
+                                </FormLabel>
+                                <FormControl>
+                                    <Select
+                                        value={field.value}
+                                        onValueChange={field.onChange}
+                                        disabled={communitiesLoading || selectableCommunities.length === 0 || isEditMode}
+                                    >
+                                        <SelectTrigger className="rounded-xl">
+                                            <SelectValue
+                                                placeholder={communitiesLoading ? 'Loading your communities...' : 'Select community'}
+                                            />
+                                        </SelectTrigger>
+                                        <SelectContent
+                                            sideOffset={8}
+                                            className={DROPDOWN_CONTENT_CLASS}
+                                        >
+                                            {selectableCommunities.map((community) => (
+                                                <SelectItem
+                                                    key={community.id}
+                                                    value={community.id}
+                                                    className={DROPDOWN_ITEM_CLASS}
+                                                >
+                                                    <div className="flex items-center justify-between gap-3 w-full">
+                                                        <span className="text-sm font-medium leading-snug transition-colors">{community.name}</span>
+                                                        <span
+                                                            className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                                                                community.role === 'OWNER'
+                                                                    ? 'bg-cyan-50 border-cyan-100 text-cyan-700'
+                                                                    : 'bg-primary/10 border-primary/20 text-primary'
+                                                            }`}
+                                                        >
+                                                            {community.role === 'OWNER' ? 'Owner' : 'Member'}
+                                                        </span>
+                                                    </div>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </FormControl>
+                                {isEditMode ? (
+                                    <FormDescription className="text-xs">
+                                        Community cannot be changed when editing an existing listing.
+                                    </FormDescription>
+                                ) : !communitiesLoading && selectableCommunities.length === 0 ? (
+                                    <FormDescription className="text-xs text-amber-700">
+                                        You need to create or join a community (and be approved) before listing an item.
+                                    </FormDescription>
+                                ) : null}
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+
                         {/* Title */}
                         <FormField control={form.control} name="title" render={({ field }) => (
                             <FormItem>
@@ -334,16 +603,21 @@ const CreateItemModal = ({
                                 <div className="flex gap-2 items-start">
                                     <div className="flex-1">
                                         <FormControl>
-                                            <select
+                                            <Select
                                                 value={field.value ?? ''}
-                                                onChange={(e) => field.onChange(e.target.value || undefined)}
-                                                className="w-full h-10 px-3 pr-8 rounded-xl border border-gray-200 bg-white text-sm text-charcoal focus:outline-none focus:border-primary appearance-none cursor-pointer"
+                                                onValueChange={(value) => field.onChange(value || undefined)}
                                             >
-                                                <option value="" disabled>Select category</option>
-                                                {resolvedCategoryOptions.map((cat) => (
-                                                    <option key={cat} value={cat}>{cat}</option>
-                                                ))}
-                                            </select>
+                                                <SelectTrigger className="rounded-xl">
+                                                    <SelectValue placeholder="Select category" />
+                                                </SelectTrigger>
+                                                <SelectContent sideOffset={8} className={DROPDOWN_CONTENT_CLASS}>
+                                                    {resolvedCategoryOptions.map((cat) => (
+                                                        <SelectItem key={cat} value={cat} className={DROPDOWN_ITEM_CLASS}>
+                                                            {cat}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
                                         </FormControl>
                                     </div>
                                     <button
@@ -394,16 +668,21 @@ const CreateItemModal = ({
                                 <FormItem>
                                     <FormLabel>Condition <span className="text-red-500">*</span></FormLabel>
                                     <FormControl>
-                                        <select
+                                        <Select
                                             value={field.value ?? ''}
-                                            onChange={(e) => field.onChange(e.target.value || undefined)}
-                                            className="w-full h-10 px-3 pr-8 rounded-xl border border-gray-200 bg-white text-sm text-charcoal focus:outline-none focus:border-primary appearance-none cursor-pointer"
+                                            onValueChange={(value) => field.onChange(value || undefined)}
                                         >
-                                            <option value="" disabled>Select condition</option>
-                                            {CONDITIONS.map((cond) => (
-                                                <option key={cond} value={cond}>{cond}</option>
-                                            ))}
-                                        </select>
+                                            <SelectTrigger className="rounded-xl">
+                                                <SelectValue placeholder="Select condition" />
+                                            </SelectTrigger>
+                                            <SelectContent sideOffset={8} className={DROPDOWN_CONTENT_CLASS}>
+                                                {CONDITIONS.map((cond) => (
+                                                    <SelectItem key={cond} value={cond} className={DROPDOWN_ITEM_CLASS}>
+                                                        {cond}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -441,14 +720,13 @@ const CreateItemModal = ({
                                             </button>
                                         </div>
                                     )}
-                                    <FormDescription className="text-xs">Borrower pays per day</FormDescription>
                                     <FormMessage />
                                 </FormItem>
                             )} />
                         </div>
 
                         {/* Availability Window */}
-                        <div className="space-y-3 p-4 bg-gray-50 rounded-2xl border border-gray-200">
+                        <div className="space-y-4 p-4 bg-gray-50 rounded-2xl border border-gray-200">
                             <div>
                                 <p className="text-sm font-semibold text-charcoal flex items-center gap-1.5">
                                     <span className="material-symbols-outlined text-base text-primary">event_available</span>
@@ -457,17 +735,15 @@ const CreateItemModal = ({
                                 </p>
                                 <p className="text-xs text-muted-green mt-0.5">Let borrowers know when this item is available to borrow</p>
                             </div>
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <FormField control={form.control} name="availableFrom" render={({ field }) => (
                                     <FormItem>
                                         <FormLabel className="text-xs">From</FormLabel>
                                         <FormControl>
-                                            <input
-                                                type="date"
+                                            <DatePickerInput
                                                 value={field.value}
-                                                onChange={(e) => field.onChange(e.target.value)}
-                                                min={new Date().toISOString().split('T')[0]}
-                                                className="w-full h-9 px-3 rounded-xl border border-gray-200 bg-white text-sm text-charcoal focus:outline-none focus:border-primary cursor-pointer"
+                                                onChange={field.onChange}
+                                                minDate={new Date().toISOString().split('T')[0]}
                                             />
                                         </FormControl>
                                         <FormMessage />
@@ -477,11 +753,10 @@ const CreateItemModal = ({
                                     <FormItem>
                                         <FormLabel className="text-xs">To</FormLabel>
                                         <FormControl>
-                                            <input
-                                                type="date"
-                                                {...field}
-                                                min={selectedAvailableFrom || new Date().toISOString().split('T')[0]}
-                                                className="w-full h-9 px-3 rounded-xl border border-gray-200 bg-white text-sm text-charcoal focus:outline-none focus:border-primary cursor-pointer"
+                                            <DatePickerInput
+                                                value={field.value}
+                                                onChange={field.onChange}
+                                                minDate={selectedAvailableFrom || new Date().toISOString().split('T')[0]}
                                             />
                                         </FormControl>
                                         <FormMessage />

@@ -6,9 +6,10 @@ import AppFooter from '../components/ui/AppFooter';
 import HomeNavbar from '../components/ui/HomeNavbar';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { Badge } from '../components/ui/badge';
-import { getItemById, requestItem } from '../services/marketplaceService';
+import { getItemById, getListingAvailability, requestItem } from '../services/marketplaceService';
 import { getUserProfileById } from '../services/profileService';
 import { useAuth } from '../context/AuthContext';
+import { ROUTES } from '../constants';
 
 // ── Condition colour map ──────────────────────────────────────────────────────
 
@@ -48,6 +49,75 @@ const formatMemberSince = (memberSince) => {
         month: 'long',
         year: 'numeric',
     })}`;
+};
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+const pad2 = (value) => String(value).padStart(2, '0');
+
+const dateKeyFromDate = (date) => (
+    `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`
+);
+
+const parseDateKey = (dateKey) => {
+    if (!dateKey) return null;
+    const parsed = new Date(`${dateKey}T00:00:00`);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const startOfMonth = (date) => new Date(date.getFullYear(), date.getMonth(), 1);
+
+const addMonths = (date, amount) => new Date(date.getFullYear(), date.getMonth() + amount, 1);
+
+const addDaysToDateKey = (dateKey, days) => {
+    const parsed = parseDateKey(dateKey);
+    if (!parsed) return null;
+    return dateKeyFromDate(new Date(parsed.getTime() + days * DAY_MS));
+};
+
+const buildBlockedDateSet = (blockedRanges = []) => {
+    const blockedSet = new Set();
+
+    blockedRanges.forEach((range) => {
+        const start = parseDateKey(range?.startDate);
+        const end = parseDateKey(range?.endDate);
+
+        if (!start || !end) return;
+        let cursor = new Date(start);
+
+        while (cursor <= end) {
+            blockedSet.add(dateKeyFromDate(cursor));
+            cursor = new Date(cursor.getTime() + DAY_MS);
+        }
+    });
+
+    return blockedSet;
+};
+
+const buildRangeDateSet = (fromDate, toDate) => {
+    const rangeSet = new Set();
+    const start = parseDateKey(fromDate);
+    const end = parseDateKey(toDate);
+
+    if (!start) return rangeSet;
+
+    const finalEnd = end && end >= start ? end : start;
+    let cursor = new Date(start);
+
+    while (cursor <= finalEnd) {
+        rangeSet.add(dateKeyFromDate(cursor));
+        cursor = new Date(cursor.getTime() + DAY_MS);
+    }
+
+    return rangeSet;
+};
+
+const countDaysInclusive = (fromDate, toDate) => {
+    const start = parseDateKey(fromDate);
+    const end = parseDateKey(toDate);
+    if (!start) return 1;
+    if (!end || end < start) return 1;
+    return Math.floor((end - start) / DAY_MS) + 1;
 };
 
 // ── Gallery ───────────────────────────────────────────────────────────────────
@@ -113,31 +183,243 @@ function Gallery({ images }) {
 function RequestPanel({ item }) {
     const navigate = useNavigate();
     const [message, setMessage] = useState("Hi! Is this still available to borrow?");
-    const [days, setDays] = useState(1);
     const [isRequesting, setIsRequesting] = useState(false);
     const [fromDate, setFromDate] = useState('');
     const [toDate, setToDate] = useState('');
+    const [visibleMonth, setVisibleMonth] = useState(() => startOfMonth(new Date()));
+    const [isDragging, setIsDragging] = useState(false);
+    const [dragAnchorDate, setDragAnchorDate] = useState('');
+    const [dragCurrentDate, setDragCurrentDate] = useState('');
+    const [dragMoved, setDragMoved] = useState(false);
+    const [suppressNextClick, setSuppressNextClick] = useState(false);
 
-    const today = new Date().toISOString().split('T')[0];
+    const { data: availabilityData, isLoading: availabilityLoading, isError: availabilityError, refetch: refetchAvailability } = useQuery({
+        queryKey: ['listingAvailabilityCalendar', item.id],
+        queryFn: () => getListingAvailability(item.id),
+        enabled: !!item?.id,
+        staleTime: 30_000,
+    });
 
-    // Sync days when both dates chosen
-    const handleFromDate = (val) => {
-        setFromDate(val);
-        if (toDate && val > toDate) setToDate('');
-        if (val && toDate) {
-            const diff = Math.ceil((new Date(toDate) - new Date(val)) / 86400000);
-            if (diff > 0) setDays(diff);
-        }
-    };
-    const handleToDate = (val) => {
-        setToDate(val);
-        if (val && fromDate) {
-            const diff = Math.ceil((new Date(val) - new Date(fromDate)) / 86400000);
-            if (diff > 0) setDays(diff);
-        }
-    };
+    const todayDate = new Date();
+    const todayKey = dateKeyFromDate(todayDate);
 
+    const availableFromDate = parseDateKey(availabilityData?.availableFrom ?? item?.availableFrom);
+    const availableToDate = parseDateKey(availabilityData?.availableTo ?? item?.availableTo);
+    const availableFromKey = availableFromDate ? dateKeyFromDate(availableFromDate) : null;
+    const availableToKey = availableToDate ? dateKeyFromDate(availableToDate) : null;
+
+    const blockedDateSet = buildBlockedDateSet(availabilityData?.blockedRanges ?? []);
+    const previewStart = isDragging && dragMoved && dragAnchorDate && dragCurrentDate
+        ? (dragAnchorDate <= dragCurrentDate ? dragAnchorDate : dragCurrentDate)
+        : fromDate;
+    const previewEnd = isDragging && dragMoved && dragAnchorDate && dragCurrentDate
+        ? (dragAnchorDate >= dragCurrentDate ? dragAnchorDate : dragCurrentDate)
+        : toDate;
+
+    const selectedRangeSet = buildRangeDateSet(previewStart, previewEnd || previewStart);
+
+    const days = countDaysInclusive(fromDate, toDate);
     const totalCost = (item.price ?? 0) * days;
+
+    const isInsideAvailabilityWindow = (dateKey) => {
+        if (!availableFromKey || !availableToKey) return true;
+        return dateKey >= availableFromKey && dateKey <= availableToKey;
+    };
+
+    const isDateBlocked = (dateKey) => blockedDateSet.has(dateKey);
+
+    const isDateSelectable = (dateKey) => {
+        if (dateKey < todayKey) return false;
+        if (!isInsideAvailabilityWindow(dateKey)) return false;
+        if (isDateBlocked(dateKey)) return false;
+        return true;
+    };
+
+    const doesSelectionOverlapBlocked = (startKey, endKey) => {
+        const start = parseDateKey(startKey);
+        const end = parseDateKey(endKey);
+        if (!start || !end || end < start) return false;
+
+        let cursor = new Date(start);
+        while (cursor <= end) {
+            if (isDateBlocked(dateKeyFromDate(cursor))) {
+                return true;
+            }
+            cursor = new Date(cursor.getTime() + DAY_MS);
+        }
+        return false;
+    };
+
+    const handleDateSelection = (dateKey) => {
+        if (!isDateSelectable(dateKey)) return;
+
+        // Toggle off single selected day.
+        if (fromDate && toDate && fromDate === toDate && dateKey === fromDate) {
+            setFromDate('');
+            setToDate('');
+            return;
+        }
+
+        if (!fromDate) {
+            setFromDate(dateKey);
+            setToDate(dateKey);
+            return;
+        }
+
+        const rangeStart = fromDate <= toDate ? fromDate : toDate;
+        const rangeEnd = fromDate <= toDate ? toDate : fromDate;
+
+        // Allow endpoint unselect/shrink for already selected ranges.
+        if (selectedRangeSet.has(dateKey)) {
+            if (dateKey === rangeStart) {
+                const nextStart = addDaysToDateKey(rangeStart, 1);
+                if (!nextStart || nextStart > rangeEnd) {
+                    setFromDate('');
+                    setToDate('');
+                    return;
+                }
+
+                setFromDate(nextStart);
+                setToDate(rangeEnd);
+                return;
+            }
+
+            if (dateKey === rangeEnd) {
+                const nextEnd = addDaysToDateKey(rangeEnd, -1);
+                if (!nextEnd || nextEnd < rangeStart) {
+                    setFromDate('');
+                    setToDate('');
+                    return;
+                }
+
+                setFromDate(rangeStart);
+                setToDate(nextEnd);
+                return;
+            }
+
+            toast.info('To unselect, click the first or last selected day.');
+            return;
+        }
+
+        const prevAdjacent = addDaysToDateKey(rangeStart, -1);
+        const nextAdjacent = addDaysToDateKey(rangeEnd, 1);
+
+        if (prevAdjacent && dateKey === prevAdjacent && isDateSelectable(prevAdjacent)) {
+            if (doesSelectionOverlapBlocked(dateKey, rangeEnd)) {
+                toast.error('Selected range overlaps with booked dates.');
+                return;
+            }
+
+            setFromDate(dateKey);
+            setToDate(rangeEnd);
+            return;
+        }
+
+        if (nextAdjacent && dateKey === nextAdjacent && isDateSelectable(nextAdjacent)) {
+            if (doesSelectionOverlapBlocked(rangeStart, dateKey)) {
+                toast.error('Selected range overlaps with booked dates.');
+                return;
+            }
+
+            setFromDate(rangeStart);
+            setToDate(dateKey);
+            return;
+        }
+
+        toast.info('Select only the next or previous adjacent date to extend the range.');
+    };
+
+    const finalizeDraggedSelection = (endDateKey) => {
+        if (!isDragging || !dragAnchorDate || !endDateKey) return;
+
+        if (!dragMoved) {
+            setIsDragging(false);
+            setDragAnchorDate('');
+            setDragCurrentDate('');
+            return;
+        }
+
+        const start = dragAnchorDate <= endDateKey ? dragAnchorDate : endDateKey;
+        const end = dragAnchorDate >= endDateKey ? dragAnchorDate : endDateKey;
+
+        if (!isDateSelectable(start) || !isDateSelectable(end) || doesSelectionOverlapBlocked(start, end)) {
+            toast.error('Selected range includes unavailable or booked dates.');
+            setFromDate(dragAnchorDate);
+            setToDate(dragAnchorDate);
+        } else {
+            setFromDate(start);
+            setToDate(end);
+        }
+
+        setIsDragging(false);
+        setDragAnchorDate('');
+        setDragCurrentDate('');
+        setDragMoved(false);
+        setSuppressNextClick(true);
+    };
+
+    const handleDateMouseDown = (dateKey) => {
+        if (!isDateSelectable(dateKey)) return;
+        setIsDragging(true);
+        setDragAnchorDate(dateKey);
+        setDragCurrentDate(dateKey);
+        setDragMoved(false);
+    };
+
+    const handleDateMouseEnter = (dateKey) => {
+        if (!isDragging || !isDateSelectable(dateKey)) return;
+        if (dateKey !== dragCurrentDate) {
+            setDragMoved(true);
+        }
+        setDragCurrentDate(dateKey);
+    };
+
+    const handleDateMouseUp = (dateKey) => {
+        if (!isDragging) return;
+
+        if (!isDateSelectable(dateKey)) {
+            setIsDragging(false);
+            setDragAnchorDate('');
+            setDragCurrentDate('');
+            setDragMoved(false);
+            setSuppressNextClick(true);
+            return;
+        }
+
+        finalizeDraggedSelection(dateKey);
+    };
+
+    const handleDateClick = (dateKey) => {
+        if (suppressNextClick) {
+            setSuppressNextClick(false);
+            return;
+        }
+
+        handleDateSelection(dateKey);
+    };
+
+    const calendarDays = (() => {
+        const monthStart = startOfMonth(visibleMonth);
+        const firstDayOffset = monthStart.getDay();
+        const daysInMonth = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0).getDate();
+
+        const cells = [];
+        for (let i = 0; i < firstDayOffset; i += 1) {
+            cells.push(null);
+        }
+
+        for (let day = 1; day <= daysInMonth; day += 1) {
+            cells.push(new Date(monthStart.getFullYear(), monthStart.getMonth(), day));
+        }
+
+        return cells;
+    })();
+
+    const isRangeValidationFailed = Boolean(fromDate && toDate && doesSelectionOverlapBlocked(fromDate, toDate));
+
+    const availabilityWindowLabel = (availableFromKey && availableToKey)
+        ? `${availableFromDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} - ${availableToDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`
+        : null;
 
     const handleRequest = async () => {
         if (!fromDate || !toDate) {
@@ -152,6 +434,16 @@ function RequestPanel({ item }) {
 
         setIsRequesting(true);
         try {
+            const availability = await getListingAvailability(item.id, {
+                fromDate,
+                toDate,
+            });
+
+            if (availability?.requestedRangeAvailable === false || availability?.isAvailable === false) {
+                toast.error('This item is not available for the selected date range.');
+                return;
+            }
+
             await requestItem(item.id, {
                 message,
                 fromDate,
@@ -180,55 +472,142 @@ function RequestPanel({ item }) {
                 </div>
             </div>
 
-            {/* Date pickers */}
+            {/* Calendar availability */}
             <div>
-                <label className="text-xs font-bold text-charcoal mb-2 block tracking-wide uppercase">Select dates</label>
-                <div className="grid grid-cols-2 gap-3">
-                    <div>
-                        <label className="text-xs text-muted-green mb-1 block">From</label>
-                        <input
-                            type="date"
-                            value={fromDate}
-                            min={today}
-                            onChange={e => handleFromDate(e.target.value)}
-                            className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:border-primary bg-white cursor-pointer"
-                        />
+                <div className="flex items-center justify-between mb-2">
+                    <label className="text-xs font-bold text-charcoal block tracking-wide uppercase">Select dates</label>
+                    {availabilityWindowLabel && (
+                        <span className="text-[11px] text-muted-green">Window: {availabilityWindowLabel}</span>
+                    )}
+                </div>
+
+                <div className="bg-gray-50 border border-gray-200 rounded-2xl p-3">
+                    <div className="flex items-center justify-between mb-3">
+                        <button
+                            type="button"
+                            onClick={() => setVisibleMonth((prev) => addMonths(prev, -1))}
+                            className="w-8 h-8 rounded-lg border border-gray-200 bg-white hover:border-primary transition-colors flex items-center justify-center"
+                            aria-label="Previous month"
+                        >
+                            <span className="material-symbols-outlined text-base">chevron_left</span>
+                        </button>
+                        <p className="text-sm font-semibold text-charcoal">
+                            {visibleMonth.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
+                        </p>
+                        <button
+                            type="button"
+                            onClick={() => setVisibleMonth((prev) => addMonths(prev, 1))}
+                            className="w-8 h-8 rounded-lg border border-gray-200 bg-white hover:border-primary transition-colors flex items-center justify-center"
+                            aria-label="Next month"
+                        >
+                            <span className="material-symbols-outlined text-base">chevron_right</span>
+                        </button>
                     </div>
-                    <div>
-                        <label className="text-xs text-muted-green mb-1 block">To</label>
-                        <input
-                            type="date"
-                            value={toDate}
-                            min={fromDate || today}
-                            onChange={e => handleToDate(e.target.value)}
-                            className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:border-primary bg-white cursor-pointer"
-                        />
+
+                    <div className="grid grid-cols-7 gap-1 text-center mb-1">
+                        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+                            <span key={day} className="text-[10px] font-semibold text-muted-green uppercase tracking-wide py-1">
+                                {day}
+                            </span>
+                        ))}
                     </div>
+
+                    {availabilityLoading ? (
+                        <div className="h-56 flex items-center justify-center text-sm text-muted-green gap-2">
+                            <span className="material-symbols-outlined animate-spin text-base">progress_activity</span>
+                            Loading availability...
+                        </div>
+                    ) : availabilityError ? (
+                        <div className="h-56 flex flex-col items-center justify-center text-center gap-2 px-4">
+                            <p className="text-sm text-red-600">Failed to load availability calendar.</p>
+                            <button
+                                type="button"
+                                onClick={() => refetchAvailability()}
+                                className="text-xs font-semibold text-primary hover:underline"
+                            >
+                                Try again
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-7 gap-1" onMouseLeave={() => finalizeDraggedSelection(dragCurrentDate)}>
+                            {calendarDays.map((dateValue, index) => {
+                                if (!dateValue) {
+                                    return <div key={`empty-${index}`} className="h-9" />;
+                                }
+
+                                const dateKey = dateKeyFromDate(dateValue);
+                                const isSelected = selectedRangeSet.has(dateKey);
+                                const isBlocked = isDateBlocked(dateKey);
+                                const isAvailable = isInsideAvailabilityWindow(dateKey) && !isBlocked && dateKey >= todayKey;
+                                const selectable = isDateSelectable(dateKey);
+
+                                let dayClass = 'bg-gray-100 border-gray-200 text-gray-400';
+                                if (isBlocked) {
+                                    dayClass = 'bg-red-50 border-red-200 text-red-600';
+                                } else if (isSelected) {
+                                    dayClass = 'bg-blue-100 border-blue-300 text-blue-700 shadow-sm';
+                                } else if (isAvailable) {
+                                    dayClass = 'bg-emerald-100 border-emerald-300 text-emerald-800 shadow-sm';
+                                }
+
+                                return (
+                                    <button
+                                        key={dateKey}
+                                        type="button"
+                                        onClick={() => handleDateClick(dateKey)}
+                                        onMouseDown={() => handleDateMouseDown(dateKey)}
+                                        onMouseEnter={() => handleDateMouseEnter(dateKey)}
+                                        onMouseUp={() => handleDateMouseUp(dateKey)}
+                                        disabled={!selectable}
+                                        className={`h-9 rounded-lg border text-xs font-semibold transition-colors ${dayClass} ${!selectable ? 'cursor-not-allowed' : 'cursor-pointer hover:brightness-95'}`}
+                                    >
+                                        {dateValue.getDate()}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    {!availabilityLoading && !availabilityError && !availabilityWindowLabel && !(availabilityData?.blockedRanges?.length > 0) && (
+                        <p className="mt-3 text-xs text-muted-green text-center">
+                            Availability data is limited for this listing. You can still request dates.
+                        </p>
+                    )}
+
+                    <div className="mt-3 flex items-center gap-3 text-[11px] text-muted-green flex-wrap">
+                        <span className="inline-flex items-center gap-1.5">
+                            <span className="w-3 h-3 rounded bg-green-100 border border-green-200" /> Available
+                        </span>
+                        <span className="inline-flex items-center gap-1.5">
+                            <span className="w-3 h-3 rounded bg-red-50 border border-red-200" /> Booked
+                        </span>
+                        <span className="inline-flex items-center gap-1.5">
+                            <span className="w-3 h-3 rounded bg-blue-100 border border-blue-300" /> Selected
+                        </span>
+                    </div>
+                    <p className="mt-2 text-[11px] text-muted-green">
+                        Range selection is sequential: choose the previous or next adjacent day, or drag continuously.
+                    </p>
                 </div>
             </div>
 
-            {/* Manual day stepper */}
-            <div>
-                <label className="text-xs font-bold text-charcoal mb-2 block tracking-wide uppercase">Or set number of days</label>
-                <div className="flex items-center gap-3">
-                    <button
-                        type="button"
-                        onClick={() => setDays(d => Math.max(1, d - 1))}
-                        className="w-10 h-10 rounded-xl border border-gray-200 flex items-center justify-center hover:border-primary transition-colors"
-                    >
-                        <span className="material-symbols-outlined text-lg">remove</span>
-                    </button>
-                    <span className="w-10 text-center font-bold text-charcoal text-xl">{days}</span>
-                    <button
-                        type="button"
-                        onClick={() => setDays(d => d + 1)}
-                        className="w-10 h-10 rounded-xl border border-gray-200 flex items-center justify-center hover:border-primary transition-colors"
-                    >
-                        <span className="material-symbols-outlined text-lg">add</span>
-                    </button>
-                    <span className="text-sm text-muted-green">{days} day{days > 1 ? 's' : ''} · ₹{totalCost} total</span>
+            {/* Selected range summary */}
+            <div className="grid grid-cols-2 gap-3">
+                <div className="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2">
+                    <p className="text-[10px] uppercase tracking-wide text-muted-green font-semibold">Start Date</p>
+                    <p className="text-sm font-semibold text-charcoal mt-1">{fromDate || 'Not selected'}</p>
+                </div>
+                <div className="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2">
+                    <p className="text-[10px] uppercase tracking-wide text-muted-green font-semibold">End Date</p>
+                    <p className="text-sm font-semibold text-charcoal mt-1">{toDate || 'Not selected'}</p>
                 </div>
             </div>
+
+            {isRangeValidationFailed && (
+                <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                    Selected range is not available due to overlapping approved bookings.
+                </div>
+            )}
 
             {/* Message */}
             <div>
@@ -276,10 +655,10 @@ export default function ItemDetailPage() {
     const { data: fetchedItem, isLoading } = useQuery({
         queryKey: ['marketplaceListing', id],
         queryFn: () => getItemById(id),
-        enabled: !!id && !itemFromState,
+        enabled: !!id,
     });
 
-    const item = itemFromState ?? fetchedItem;
+    const item = fetchedItem ?? itemFromState;
     const currentUserId = user?.id ?? user?.userId;
     const ownerId = item?.owner?.userId ?? item?.owner?.id;
     const isOwner = currentUserId != null && ownerId != null && String(currentUserId) === String(ownerId);
@@ -549,7 +928,7 @@ export default function ItemDetailPage() {
                                 </div>
                                 {isOwner ? (
                                     <button
-                                        onClick={() => navigate('/my-listings')}
+                                        onClick={() => navigate(ROUTES.MY_LISTINGS)}
                                         className="w-full py-3.5 text-sm font-bold bg-primary hover:bg-primary/90 text-white rounded-2xl transition-colors flex items-center justify-center gap-2 shadow-sm"
                                     >
                                         <span className="material-symbols-outlined text-base">inventory_2</span>

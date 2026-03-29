@@ -21,6 +21,16 @@ export default function HomeNavbar({ hideNavLinks = false }) {
   const isActive = (path) => {
     if (path === ROUTES.MY_COMMUNITIES && isCommunityView) return true;
     if (path === ROUTES.DASHBOARD && isCommunityView) return false;
+    if (path === ROUTES.DISCOVER) {
+      return location.pathname === ROUTES.DISCOVER || location.pathname.startsWith(`${ROUTES.DISCOVER}/`);
+    }
+    if (path === ROUTES.MARKETPLACE_ACTIVITY) {
+      return location.pathname === ROUTES.MARKETPLACE_ACTIVITY
+        || location.pathname === ROUTES.MY_LISTINGS
+        || location.pathname === ROUTES.LEGACY_MY_LISTINGS
+        || location.pathname === ROUTES.MARKETPLACE_REQUESTS
+        || location.pathname === ROUTES.MARKETPLACE_EXCHANGES;
+    }
     return location.pathname === path;
   };
 
@@ -76,6 +86,18 @@ export default function HomeNavbar({ hideNavLinks = false }) {
             >
               Marketplace
               {isActive(ROUTES.DISCOVER) && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full"></span>
+              )}
+            </button>
+            <button
+              onClick={() => navigate(ROUTES.MARKETPLACE_ACTIVITY)}
+              className={`text-base font-medium transition-colors relative pb-1 hover:text-primary ${isActive(ROUTES.MARKETPLACE_ACTIVITY)
+                ? 'text-primary'
+                : 'text-charcoal'
+                }`}
+            >
+              My Activity
+              {isActive(ROUTES.MARKETPLACE_ACTIVITY) && (
                 <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full"></span>
               )}
             </button>

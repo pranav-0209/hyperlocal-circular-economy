@@ -27,6 +27,9 @@ export const CONDITIONS = [
 ];
 
 export const marketplaceSchema = z.object({
+    communityId: z
+        .string()
+        .min(1, 'Please select a community'),
     title: z
         .string()
         .min(5, 'Title must be at least 5 characters')

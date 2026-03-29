@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import HomeNavbar from '../components/ui/HomeNavbar';
 import AppFooter from '../components/ui/AppFooter';
+import MarketplaceSectionNav from '../components/ui/MarketplaceSectionNav';
 import ConfirmModal from '../components/ui/ConfirmModal';
 import CreateItemModal from '../components/marketplace/CreateItemModal';
 import {
@@ -36,6 +37,7 @@ const CAT_ICON = {
 
 function ListingCard({ item, onEdit, onToggle, onDelete }) {
     const s = STATUS_STYLE[item.status] ?? STATUS_STYLE['AVAILABLE'];
+    const isBorrowed = item.status === 'BORROWED';
     const [imageFailed, setImageFailed] = useState(false);
     const hasImage = Boolean(item.images?.[0]) && !imageFailed;
 
@@ -88,34 +90,42 @@ function ListingCard({ item, onEdit, onToggle, onDelete }) {
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-2 mt-4 pt-3 border-t border-gray-100">
-                    <button
-                        onClick={() => onToggle(item)}
-                        className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold border transition-colors ${
-                            item.status === 'AVAILABLE'
-                                ? 'border-amber-200 text-amber-700 hover:bg-amber-50'
-                                : 'border-green-200 text-green-700 hover:bg-green-50'
-                        }`}
-                    >
-                        <span className="material-symbols-outlined text-sm">
-                            {item.status === 'AVAILABLE' ? 'pause_circle' : 'play_circle'}
-                        </span>
-                        {item.status === 'AVAILABLE' ? 'Pause' : 'Resume'}
-                    </button>
-                    <button
-                        onClick={() => onEdit(item)}
-                        className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold border border-gray-200 text-charcoal hover:bg-gray-50 transition-colors"
-                    >
-                        <span className="material-symbols-outlined text-sm">edit</span>
-                        Edit
-                    </button>
-                    <button
-                        onClick={() => onDelete(item)}
-                        className="w-9 h-9 flex items-center justify-center rounded-xl border border-red-100 text-red-500 hover:bg-red-50 transition-colors"
-                    >
-                        <span className="material-symbols-outlined text-base">delete</span>
-                    </button>
-                </div>
+                {isBorrowed ? (
+                    <div className="mt-4 pt-3 border-t border-gray-100">
+                        <p className="text-xs font-medium text-blue-700 bg-blue-50 border border-blue-100 rounded-xl px-3 py-2">
+                            This item is currently borrowed. Actions are temporarily unavailable.
+                        </p>
+                    </div>
+                ) : (
+                    <div className="flex items-center gap-2 mt-4 pt-3 border-t border-gray-100">
+                        <button
+                            onClick={() => onToggle(item)}
+                            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold border transition-colors ${
+                                item.status === 'AVAILABLE'
+                                    ? 'border-amber-200 text-amber-700 hover:bg-amber-50'
+                                    : 'border-green-200 text-green-700 hover:bg-green-50'
+                            }`}
+                        >
+                            <span className="material-symbols-outlined text-sm">
+                                {item.status === 'AVAILABLE' ? 'pause_circle' : 'play_circle'}
+                            </span>
+                            {item.status === 'AVAILABLE' ? 'Pause' : 'Resume'}
+                        </button>
+                        <button
+                            onClick={() => onEdit(item)}
+                            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold border border-gray-200 text-charcoal hover:bg-gray-50 transition-colors"
+                        >
+                            <span className="material-symbols-outlined text-sm">edit</span>
+                            Edit
+                        </button>
+                        <button
+                            onClick={() => onDelete(item)}
+                            className="w-9 h-9 flex items-center justify-center rounded-xl border border-red-100 text-red-500 hover:bg-red-50 transition-colors"
+                        >
+                            <span className="material-symbols-outlined text-base">delete</span>
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -161,16 +171,19 @@ export default function MyListingsPage() {
     const filtered = filter === 'All' ? items : items.filter(i => i.status === filter);
 
     const handleEdit = (item) => {
+        if (item.status === 'BORROWED') return;
         setEditingItem(item);
         setIsEditModalOpen(true);
     };
 
     const handleToggle = (item) => {
+        if (item.status === 'BORROWED') return;
         if (toggleMutation.isPending) return;
         toggleMutation.mutate(item);
     };
 
     const handleDelete = (item) => {
+        if (item.status === 'BORROWED') return;
         if (deleteMutation.isPending) return;
 
         setListingToDelete(item);
@@ -193,7 +206,7 @@ export default function MyListingsPage() {
             {/* Breadcrumb */}
             <div className="pt-16 bg-white border-b border-gray-100">
                 <div className="w-full px-4 sm:px-6 lg:px-8 py-3.5 flex items-center gap-1.5 text-sm text-muted-green">
-                    <button onClick={() => navigate(ROUTES.DASHBOARD)} className="hover:text-primary transition-colors">Dashboard</button>
+                    <button onClick={() => navigate(ROUTES.MARKETPLACE_ACTIVITY)} className="hover:text-primary transition-colors">My Activity</button>
                     <span className="material-symbols-outlined text-sm">chevron_right</span>
                     <span className="text-charcoal font-semibold">My Listings</span>
                 </div>
@@ -216,8 +229,10 @@ export default function MyListingsPage() {
                     </button>
                 </div>
 
+                <MarketplaceSectionNav />
+
                 {/* Stats row */}
-                <div className="grid grid-cols-3 gap-3 mb-6">
+                <div className="grid grid-cols-3 gap-3 my-6">
                     {[
                         { label: 'Total Listed', value: items.length, icon: 'inventory_2', color: 'text-primary' },
                         { label: 'Available', value: items.filter(i => i.status === 'AVAILABLE').length, icon: 'check_circle', color: 'text-green-600' },
@@ -303,7 +318,6 @@ export default function MyListingsPage() {
                         setEditingItem(null);
                     }
                 }}
-                communityId={editingItem?.communityId}
                 mode="edit"
                 listingId={editingItem?.id}
                 initialValues={editingItem}

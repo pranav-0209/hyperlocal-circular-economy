@@ -93,16 +93,6 @@ export default function ProfileAvatar({ user, onLogout }) {
                         <button
                             onClick={() => {
                                 setShowDropdown(false);
-                                navigate('/my-listings');
-                            }}
-                            className="w-full px-4 py-2.5 text-left text-base text-charcoal hover:bg-gray-50 transition-colors flex items-center gap-3"
-                        >
-                            <span className="material-symbols-outlined text-xl">sell</span>
-                            My Listings
-                        </button>
-                        <button
-                            onClick={() => {
-                                setShowDropdown(false);
                                 navigate('/settings');
                             }}
                             className="w-full px-4 py-2.5 text-left text-base text-charcoal hover:bg-gray-50 transition-colors flex items-center gap-3"
