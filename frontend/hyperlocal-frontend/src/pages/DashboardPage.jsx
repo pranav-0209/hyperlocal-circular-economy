@@ -519,9 +519,12 @@ export default function DashboardPage() {
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-semibold text-charcoal">
                               {requestsTab === 'incoming'
-                                ? `${req.requesterName || 'Community Member'} requested `
+                                ? `${req.requesterName || req.requesterId || 'Community Member'} requested `
                                 : 'You requested '}
                               <span className="font-bold">{req.listingTitle || 'Listing'}</span>
+                              {requestsTab === 'sent' && (
+                                <span>{` from ${req.ownerName || req.ownerId || 'Community member'}`}</span>
+                              )}
                             </p>
                             <p className="text-xs text-muted-green">{formatRequestDate(req.createdAt)}</p>
                           </div>

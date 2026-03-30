@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useForm } from 'react-hook-form';
@@ -33,6 +33,7 @@ function AdminCommunityCard({ community, onNavigate }) {
     return (
         <motion.div
             variants={itemVariants}
+            initial={false}
             onClick={() => onNavigate(community.id)}
             className="bg-white rounded-2xl border border-cyan-100 shadow-sm overflow-hidden hover:shadow-lg hover:-translate-y-0.5 transition-all cursor-pointer group"
         >
@@ -78,6 +79,7 @@ function MemberCommunityCard({ community, onNavigate }) {
     return (
         <motion.div
             variants={itemVariants}
+            initial={false}
             onClick={() => onNavigate(community.id)}
             className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-lg hover:-translate-y-0.5 transition-all cursor-pointer group"
         >
@@ -111,7 +113,6 @@ function MemberCommunityCard({ community, onNavigate }) {
 export default function MyCommunitiesPage() {
     const navigate = useNavigate();
     const { user } = useAuth();
-    const shouldReduceMotion = useReducedMotion();
 
     const { data: freshCommunities, isLoading } = useMyCommunities();
     const joinMutation = useJoinCommunity();
@@ -207,7 +208,7 @@ export default function MyCommunitiesPage() {
             <HomeNavbar />
 
             <main className="pt-[88px] pb-8 px-4 sm:px-6 lg:px-8 flex-1">
-                {/* ── Header (unchanged) ── */
+                {/* ── Header ── */}
                 <div className="flex items-center justify-between mb-8">
                     <div>
                         <h1 className="text-4xl font-bold text-charcoal mb-2">My Communities</h1>
@@ -232,7 +233,6 @@ export default function MyCommunitiesPage() {
                         </button>
                     </div>
                 </div>
-                }
                 {pendingCommunities.length > 0 && (
                     <section className="mb-8">
                         <div className="flex items-center gap-3 mb-4">
@@ -313,7 +313,7 @@ export default function MyCommunitiesPage() {
                                 <motion.div
                                     className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
                                     variants={containerVariants}
-                                    initial={shouldReduceMotion ? false : 'hidden'}
+                                    initial={false}
                                     animate="show"
                                     key="manage"
                                 >
@@ -344,7 +344,7 @@ export default function MyCommunitiesPage() {
                                 <motion.div
                                     className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
                                     variants={containerVariants}
-                                    initial={shouldReduceMotion ? false : 'hidden'}
+                                    initial={false}
                                     animate="show"
                                     key="joined"
                                 >

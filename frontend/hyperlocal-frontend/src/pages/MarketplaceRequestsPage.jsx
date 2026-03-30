@@ -170,7 +170,9 @@ export default function MarketplaceRequestsPage() {
                           {formatRequestDate(request.startDate)} - {formatRequestDate(request.endDate)}
                         </p>
                         <p className="text-xs text-muted-green mt-1">
-                          {tab === 'incoming' ? `Requester: ${request.requesterName || 'Community member'}` : `Owner ID: ${request.ownerId || 'N/A'}`}
+                          {tab === 'incoming'
+                            ? `Requester: ${request.requesterName || request.requesterId || 'Community member'}`
+                            : `Owner: ${request.ownerName || request.ownerId || 'Community member'}`}
                         </p>
                       </div>
                       <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full border pointer-events-none select-none cursor-default ${requestBadgeStyle(status)}`}>

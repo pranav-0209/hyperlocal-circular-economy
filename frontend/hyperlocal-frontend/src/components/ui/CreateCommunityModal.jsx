@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCreateCommunity } from '../../hooks/useCommunityMutations';
+import { useAuth } from '../../context/AuthContext';
 import { createCommunitySchema, COMMUNITY_CATEGORIES } from '../../schemas/communitySchemas';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -74,7 +75,7 @@ function CategoryDropdown({ value, onChange, disabled }) {
                             className={`flex items-center justify-between px-4 py-2.5 text-sm cursor-pointer transition-colors
                                 ${ value === cat.value
                                     ? 'bg-primary/5 text-primary font-semibold'
-                                    : 'text-charcoal hover:bg-gray-50'
+                                    : 'text-charcoal hover:bg-gray-50 hover:text-primary!'
                                 }`}
                         >
                             {cat.label}
@@ -101,6 +102,7 @@ function CategoryDropdown({ value, onChange, disabled }) {
  */
 export default function CreateCommunityModal({ open, onOpenChange }) {
     const queryClient = useQueryClient();
+    const { updateUser } = useAuth();
     const createMutation = useCreateCommunity();
     const [showSuccess, setShowSuccess] = useState(false);
     const [createdCommunity, setCreatedCommunity] = useState(null);
@@ -125,6 +127,53 @@ export default function CreateCommunityModal({ open, onOpenChange }) {
         return () => subscription.unsubscribe();
     }, [form, createMutation]);
 
+    const normalizeCreatedCommunity = (created) => {
+        if (!created) return null;
+
+        const normalizedId = created.id != null ? String(created.id) : '';
+        if (!normalizedId) return null;
+
+        const parsedMemberCount = Number(created.memberCount);
+        const parsedPendingCount = Number(created.pendingCount);
+
+        return {
+            ...created,
+            id: normalizedId,
+            isAdmin: created.isAdmin ?? true,
+            role: created.role || 'admin',
+            membershipStatus: created.membershipStatus || 'APPROVED',
+            status: created.status || 'ACTIVE',
+            memberCount: Number.isFinite(parsedMemberCount) ? parsedMemberCount : 1,
+            pendingCount: Number.isFinite(parsedPendingCount) ? parsedPendingCount : 0,
+            createdAt: created.createdAt || new Date().toISOString(),
+        };
+    };
+
+    const upsertCommunityInCache = (created) => {
+        const normalizedCreated = normalizeCreatedCommunity(created);
+        if (!normalizedCreated) return;
+        const createdId = normalizedCreated.id;
+
+        queryClient.setQueryData(['communities', 'me'], (existing) => {
+            const current = Array.isArray(existing) ? existing : [];
+            const deduped = current.filter((community) => String(community?.id || '') !== createdId);
+
+            const nextCommunities = [normalizedCreated, ...deduped].sort(
+                (a, b) => new Date(b?.createdAt || 0) - new Date(a?.createdAt || 0)
+            );
+
+            updateUser({
+                communities: nextCommunities,
+                hasCommunities: nextCommunities.length > 0,
+            });
+
+            return nextCommunities;
+        });
+
+        // Ensure active community views are refreshed quickly with server-accurate data.
+        queryClient.invalidateQueries({ queryKey: ['communities', 'me'] });
+    };
+
     const handleSubmit = (data) => {
         createMutation.mutate(
             {
@@ -135,6 +184,8 @@ export default function CreateCommunityModal({ open, onOpenChange }) {
             },
             {
                 onSuccess: (community) => {
+                    // Optimistically show the newly created community immediately.
+                    upsertCommunityInCache(community);
                     form.reset();
                     onOpenChange(false);
                     // Defer invalidation until the success modal is dismissed,

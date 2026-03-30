@@ -155,8 +155,15 @@ const normalizeRecentRequest = (request = {}) => ({
     id: String(request.id ?? request.requestId ?? ''),
     itemId: String(request.itemId ?? request.listingId ?? ''),
     title: request.itemTitle ?? request.title ?? request.listingTitle ?? 'Listing',
-    requestor: request.requesterName ?? request.requestor ?? request.borrowerName ?? 'Community Member',
-    status: request.status ?? 'PENDING',
+    requestor:
+        request.requesterName
+        ?? request.requestorName
+        ?? request.requestor
+        ?? request.borrowerName
+        ?? request.requester?.name
+        ?? request.borrower?.name
+        ?? 'Community Member',
+    status: String(request.status ?? 'PENDING').toUpperCase(),
     date: request.createdAt
         ? new Date(request.createdAt).toLocaleDateString('en-US', {
             day: 'numeric',
@@ -169,14 +176,22 @@ const normalizeBorrowRequest = (request = {}) => ({
     id: String(request.id ?? request.requestId ?? ''),
     listingId: String(request.listingId ?? request.itemId ?? ''),
     listingTitle: request.listingTitle ?? request.itemTitle ?? request.title ?? '',
-    requesterId: String(request.requesterId ?? request.borrowerId ?? ''),
-    requesterName: request.requesterName ?? request.borrowerName ?? request.requestor ?? 'Community Member',
+    requesterId: String(request.requesterId ?? request.borrowerId ?? request.requester?.id ?? request.borrower?.id ?? ''),
+    requesterName:
+        request.requesterName
+        ?? request.requestorName
+        ?? request.borrowerName
+        ?? request.requestor
+        ?? request.requester?.name
+        ?? request.borrower?.name
+        ?? '',
     ownerId: String(request.ownerId ?? ''),
-    status: request.status ?? 'PENDING',
+    ownerName: request.ownerName ?? request.owner?.name ?? request.ownerFullName ?? '',
+    status: String(request.status ?? 'PENDING').toUpperCase(),
     startDate: request.startDate ?? request.fromDate ?? '',
     endDate: request.endDate ?? request.toDate ?? '',
     message: request.message ?? '',
-    exchangeStatus: request.exchangeStatus ?? '',
+    exchangeStatus: String(request.exchangeStatus ?? '').toUpperCase(),
     completedAt: request.completedAt ?? null,
     returnedAt: request.returnedAt ?? null,
     actualReturnDate: request.actualReturnDate ?? null,

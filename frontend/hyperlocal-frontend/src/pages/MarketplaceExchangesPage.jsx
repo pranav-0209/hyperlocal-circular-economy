@@ -51,6 +51,9 @@ export default function MarketplaceExchangesPage() {
 
   const data = tab === 'borrowed' ? borrowedItems : lentItems;
   const isLoading = tab === 'borrowed' ? sentLoading : incomingLoading;
+  const tabHelpText = tab === 'borrowed'
+    ? 'Items borrowed by you from other community members.'
+    : 'Items lent by you to borrowers in your community.';
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -90,6 +93,8 @@ export default function MarketplaceExchangesPage() {
             </button>
           </div>
 
+          <p className="text-xs text-muted-green mb-4">{tabHelpText}</p>
+
           {isLoading ? (
             <div className="text-sm text-muted-green">Loading exchanges...</div>
           ) : data.length === 0 ? (
@@ -106,8 +111,8 @@ export default function MarketplaceExchangesPage() {
                       </p>
                       <p className="text-xs text-muted-green mt-1">
                         {tab === 'borrowed'
-                          ? `Owner ID: ${exchange.ownerId || 'N/A'}`
-                          : `Borrower: ${exchange.requesterName || 'Community member'}`}
+                          ? `Owner: ${exchange.ownerName || exchange.ownerId || 'Community member'}`
+                          : `Borrower: ${exchange.requesterName || exchange.requesterId || 'Community member'}`}
                       </p>
                     </div>
                     <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full border ${statusStyle(exchange.status)}`}>
