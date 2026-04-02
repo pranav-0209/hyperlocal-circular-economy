@@ -3,15 +3,32 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from '../../context/AuthContext';
+import useSecureImageSource from '../../hooks/useSecureImageSource';
+
+const renderRatingStars = (rating) => {
+    const rounded = Math.round((Number(rating) || 0) * 2) / 2;
+
+    return Array.from({ length: 5 }, (_, index) => {
+        const starValue = index + 1;
+        if (rounded >= starValue) return 'star';
+        if (rounded >= starValue - 0.5) return 'star_half';
+        return 'star_outline';
+    });
+};
 
 const ItemCard = ({ item, onRequest }) => {
     const { user } = useAuth();
     const isFree = item.type === 'GIFT';
-    const [imageFailed, setImageFailed] = useState(false);
-    const hasImage = Boolean(item.images?.[0]) && !imageFailed;
+    const rawImageSrc = item.images?.[0] ?? item.thumbnailUrl ?? null;
+    const { resolvedSource: resolvedImageSrc, isLoading: isResolvingImage } = useSecureImageSource(rawImageSrc);
+    const { resolvedSource: resolvedOwnerAvatar } = useSecureImageSource(item.owner?.avatarUrl);
+    const [failedImageSource, setFailedImageSource] = useState(null);
+    const hasImage = Boolean(resolvedImageSrc) && failedImageSource !== resolvedImageSrc;
     const currentUserId = user?.id ?? user?.userId;
     const ownerId = item?.owner?.userId ?? item?.owner?.id;
     const isOwner = currentUserId != null && ownerId != null && String(currentUserId) === String(ownerId);
+    const listingAverage = Number(item?.averageRating ?? item?.rating ?? 0);
+    const listingTotal = Number(item?.totalReviews ?? 0);
 
     const getTypeColor = (type) => {
         switch (type) {
@@ -32,11 +49,16 @@ const ItemCard = ({ item, onRequest }) => {
         >
             {/* Image Container */}
             <div className="relative aspect-4/3 overflow-hidden bg-gray-100">
+                {isResolvingImage && (
+                    <div className="absolute inset-0 z-10 bg-gray-100/80 flex items-center justify-center">
+                        <span className="material-symbols-outlined text-gray-400 animate-spin">progress_activity</span>
+                    </div>
+                )}
                 {hasImage ? (
                     <img
-                        src={item.images[0]}
+                        src={resolvedImageSrc}
                         alt={item.title}
-                        onError={() => setImageFailed(true)}
+                        onError={() => setFailedImageSource(resolvedImageSrc)}
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                 ) : (
@@ -72,12 +94,34 @@ const ItemCard = ({ item, onRequest }) => {
                     {item.description}
                 </p>
 
+                <div className="mb-3">
+                    {listingTotal > 0 ? (
+                        <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-100">
+                            <span className="text-[11px] font-bold text-amber-800">{listingAverage.toFixed(1)}</span>
+                            <span className="inline-flex items-center gap-0.5">
+                                {renderRatingStars(listingAverage).map((icon, index) => (
+                                    <span
+                                        key={`${icon}-${index}`}
+                                        className="material-symbols-outlined text-[15px] text-amber-500"
+                                        style={{ fontVariationSettings: "'FILL' 1" }}
+                                    >
+                                        {icon}
+                                    </span>
+                                ))}
+                            </span>
+                            <span className="text-[11px] text-amber-700">{listingTotal} review{listingTotal === 1 ? '' : 's'}</span>
+                        </div>
+                    ) : (
+                        <span className="text-[11px] text-muted-green bg-gray-100 border border-gray-200 px-2.5 py-1 rounded-full inline-flex">New listing</span>
+                    )}
+                </div>
+
                 {/* Footer */}
                 <div className="flex items-center justify-between pt-4 border-t border-gray-100 mt-auto">
                     {/* Owner Info */}
                     <div className="flex items-center gap-2">
                         <Avatar className="h-8 w-8 border border-gray-200">
-                            <AvatarImage src={item.owner?.avatarUrl} />
+                            <AvatarImage src={resolvedOwnerAvatar ?? undefined} />
                             <AvatarFallback className="text-[10px] bg-primary/10 text-primary font-bold">
                                 {item.owner?.avatar || item.owner?.name?.substring(0, 2).toUpperCase()}
                             </AvatarFallback>

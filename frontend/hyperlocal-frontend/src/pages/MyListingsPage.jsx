@@ -7,6 +7,7 @@ import AppFooter from '../components/ui/AppFooter';
 import MarketplaceSectionNav from '../components/ui/MarketplaceSectionNav';
 import ConfirmModal from '../components/ui/ConfirmModal';
 import CreateItemModal from '../components/marketplace/CreateItemModal';
+import SecureImage from '../components/ui/SecureImage';
 import {
     deleteItem,
     getMyListings,
@@ -46,8 +47,8 @@ function ListingCard({ item, onEdit, onToggle, onDelete }) {
             {/* Image */}
             <div className="relative aspect-video bg-gray-100">
                 {hasImage ? (
-                    <img
-                        src={item.images[0]}
+                    <SecureImage
+                        source={item.images[0]}
                         alt={item.title}
                         onError={() => setImageFailed(true)}
                         className="w-full h-full object-cover"

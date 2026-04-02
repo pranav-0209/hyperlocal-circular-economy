@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
 import CreateCommunityModal from '../components/ui/CreateCommunityModal';
+import SecureImage from '../components/ui/SecureImage';
 import { ROUTES } from '../constants';
 
 /**
@@ -604,7 +605,7 @@ export default function DashboardPage() {
                     >
                       <div className="w-16 h-16 rounded-xl overflow-hidden shrink-0 bg-gradient-to-br from-gray-100 to-gray-200 border border-gray-200">
                         {item.images && item.images[0] ? (
-                          <img src={item.images[0]} alt={item.title} className="w-full h-full object-cover" />
+                          <SecureImage source={item.images[0]} alt={item.title} className="w-full h-full object-cover" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-gray-400">
                             <span className="material-symbols-outlined text-xl">image</span>

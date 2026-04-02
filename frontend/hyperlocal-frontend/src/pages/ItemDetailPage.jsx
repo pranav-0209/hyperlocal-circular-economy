@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import AppFooter from '../components/ui/AppFooter';
 import HomeNavbar from '../components/ui/HomeNavbar';
-import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { Badge } from '../components/ui/badge';
-import { getItemById, getListingAvailability, requestItem } from '../services/marketplaceService';
+import SecureImage from '../components/ui/SecureImage';
+import ListingReviewsSection from '../components/marketplace/ListingReviewsSection';
+import { getItemById, getListingAvailability, getListingReviews, requestItem } from '../services/marketplaceService';
 import { getUserProfileById } from '../services/profileService';
 import { useAuth } from '../context/AuthContext';
 import { ROUTES } from '../constants';
@@ -120,6 +121,17 @@ const countDaysInclusive = (fromDate, toDate) => {
     return Math.floor((end - start) / DAY_MS) + 1;
 };
 
+const ratingStarIcons = (rating) => {
+    const rounded = Math.round((Number(rating) || 0) * 2) / 2;
+
+    return Array.from({ length: 5 }, (_, index) => {
+        const starValue = index + 1;
+        if (rounded >= starValue) return 'star';
+        if (rounded >= starValue - 0.5) return 'star_half';
+        return 'star_outline';
+    });
+};
+
 // ── Gallery ───────────────────────────────────────────────────────────────────
 
 function Gallery({ images }) {
@@ -130,12 +142,7 @@ function Gallery({ images }) {
         <div className="space-y-3">
             {/* Main image */}
             <div className="relative aspect-video rounded-2xl overflow-hidden bg-gray-100 shadow-sm">
-                <img
-                    key={active}
-                    src={imgs[active]}
-                    alt="Item photo"
-                    className="w-full h-full object-cover"
-                />
+                <SecureImage key={active} source={imgs[active]} alt="Item photo" className="w-full h-full object-cover" />
                 {/* Nav arrows */}
                 {imgs.length > 1 && (
                     <>
@@ -169,7 +176,7 @@ function Gallery({ images }) {
                             onClick={() => setActive(i)}
                             className={`flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 transition-all ${i === active ? 'border-primary scale-105 shadow-sm' : 'border-transparent opacity-60 hover:opacity-90'}`}
                         >
-                            <img src={src} alt="" className="w-full h-full object-cover" />
+                            <SecureImage source={src} alt="" className="w-full h-full object-cover" />
                         </button>
                     ))}
                 </div>
@@ -651,11 +658,23 @@ export default function ItemDetailPage() {
     const { user } = useAuth();
 
     const itemFromState = state?.item ?? null;
+    const reviewContext = state?.reviewContext ?? null;
+
+    useEffect(() => {
+        window.scrollTo({ top: 0, behavior: 'auto' });
+    }, [id]);
 
     const { data: fetchedItem, isLoading } = useQuery({
         queryKey: ['marketplaceListing', id],
         queryFn: () => getItemById(id),
         enabled: !!id,
+    });
+
+    const { data: listingReviewsData, isLoading: listingReviewsLoading, isError: listingReviewsError, refetch: refetchListingReviews } = useQuery({
+        queryKey: ['listingReviews', id],
+        queryFn: () => getListingReviews(id, { page: 0, size: 5, sort: 'createdAt,desc' }),
+        enabled: !!id,
+        staleTime: 1000 * 30,
     });
 
     const item = fetchedItem ?? itemFromState;
@@ -717,6 +736,7 @@ export default function ItemDetailPage() {
     const availWindow = (item.availableFrom && item.availableTo)
         ? `${new Date(item.availableFrom).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} – ${new Date(item.availableTo).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`
         : null;
+    const listingRatingSummary = listingReviewsData?.summary ?? { averageRating: 0, totalReviews: 0 };
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -779,6 +799,30 @@ export default function ItemDetailPage() {
                                 )}
                             </div>
                             <h1 className="text-2xl sm:text-3xl font-bold text-charcoal leading-tight">{item.title}</h1>
+                            <div className="mt-2 inline-flex items-center gap-2 bg-amber-50 border border-amber-100 rounded-full px-3 py-1.5">
+                                {listingRatingSummary.totalReviews > 0 ? (
+                                    <>
+                                        <span className="text-sm font-bold text-charcoal">{listingRatingSummary.averageRating.toFixed(1)}</span>
+                                        <span className="inline-flex items-center gap-0.5">
+                                            {ratingStarIcons(listingRatingSummary.averageRating).map((icon, index) => (
+                                                <span
+                                                    key={`${icon}-${index}`}
+                                                    className="material-symbols-outlined text-amber-500 text-sm"
+                                                    style={{ fontVariationSettings: "'FILL' 1" }}
+                                                >
+                                                    {icon}
+                                                </span>
+                                            ))}
+                                        </span>
+                                        <span className="text-xs text-amber-800">{listingRatingSummary.totalReviews} ratings</span>
+                                    </>
+                                ) : (
+                                    <span className="text-xs text-amber-800">No ratings yet</span>
+                                )}
+                                {listingReviewsLoading && (
+                                    <span className="text-[10px] text-muted-green">Loading...</span>
+                                )}
+                            </div>
                         </div>
 
                         {/* Community card */}
@@ -844,6 +888,16 @@ export default function ItemDetailPage() {
                             </div>
                         )}
 
+                        <ListingReviewsSection
+                            itemId={item.id}
+                            itemTitle={item.title}
+                            reviewContext={reviewContext}
+                            reviewsData={listingReviewsData}
+                            isLoading={listingReviewsLoading}
+                            isError={listingReviewsError}
+                            onRefresh={refetchListingReviews}
+                        />
+
                         {!isOwner && (
                             <>
                                 {/* Owner card */}
@@ -853,12 +907,18 @@ export default function ItemDetailPage() {
                                         About the owner
                                     </h2>
                                     <div className="flex items-center gap-4">
-                                        <Avatar className="h-16 w-16 border-2 border-white shadow-md">
-                                            <AvatarImage src={ownerAvatarUrl} />
-                                            <AvatarFallback className="bg-primary/10 text-primary font-bold text-lg">
-                                                {initialsFromName(ownerName)}
-                                            </AvatarFallback>
-                                        </Avatar>
+                                        <div className="h-16 w-16 border-2 border-white shadow-md rounded-full overflow-hidden">
+                                            <SecureImage
+                                                source={ownerAvatarUrl}
+                                                alt={ownerName}
+                                                className="w-full h-full object-cover"
+                                                fallback={(
+                                                    <div className="w-full h-full bg-primary/10 text-primary font-bold text-lg flex items-center justify-center">
+                                                        {initialsFromName(ownerName)}
+                                                    </div>
+                                                )}
+                                            />
+                                        </div>
                                         <div className="flex-1 min-w-0">
                                             <p className="font-bold text-charcoal text-base">{ownerName}</p>
                                             <p className="text-xs text-muted-green mt-0.5">{ownerMemberSinceLabel}</p>

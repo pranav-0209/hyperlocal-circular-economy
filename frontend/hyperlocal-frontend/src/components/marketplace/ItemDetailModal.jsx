@@ -4,6 +4,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { toast } from 'sonner';
 import { getListingAvailability, requestItem } from '../../services/marketplaceService';
+import SecureImage from '../ui/SecureImage';
+import useSecureImageSource from '../../hooks/useSecureImageSource';
 
 // Condition colour map
 const CONDITION_STYLE = {
@@ -45,12 +47,7 @@ function Gallery({ images }) {
         <div className="space-y-2">
             {/* Main photo */}
             <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-gray-100">
-                <img
-                    key={active}
-                    src={imgs[active]}
-                    alt="Item photo"
-                    className="w-full h-full object-cover"
-                />
+                <SecureImage key={active} source={imgs[active]} alt="Item photo" className="w-full h-full object-cover" />
                 {imgs.length > 1 && (
                     <>
                         <button
@@ -89,7 +86,7 @@ function Gallery({ images }) {
                             onClick={() => setActive(i)}
                             className={`flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden border-2 transition-colors ${i === active ? 'border-primary' : 'border-transparent'}`}
                         >
-                            <img src={src} alt="" className="w-full h-full object-cover" />
+                            <SecureImage source={src} alt="" className="w-full h-full object-cover" />
                         </button>
                     ))}
                 </div>
@@ -240,6 +237,7 @@ function RequestPanel({ item, onClose }) {
 
 const ItemDetailModal = ({ item, open, onOpenChange }) => {
     const onClose = () => onOpenChange(false);
+    const { resolvedSource: resolvedOwnerAvatar } = useSecureImageSource(item?.owner?.avatarUrl);
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -310,7 +308,7 @@ const ItemDetailModal = ({ item, open, onOpenChange }) => {
                         <div className="mt-4 p-4 bg-white rounded-2xl border border-gray-100 flex items-center justify-between">
                             <div className="flex items-center gap-3">
                                 <Avatar className="h-12 w-12 border-2 border-white shadow-sm">
-                                    <AvatarImage src={item.owner?.avatarUrl} />
+                                    <AvatarImage src={resolvedOwnerAvatar ?? undefined} />
                                     <AvatarFallback className="bg-primary/10 text-primary font-bold text-sm">
                                         {item.owner?.avatar ?? 'US'}
                                     </AvatarFallback>

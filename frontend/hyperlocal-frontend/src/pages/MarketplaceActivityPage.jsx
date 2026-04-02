@@ -4,7 +4,7 @@ import HomeNavbar from '../components/ui/HomeNavbar';
 import AppFooter from '../components/ui/AppFooter';
 import MarketplaceSectionNav from '../components/ui/MarketplaceSectionNav';
 import { ROUTES } from '../constants';
-import { getIncomingRequests, getMyListings, getMySentRequests } from '../services/marketplaceService';
+import { getIncomingRequests, getMyListings, getMySentRequests, getPendingReviews } from '../services/marketplaceService';
 
 export default function MarketplaceActivityPage() {
   const navigate = useNavigate();
@@ -34,6 +34,24 @@ export default function MarketplaceActivityPage() {
   const totalRequests = incomingRequests.length + sentRequests.length;
   const totalPendingRequests = pendingIncoming + pendingSent;
   const isLoadingCards = listingsLoading || incomingLoading || sentLoading;
+
+  const { data: pendingReviews = [], isLoading: pendingReviewsLoading, isError: pendingReviewsError } = useQuery({
+    queryKey: ['pendingReviews'],
+    queryFn: getPendingReviews,
+  });
+
+  const submittedReviewTransactions = (() => {
+    try {
+      const parsed = JSON.parse(sessionStorage.getItem('submittedReviewTransactions') || '[]');
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  })();
+
+  const visiblePendingReviews = pendingReviews.filter(
+    (task) => !submittedReviewTransactions.includes(task.transactionId)
+  );
 
   const cards = [
     {
@@ -141,6 +159,66 @@ export default function MarketplaceActivityPage() {
               </div>
             ))}
         </div>
+
+        <section className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+          <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
+            <div>
+              <h2 className="text-lg font-bold text-charcoal">Pending reviews</h2>
+              <p className="text-xs text-muted-green mt-1">Finish these to strengthen your trust profile.</p>
+            </div>
+          </div>
+
+          {pendingReviewsLoading ? (
+            <div className="text-sm text-muted-green">Loading pending reviews...</div>
+          ) : pendingReviewsError ? (
+            <div className="text-sm text-red-600">Unable to load pending reviews.</div>
+          ) : visiblePendingReviews.length === 0 ? (
+            <div className="text-sm text-muted-green bg-gray-50 rounded-xl p-4">
+              No pending reviews. You are all caught up.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {visiblePendingReviews.map((task) => (
+                <div key={task.transactionId} className="border border-gray-100 rounded-xl p-4 bg-gray-50">
+                  <div className="flex items-start justify-between gap-3 flex-wrap">
+                    <div>
+                      <p className="text-sm font-semibold text-charcoal">{task.listingTitle}</p>
+                      <p className="text-xs text-muted-green mt-1">
+                        Review for {task.ownerName}
+                        <span className="mx-1.5">·</span>
+                        Transaction #{task.transactionId}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/discover/item/${task.listingId}`, {
+                          state: {
+                            reviewContext: {
+                              transactionId: task.transactionId,
+                              revieweeUserId: task.ownerUserId,
+                              listingId: task.listingId,
+                            },
+                          },
+                        })}
+                        className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-primary text-white hover:bg-primary/90"
+                      >
+                        Leave review
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => navigate(ROUTES.MARKETPLACE_EXCHANGES)}
+                        className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white border border-gray-200 text-charcoal hover:bg-gray-100"
+                      >
+                        View exchange
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
       </main>
 
       <AppFooter />

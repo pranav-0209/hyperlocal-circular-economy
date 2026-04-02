@@ -255,7 +255,7 @@ function PhotoUploader({ photos, setPhotos }) {
         <div className="space-y-3">
             <div className="flex items-center justify-between">
                 <label className="text-sm font-semibold text-charcoal">
-                    Photos <span className="text-xs font-normal text-muted-green">(up to 5)</span>
+                    Photos <span className="text-red-500">*</span> <span className="text-xs font-normal text-muted-green">(at least 1, up to 5)</span>
                 </label>
                 {photos.length > 0 && (
                     <span className="text-xs text-muted-green">{photos.length}/5 added</span>
@@ -464,6 +464,12 @@ const CreateItemModal = ({
 
     const onSubmit = async (data) => {
         const hasNewPhotos = photos.length > 0;
+
+        if (!isEditMode && !hasNewPhotos) {
+            toast.error('Please upload at least one photo before listing your item.');
+            return;
+        }
+
         const payload = {
             ...data,
             imageFiles: photos.map((photo) => photo.file),

@@ -29,6 +29,24 @@ const API_TO_UI_CONDITION = Object.fromEntries(
     Object.entries(UI_TO_API_CONDITION).map(([ui, apiValue]) => [apiValue, ui])
 );
 
+const resolveAssetUrl = (value) => {
+    if (!value || typeof value !== 'string') return null;
+    if (/^https?:\/\//i.test(value)) return value;
+
+    const baseUrl = api?.defaults?.baseURL;
+    if (!baseUrl) return value;
+
+    let normalizedBase = String(baseUrl).replace(/\/+$/, '');
+    try {
+        normalizedBase = new URL(baseUrl).origin;
+    } catch {
+        // Keep original baseUrl if URL parsing fails.
+    }
+
+    const normalizedPath = value.startsWith('/') ? value : `/${value}`;
+    return `${normalizedBase}${normalizedPath}`;
+};
+
 const initialsFromName = (name = '') => {
     const parts = name
         .split(' ')
@@ -78,7 +96,7 @@ const normalizeOwner = (owner = {}) => {
         id: String(owner.userId ?? owner.id ?? ''),
         userId: owner.userId ?? owner.id ?? null,
         name,
-        avatarUrl: owner.profilePhotoUrl ?? owner.avatarUrl ?? null,
+        avatarUrl: resolveAssetUrl(owner.profilePhotoUrl ?? owner.avatarUrl ?? null),
         avatar: initialsFromName(name),
         rating: owner.averageRating ?? owner.rating ?? 0,
         averageRating: owner.averageRating ?? owner.rating ?? 0,
@@ -99,13 +117,15 @@ export const normalizeListing = (listing = {}) => ({
     price: Number(listing.price ?? 0),
     condition: fromApiCondition(listing.condition),
     images: Array.isArray(listing.images)
-        ? listing.images
-        : (listing.thumbnailUrl ? [listing.thumbnailUrl] : []),
-    thumbnailUrl: listing.thumbnailUrl ?? (Array.isArray(listing.images) ? listing.images[0] ?? null : null),
+        ? listing.images.map((image) => resolveAssetUrl(image)).filter(Boolean)
+        : (listing.thumbnailUrl ? [resolveAssetUrl(listing.thumbnailUrl)] : []),
+    thumbnailUrl: resolveAssetUrl(listing.thumbnailUrl ?? (Array.isArray(listing.images) ? listing.images[0] ?? null : null)),
     status: listing.status ?? 'AVAILABLE',
     communityId: listing.communityId != null ? String(listing.communityId) : '',
     communityName: listing.communityName ?? '',
     owner: normalizeOwner(listing.owner),
+    averageRating: Number(listing.averageRating ?? 0),
+    totalReviews: Number(listing.totalReviews ?? 0),
     availableFrom: listing.availableFrom ?? '',
     availableTo: listing.availableTo ?? '',
     createdAt: listing.createdAt ?? '',
@@ -449,4 +469,56 @@ export const getRecentRequests = async () => {
         }
         throw error;
     }
+};
+
+/**
+ * REVIEWS & RATINGS (backend wiring stubs)
+ */
+export const getListingReviews = async (listingId, { page = 0, size = 10, sort } = {}) => {
+    const response = await api.get(`/api/reviews/listings/${listingId}`, {
+        params: { page, size, ...(sort ? { sort } : {}) },
+    });
+    return response.data;
+};
+
+export const getUserReviews = async (userId, { page = 0, size = 10, role } = {}) => {
+    const response = await api.get(`/api/reviews/users/${userId}`, {
+        params: { page, size, ...(role ? { role } : {}) },
+    });
+    return response.data;
+};
+
+export const getPendingReviews = async () => {
+    const response = await api.get('/api/reviews/me/pending');
+    return response.data;
+};
+
+export const submitReview = async (payload) => {
+    const response = await api.post('/api/reviews', payload);
+    return response.data;
+};
+
+export const updateReview = async (reviewId, payload) => {
+    const response = await api.patch(`/api/reviews/${reviewId}`, payload);
+    return response.data;
+};
+
+export const reportReview = async (reviewId, payload) => {
+    const response = await api.post(`/api/reviews/${reviewId}/report`, payload);
+    return response.data;
+};
+
+export const getListingRatingSummary = async (listingId) => {
+    const response = await api.get(`/api/ratings/listings/${listingId}/summary`);
+    return response.data;
+};
+
+export const getUserRatingSummary = async (userId) => {
+    const response = await api.get(`/api/ratings/users/${userId}/summary`);
+    return response.data;
+};
+
+export const getTrustScoreSummary = async (userId) => {
+    const response = await api.get(`/api/trust-score/users/${userId}`);
+    return response.data;
 };

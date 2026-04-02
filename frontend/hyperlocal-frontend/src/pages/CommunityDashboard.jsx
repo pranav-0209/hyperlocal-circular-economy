@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import AppFooter from '../components/ui/AppFooter';
 import HomeNavbar from '../components/ui/HomeNavbar';
 import ConfirmModal from '../components/ui/ConfirmModal';
+import SecureImage from '../components/ui/SecureImage';
 import { getCommunityMembers } from '../services/communityService';
 import { getItems } from '../services/marketplaceService';
 import {
@@ -45,23 +46,28 @@ function colorFor(name = '') {
 
 /** Avatar — photo if available and loads successfully, otherwise a deterministically colored initial */
 function MemberAvatar({ name = '', photoUrl, size = 'md' }) {
-    const [imgError, setImgError] = useState(false);
     const color   = colorFor(name);
     const initial = name.trim().charAt(0).toUpperCase() || '?';
     const dim     = size === 'sm' ? 'w-8 h-8 text-xs' : 'w-10 h-10 text-sm';
 
-    if (photoUrl && !imgError) {
-        return (
-            <img src={photoUrl} alt={name}
-                onError={() => setImgError(true)}
-                className={`${dim} rounded-full object-cover shrink-0`} />
-        );
-    }
-    return (
+    const fallbackAvatar = (
         <div className={`${dim} ${color.bg} ${color.text} rounded-full flex items-center justify-center font-bold shrink-0`}>
             {initial}
         </div>
     );
+
+    if (photoUrl) {
+        return (
+            <SecureImage
+                source={photoUrl}
+                alt={name}
+                className={`${dim} rounded-full object-cover shrink-0`}
+                fallback={fallbackAvatar}
+            />
+        );
+    }
+
+    return fallbackAvatar;
 }
 
 const CATEGORY_LABELS = {
@@ -545,7 +551,7 @@ export default function CommunityDashboard({ community }) {
                                         >
                                             <div className="h-24 bg-gray-100 overflow-hidden">
                                                 {item.images?.[0] ? (
-                                                    <img src={item.images[0]} alt={item.title} className="w-full h-full object-cover" />
+                                                    <SecureImage source={item.images[0]} alt={item.title} className="w-full h-full object-cover" />
                                                 ) : (
                                                     <div className="w-full h-full flex items-center justify-center text-gray-300">
                                                         <span className="material-symbols-outlined text-3xl">image</span>

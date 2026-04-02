@@ -3,8 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import AppFooter from '../components/ui/AppFooter';
 import HomeNavbar from '../components/ui/HomeNavbar';
+import SecureImage from '../components/ui/SecureImage';
 import { ROUTES } from '../constants';
 import { getMyProfile, updateMyProfile } from '../services/profileService';
+import { getUserTrustScoreSummary } from '../utils/reviewMocks';
 
 // ── Star rating ───────────────────────────────────────────────────────────────
 function Stars({ rating = 5 }) {
@@ -189,6 +191,7 @@ export default function ProfilePage() {
     const totalReviews = profile?.totalReviews ?? 0;
     const listingsPosted = profile?.stats?.listingsPosted ?? 0;
     const verified = profile?.verified ?? false;
+    const trustSummary = getUserTrustScoreSummary(profile?.id ?? user?.id);
     const memberSince = profile?.memberSince
         ? new Date(profile.memberSince).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
         : null;
@@ -237,7 +240,7 @@ export default function ProfilePage() {
                                 <div className="-mt-10 mb-3">
                                     <div className="w-20 h-20 rounded-2xl bg-primary flex items-center justify-center text-white font-bold text-2xl shadow-lg border-4 border-white">
                                         {photoUrl ? (
-                                            <img src={photoUrl} alt={name} className="w-full h-full rounded-2xl object-cover" />
+                                            <SecureImage source={photoUrl} alt={name} className="w-full h-full rounded-2xl object-cover" fallback={initials} />
                                         ) : initials}
                                     </div>
                                 </div>
@@ -436,29 +439,45 @@ export default function ProfilePage() {
                                     <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
                                         <circle cx="18" cy="18" r="15.9" fill="none" stroke="#e5e7eb" strokeWidth="3" />
                                         <circle cx="18" cy="18" r="15.9" fill="none" stroke="currentColor" strokeWidth="3"
-                                            strokeDasharray={`${(rating / 5) * 100} 100`}
+                                            strokeDasharray={`${trustSummary.score} 100`}
                                             strokeLinecap="round" className="text-primary" />
                                     </svg>
                                     <div className="absolute inset-0 flex items-center justify-center">
-                                        <span className="text-lg font-bold text-charcoal">{rating > 0 ? rating.toFixed(1) : '—'}</span>
+                                        <span className="text-lg font-bold text-charcoal">{trustSummary.score}</span>
                                     </div>
                                 </div>
                                 <div className="flex-1 space-y-2">
-                                    {[
-                                        { label: 'Profile verified', done: verified },
-                                        { label: 'Community member', done: (profile?.joinedCommunityIds?.length ?? 0) > 0 },
-                                        { label: '5+ successful lends', done: false },
-                                        { label: 'Identity document uploaded', done: false },
-                                    ].map(t => (
-                                        <div key={t.label} className="flex items-center gap-2 text-xs">
-                                            <span className={`material-symbols-outlined text-sm ${t.done ? 'text-green-600' : 'text-gray-300'}`} style={{ fontVariationSettings: "'FILL' 1" }}>
-                                                check_circle
-                                            </span>
-                                            <span className={t.done ? 'text-charcoal font-medium' : 'text-muted-green'}>{t.label}</span>
-                                        </div>
-                                    ))}
+                                    <div>
+                                        <p className="text-xs text-muted-green">Trust tier</p>
+                                        <p className="text-base font-bold text-charcoal">{trustSummary.tier}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-muted-green">Trust XP</p>
+                                        <p className="text-sm font-semibold text-charcoal">{trustSummary.xp} XP</p>
+                                    </div>
+                                    <div className="text-[11px] text-muted-green">
+                                        Next tier: {trustSummary.nextTier}
+                                    </div>
                                 </div>
                             </div>
+                            <div className="mt-4 space-y-2">
+                                {[
+                                    { label: 'Profile verified', done: verified },
+                                    { label: 'Community member', done: (profile?.joinedCommunityIds?.length ?? 0) > 0 },
+                                    { label: 'On-time returns', done: trustSummary.score >= 65 },
+                                    { label: 'Consistent reviews', done: totalReviews >= 3 },
+                                ].map((t) => (
+                                    <div key={t.label} className="flex items-center gap-2 text-xs">
+                                        <span className={`material-symbols-outlined text-sm ${t.done ? 'text-green-600' : 'text-gray-300'}`} style={{ fontVariationSettings: "'FILL' 1" }}>
+                                            check_circle
+                                        </span>
+                                        <span className={t.done ? 'text-charcoal font-medium' : 'text-muted-green'}>{t.label}</span>
+                                    </div>
+                                ))}
+                            </div>
+                            <p className="mt-3 text-[11px] text-muted-green">
+                                Trust Score reflects reliability across completed exchanges. Item ratings remain separate.
+                            </p>
                         </div>
 
                     </div>
