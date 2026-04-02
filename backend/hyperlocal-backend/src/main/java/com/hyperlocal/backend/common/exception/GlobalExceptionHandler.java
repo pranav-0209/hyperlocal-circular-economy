@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.time.LocalDateTime;
@@ -231,6 +232,30 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.CONFLICT, ex.getMessage(), request.getRequestURI());
     }
 
+    @ExceptionHandler(CustomExceptions.ReviewAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponseDto> handleReviewAlreadyExists(
+            CustomExceptions.ReviewAlreadyExistsException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.CONFLICT, ex.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler(CustomExceptions.ReviewAccessDeniedException.class)
+    public ResponseEntity<ErrorResponseDto> handleReviewAccessDenied(
+            CustomExceptions.ReviewAccessDeniedException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.FORBIDDEN, ex.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler(CustomExceptions.ReviewInvalidStateException.class)
+    public ResponseEntity<ErrorResponseDto> handleReviewInvalidState(
+            CustomExceptions.ReviewInvalidStateException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.CONFLICT, ex.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler(CustomExceptions.ReviewPayloadMismatchException.class)
+    public ResponseEntity<ErrorResponseDto> handleReviewPayloadMismatch(
+            CustomExceptions.ReviewPayloadMismatchException ex, HttpServletRequest request) {
+        return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request.getRequestURI());
+    }
+
     // Handle validation errors for request DTOs
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponseDto> handleValidation(MethodArgumentNotValidException ex,
@@ -255,6 +280,12 @@ public class GlobalExceptionHandler {
                                                                    HttpServletRequest request) {
         return buildResponse(HttpStatus.BAD_REQUEST,
             "File size exceeds maximum allowed limit", request.getRequestURI());
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponseDto> handleNoResourceFound(NoResourceFoundException ex,
+                                                                  HttpServletRequest request) {
+        return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage(), request.getRequestURI());
     }
 
     // Generic Fallback

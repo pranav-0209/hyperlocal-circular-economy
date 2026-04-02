@@ -25,6 +25,8 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -88,7 +90,7 @@ public class BorrowRequestService {
                 ? borrowRequestRepository.findByRequesterIdOrderByRequestedAtDesc(currentUser.getId(), pageable)
                 : borrowRequestRepository.findByRequesterIdAndStatusOrderByRequestedAtDesc(currentUser.getId(), status, pageable);
 
-        return PagedResponseDto.from(requests.map(this::toResponse));
+        return toPagedResponse(requests, true);
     }
 
     @Transactional
@@ -111,7 +113,7 @@ public class BorrowRequestService {
             requests = borrowRequestRepository.findByOwnerIdOrderByRequestedAtDesc(currentUser.getId(), pageable);
         }
 
-        return PagedResponseDto.from(requests.map(this::toResponse));
+        return toPagedResponse(requests, false);
     }
 
     @Transactional
@@ -323,11 +325,24 @@ public class BorrowRequestService {
     }
 
     private BorrowRequestResponse toResponse(BorrowRequest request) {
+        return toResponse(request, null, null, null, true);
+    }
+
+    private BorrowRequestResponse toResponse(
+            BorrowRequest request,
+            String requesterName,
+            String ownerName,
+            String listingTitle,
+            boolean includeOwnerDetails
+    ) {
         return BorrowRequestResponse.builder()
                 .id(request.getId())
                 .listingId(request.getListingId())
                 .requesterId(request.getRequesterId())
-                .ownerId(request.getOwnerId())
+                .ownerId(includeOwnerDetails ? request.getOwnerId() : null)
+                .ownerName(includeOwnerDetails ? ownerName : null)
+                .requesterName(requesterName)
+                .listingTitle(listingTitle)
                 .startDate(request.getStartDate())
                 .endDate(request.getEndDate())
                 .message(request.getMessage())
@@ -337,6 +352,64 @@ public class BorrowRequestService {
                 .returnedAt(request.getReturnedAt())
                 .rejectionReason(request.getRejectionReason())
                 .build();
+    }
+
+    private PagedResponseDto<BorrowRequestResponse> toPagedResponse(
+            Page<BorrowRequest> requestPage,
+            boolean includeOwnerDetails
+    ) {
+        List<BorrowRequest> requests = requestPage.getContent();
+        if (requests.isEmpty()) {
+            return PagedResponseDto.from(requestPage.map(this::toResponse));
+        }
+
+        var listingTitles = listingRepository.findAllById(extractListingIds(requests)).stream()
+                .collect(Collectors.toMap(Listing::getId, Listing::getTitle));
+
+        var requesterNames = userRepository.findAllById(extractRequesterIds(requests)).stream()
+                .collect(Collectors.toMap(User::getId, User::getName));
+
+        var ownerNames = includeOwnerDetails
+                ? userRepository.findAllById(extractOwnerIds(requests)).stream()
+                        .collect(Collectors.toMap(User::getId, User::getName))
+                : java.util.Collections.<Long, String>emptyMap();
+
+        List<BorrowRequestResponse> content = requests.stream()
+                .map(request -> toResponse(
+                        request,
+                        requesterNames.get(request.getRequesterId()),
+                        ownerNames.get(request.getOwnerId()),
+                        listingTitles.get(request.getListingId()),
+                        includeOwnerDetails
+                ))
+                .toList();
+
+        return PagedResponseDto.<BorrowRequestResponse>builder()
+                .content(content)
+                .pageNumber(requestPage.getNumber())
+                .pageSize(requestPage.getSize())
+                .totalElements(requestPage.getTotalElements())
+                .totalPages(requestPage.getTotalPages())
+                .last(requestPage.isLast())
+                .build();
+    }
+
+    private Set<Long> extractListingIds(List<BorrowRequest> requests) {
+        return requests.stream()
+                .map(BorrowRequest::getListingId)
+                .collect(Collectors.toSet());
+    }
+
+    private Set<Long> extractRequesterIds(List<BorrowRequest> requests) {
+        return requests.stream()
+                .map(BorrowRequest::getRequesterId)
+                .collect(Collectors.toSet());
+    }
+
+    private Set<Long> extractOwnerIds(List<BorrowRequest> requests) {
+        return requests.stream()
+                .map(BorrowRequest::getOwnerId)
+                .collect(Collectors.toSet());
     }
 
     private User getAuthenticatedUser() {

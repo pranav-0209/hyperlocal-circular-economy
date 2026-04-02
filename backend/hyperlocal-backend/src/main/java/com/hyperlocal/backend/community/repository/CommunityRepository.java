@@ -1,6 +1,7 @@
 package com.hyperlocal.backend.community.repository;
 
 import com.hyperlocal.backend.community.entity.Community;
+import com.hyperlocal.backend.community.enums.CommunityCategory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -15,7 +16,7 @@ public interface CommunityRepository extends JpaRepository<Community, Long> {
 
     boolean existsByCode(String code);
 
-    boolean existsByNameIgnoreCase(String name);
+    boolean existsByNameIgnoreCaseAndCategory(String name, CommunityCategory category);
 
     @Query(
         value = """
@@ -40,4 +41,3 @@ public interface CommunityRepository extends JpaRepository<Community, Long> {
             @Param("search") String search,
             Pageable pageable);
 }
-

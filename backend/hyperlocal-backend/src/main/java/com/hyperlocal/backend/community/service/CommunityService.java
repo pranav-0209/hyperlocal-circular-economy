@@ -13,7 +13,6 @@ import com.hyperlocal.backend.community.dto.UpdateJoinPolicyRequest;
 import com.hyperlocal.backend.community.entity.Community;
 import com.hyperlocal.backend.community.entity.CommunityMember;
 import com.hyperlocal.backend.community.enums.CommunityRole;
-import com.hyperlocal.backend.community.enums.CommunityStatus;
 import com.hyperlocal.backend.community.enums.JoinPolicy;
 import com.hyperlocal.backend.community.enums.MemberStatus;
 import com.hyperlocal.backend.community.repository.CommunityMemberRepository;
@@ -42,8 +41,8 @@ public class CommunityService {
     public CommunityResponse createCommunity(CreateCommunityRequest request) {
         User currentUser = getAuthenticatedUser();
 
-        if (communityRepository.existsByNameIgnoreCase(request.getName())) {
-            throw new CustomExceptions.CommunityNameAlreadyExistsException(request.getName());
+        if (communityRepository.existsByNameIgnoreCaseAndCategory(request.getName(), request.getCategory())) {
+            throw new CustomExceptions.CommunityNameAlreadyExistsException(request.getName(), request.getCategory());
         }
 
         String code = generateUniqueCode(request.getName());
@@ -400,10 +399,14 @@ public class CommunityService {
 
         assertIsAdmin(communityId, currentUser.getId());
 
-        // Check name uniqueness only if the name actually changed
-        if (!community.getName().equalsIgnoreCase(request.getName())
-                && communityRepository.existsByNameIgnoreCase(request.getName())) {
-            throw new CustomExceptions.CommunityNameAlreadyExistsException(request.getName());
+        // Check uniqueness for the target name/category pair only if it actually changes.
+        boolean isNameOrCategoryChanged =
+                !community.getName().equalsIgnoreCase(request.getName())
+                        || community.getCategory() != request.getCategory();
+
+        if (isNameOrCategoryChanged
+                && communityRepository.existsByNameIgnoreCaseAndCategory(request.getName(), request.getCategory())) {
+            throw new CustomExceptions.CommunityNameAlreadyExistsException(request.getName(), request.getCategory());
         }
 
         community.setName(request.getName());

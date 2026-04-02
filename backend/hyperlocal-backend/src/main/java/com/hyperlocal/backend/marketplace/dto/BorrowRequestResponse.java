@@ -15,6 +15,9 @@ public class BorrowRequestResponse {
     private Long listingId;
     private Long requesterId;
     private Long ownerId;
+    private String ownerName;
+    private String requesterName;
+    private String listingTitle;
     private LocalDate startDate;
     private LocalDate endDate;
     private String message;

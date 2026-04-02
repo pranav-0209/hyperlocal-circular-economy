@@ -1,5 +1,7 @@
 package com.hyperlocal.backend.common.exception;
 
+import com.hyperlocal.backend.community.enums.CommunityCategory;
+
 public class CustomExceptions {
 
     private CustomExceptions() {
@@ -113,6 +115,10 @@ public class CustomExceptions {
         public CommunityNameAlreadyExistsException(String name) {
             super("A community with the name \"" + name + "\" already exists. Please choose a different name.");
         }
+
+        public CommunityNameAlreadyExistsException(String name, CommunityCategory category) {
+            super("Community with the name \"" + name + "\" already exists in the selected category (" + category + ").");
+        }
     }
 
     public static class JoinRequestPendingException extends RuntimeException {
@@ -192,6 +198,30 @@ public class CustomExceptions {
     public static class ListingUnavailableForBorrowException extends RuntimeException {
         public ListingUnavailableForBorrowException() {
             super("This listing is currently unavailable for borrow requests.");
+        }
+    }
+
+    public static class ReviewAlreadyExistsException extends RuntimeException {
+        public ReviewAlreadyExistsException() {
+            super("A review already exists for this transaction.");
+        }
+    }
+
+    public static class ReviewAccessDeniedException extends RuntimeException {
+        public ReviewAccessDeniedException(String message) {
+            super(message);
+        }
+    }
+
+    public static class ReviewInvalidStateException extends RuntimeException {
+        public ReviewInvalidStateException(String message) {
+            super(message);
+        }
+    }
+
+    public static class ReviewPayloadMismatchException extends RuntimeException {
+        public ReviewPayloadMismatchException(String message) {
+            super(message);
         }
     }
 }

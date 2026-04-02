@@ -13,6 +13,7 @@ import com.hyperlocal.backend.marketplace.enums.ListingCategory;
 import com.hyperlocal.backend.marketplace.enums.ListingStatus;
 import com.hyperlocal.backend.marketplace.repository.ListingRepository;
 import com.hyperlocal.backend.marketplace.repository.ListingSpecification;
+import com.hyperlocal.backend.marketplace.repository.ReviewRepository;
 import com.hyperlocal.backend.user.entity.User;
 import com.hyperlocal.backend.user.enums.VerificationStatus;
 import com.hyperlocal.backend.user.repository.UserRepository;
@@ -28,6 +29,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -40,6 +42,7 @@ public class MarketplaceService {
     private final CommunityRepository communityRepository;
     private final CommunityMemberRepository communityMemberRepository;
     private final UserRepository userRepository;
+    private final ReviewRepository reviewRepository;
     private final FileStorageService fileStorageService;
 
     // ── Create ────────────────────────────────────────────────────────────────
@@ -116,15 +119,29 @@ public class MarketplaceService {
         // Batch-load owners and communities
         List<Long> ownerIds = listings.stream().map(Listing::getOwnerId).distinct().collect(Collectors.toList());
         List<Long> communityIds = listings.stream().map(Listing::getCommunityId).distinct().collect(Collectors.toList());
+        List<Long> listingIds = listings.stream().map(Listing::getId).collect(Collectors.toList());
 
         Map<Long, User> usersById = userRepository.findAllById(ownerIds).stream()
                 .collect(Collectors.toMap(User::getId, u -> u));
         Map<Long, Community> communitiesById = communityRepository.findAllById(communityIds).stream()
                 .collect(Collectors.toMap(Community::getId, c -> c));
+        Map<Long, ListingAverageRatingView> listingRatingsById = listingIds.isEmpty()
+                ? Collections.emptyMap()
+                : reviewRepository.findAverageRatingsByListingIds(listingIds).stream()
+                .collect(Collectors.toMap(ListingAverageRatingView::getListingId, r -> r));
 
         // Build responses inside the transaction (Hibernate session still open)
         List<ListingSummaryResponse> responses = listings.stream()
-                .map(l -> buildListingSummaryResponse(l, usersById.get(l.getOwnerId()), communitiesById.get(l.getCommunityId())))
+                .map(l -> {
+                    ListingAverageRatingView rating = listingRatingsById.get(l.getId());
+                    return buildListingSummaryResponse(
+                            l,
+                            usersById.get(l.getOwnerId()),
+                            communitiesById.get(l.getCommunityId()),
+                            rating != null ? rating.getAverageRating() : 0.0,
+                            rating != null ? rating.getTotalReviews() : 0L
+                    );
+                })
                 .collect(Collectors.toList());
 
         Page<ListingSummaryResponse> responsePage = new PageImpl<>(responses, pageable, totalElements);
@@ -304,7 +321,12 @@ public class MarketplaceService {
                 .build();
     }
 
-    private ListingSummaryResponse buildListingSummaryResponse(Listing listing, User owner, Community community) {
+    private ListingSummaryResponse buildListingSummaryResponse(
+            Listing listing,
+            User owner,
+            Community community,
+            Double averageRating,
+            Long totalReviews) {
         ListingOwnerDto ownerDto = null;
         if (owner != null) {
             ownerDto = ListingOwnerDto.builder()
@@ -333,6 +355,8 @@ public class MarketplaceService {
                 .communityId(listing.getCommunityId())
                 .communityName(community != null ? community.getName() : null)
                 .owner(ownerDto)
+                .averageRating(averageRating)
+                .totalReviews(totalReviews)
                 .createdAt(listing.getCreatedAt())
                 .build();
     }

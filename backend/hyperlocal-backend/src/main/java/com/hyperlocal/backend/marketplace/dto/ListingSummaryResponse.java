@@ -25,6 +25,8 @@ public class ListingSummaryResponse {
     private String communityName;
 
     private ListingOwnerDto owner;
+    private Double averageRating;
+    private Long totalReviews;
 
     private LocalDateTime createdAt;
 }
