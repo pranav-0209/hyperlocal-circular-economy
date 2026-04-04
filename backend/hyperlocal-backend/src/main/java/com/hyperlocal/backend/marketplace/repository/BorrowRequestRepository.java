@@ -31,18 +31,29 @@ public interface BorrowRequestRepository extends JpaRepository<BorrowRequest, Lo
     Page<BorrowRequest> findByOwnerIdAndListingIdAndStatusOrderByRequestedAtDesc(
             Long ownerId, Long listingId, BorrowRequestStatus status, Pageable pageable);
 
-    boolean existsByListingIdAndStatusAndStartDateLessThanAndEndDateGreaterThan(
+    boolean existsByListingIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
             Long listingId, BorrowRequestStatus status, LocalDate endDate, LocalDate startDate);
 
-    List<BorrowRequest> findByListingIdAndStatusAndStartDateLessThanAndEndDateGreaterThan(
+    List<BorrowRequest> findByListingIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
             Long listingId, BorrowRequestStatus status, LocalDate endDate, LocalDate startDate);
 
     boolean existsByListingIdAndStatus(Long listingId, BorrowRequestStatus status);
 
     List<BorrowRequest> findByListingIdAndStatusOrderByStartDateAsc(Long listingId, BorrowRequestStatus status);
 
-    List<BorrowRequest> findByListingIdAndStatusAndStartDateLessThanAndEndDateGreaterThanOrderByStartDateAsc(
+    List<BorrowRequest> findByListingIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByStartDateAsc(
             Long listingId, BorrowRequestStatus status, LocalDate endDate, LocalDate startDate);
+
+    List<BorrowRequest> findByListingIdInAndStatusInOrderByListingIdAscStartDateAsc(
+            List<Long> listingIds, List<BorrowRequestStatus> statuses);
+
+    long countByRequesterId(Long requesterId);
+
+    long countByRequesterIdAndStatus(Long requesterId, BorrowRequestStatus status);
+
+    long countByRequesterIdAndStatusAndApprovedAtIsNotNull(Long requesterId, BorrowRequestStatus status);
+
+    List<BorrowRequest> findByRequesterIdAndStatus(Long requesterId, BorrowRequestStatus status);
 
     @Query("""
             select new com.hyperlocal.backend.marketplace.dto.PendingReviewResponse(

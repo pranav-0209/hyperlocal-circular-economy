@@ -18,6 +18,10 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
 
     boolean existsByTransactionId(Long transactionId);
 
+    long countByRevieweeUserIdAndRatingGreaterThanEqual(Long revieweeUserId, Integer rating);
+
+    long countByRevieweeUserIdAndRatingLessThanEqual(Long revieweeUserId, Integer rating);
+
     @Query("""
             select new com.hyperlocal.backend.marketplace.dto.ListingReviewItemResponse(
                 reviewer.name,

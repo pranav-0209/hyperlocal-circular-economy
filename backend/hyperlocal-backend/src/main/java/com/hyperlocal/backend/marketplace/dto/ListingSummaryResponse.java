@@ -27,6 +27,7 @@ public class ListingSummaryResponse {
     private ListingOwnerDto owner;
     private Double averageRating;
     private Long totalReviews;
+    private Boolean isFullyBooked;
 
     private LocalDateTime createdAt;
 }

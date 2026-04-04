@@ -56,8 +56,8 @@ public class UserService {
                 .profilePhotoUrl(user.getProfilePhotoUrl())
                 .verified(user.getVerificationStatus() == VerificationStatus.VERIFIED)
                 .memberSince(user.getCreatedAt())
-                .averageRating(user.getAverageRating())
-                .totalReviews(user.getTotalReviews())
+                .trustIndex(user.getTrustIndex())
+                .trustXp(user.getTrustXp())
                 .listingsPosted(listingsPosted)
                 .build();
     }
@@ -75,8 +75,8 @@ public class UserService {
                 .profilePhotoUrl(user.getProfilePhotoUrl())
                 .verified(user.getVerificationStatus() == VerificationStatus.VERIFIED)
                 .memberSince(user.getCreatedAt())
-                .averageRating(user.getAverageRating())
-                .totalReviews(user.getTotalReviews())
+                .trustIndex(user.getTrustIndex())
+                .trustXp(user.getTrustXp())
                 .stats(ProfileResponseDto.ProfileStatsDto.builder()
                         .listingsPosted(listingsPosted)
                         .build())
@@ -138,6 +138,8 @@ public class UserService {
                 .pendingSteps(profileCompletionService.getPendingSteps(user))
                 .status(user.getVerificationStatus().name())
                 .rejectionReason(user.getRejectionReason())
+                .trustIndex(user.getTrustIndex())
+                .trustXp(user.getTrustXp())
                 .joinedCommunityIds(user.getJoinedCommunityIds())
                 .createdCommunityIds(user.getCreatedCommunityIds())
                 .build();

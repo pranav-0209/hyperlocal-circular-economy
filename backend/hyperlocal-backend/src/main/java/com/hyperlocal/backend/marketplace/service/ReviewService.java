@@ -10,6 +10,7 @@ import com.hyperlocal.backend.marketplace.repository.ListingRepository;
 import com.hyperlocal.backend.marketplace.repository.ReviewRepository;
 import com.hyperlocal.backend.user.entity.User;
 import com.hyperlocal.backend.user.repository.UserRepository;
+import com.hyperlocal.backend.user.service.TrustScoreService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -27,6 +28,7 @@ public class ReviewService {
     private final BorrowRequestRepository borrowRequestRepository;
     private final ListingRepository listingRepository;
     private final UserRepository userRepository;
+    private final TrustScoreService trustScoreService;
 
     @Transactional
     public ReviewResponse createReview(CreateReviewRequest request) {
@@ -77,7 +79,10 @@ public class ReviewService {
                 .build();
 
         Review saved = reviewRepository.save(review);
-        updateRevieweeStats(reviewee, request.getRating());
+
+        if (request.getRating() >= 4 || request.getRating() <= 2) {
+            trustScoreService.recalculateAndPersist(reviewee.getId());
+        }
 
         return toReviewResponse(saved, currentUser.getName(), reviewee.getName());
     }
@@ -113,17 +118,6 @@ public class ReviewService {
         return borrowRequestRepository.findPendingReviewTransactions(currentUser.getId(), BorrowRequestStatus.COMPLETED);
     }
 
-    private void updateRevieweeStats(User reviewee, int newRating) {
-        int currentTotal = reviewee.getTotalReviews() == null ? 0 : reviewee.getTotalReviews();
-        double currentAverage = reviewee.getAverageRating() == null ? 0.0 : reviewee.getAverageRating();
-
-        int updatedTotal = currentTotal + 1;
-        double updatedAverage = ((currentAverage * currentTotal) + newRating) / updatedTotal;
-
-        reviewee.setTotalReviews(updatedTotal);
-        reviewee.setAverageRating(updatedAverage);
-        userRepository.save(reviewee);
-    }
 
     private ReviewResponse toReviewResponse(Review review, String reviewerName, String revieweeName) {
         return ReviewResponse.builder()

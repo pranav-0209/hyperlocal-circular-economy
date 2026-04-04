@@ -89,16 +89,16 @@ public class User {
     @Builder.Default
     private List<Long> createdCommunityIds = new ArrayList<>();
 
-    /**
-     * Average rating received from other users (updated on each new review).
-     * Null until the user receives their first review.
-     */
-    private Double averageRating;
 
-    /** Total number of reviews received. */
+    /** Borrower trust score shown to other users (0-100). */
     @Builder.Default
     @Column(nullable = false)
-    private Integer totalReviews = 0;
+    private Integer trustIndex = 50;
+
+    /** Gamified trust experience points (0+). */
+    @Builder.Default
+    @Column(nullable = false)
+    private Integer trustXp = 0;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -117,6 +117,12 @@ public class User {
         }
         if (this.verificationStatus == null) {
             this.verificationStatus = VerificationStatus.NOT_VERIFIED;
+        }
+        if (this.trustIndex == null) {
+            this.trustIndex = 50;
+        }
+        if (this.trustXp == null) {
+            this.trustXp = 0;
         }
     }
 

@@ -11,6 +11,7 @@ import com.hyperlocal.backend.marketplace.enums.BorrowRequestStatus;
 import com.hyperlocal.backend.marketplace.enums.ListingStatus;
 import com.hyperlocal.backend.marketplace.repository.BorrowRequestRepository;
 import com.hyperlocal.backend.marketplace.repository.ListingRepository;
+import com.hyperlocal.backend.user.service.TrustScoreService;
 import com.hyperlocal.backend.user.entity.User;
 import com.hyperlocal.backend.user.repository.UserRepository;
 import jakarta.transaction.Transactional;
@@ -36,6 +37,7 @@ public class BorrowRequestService {
     private final ListingRepository listingRepository;
     private final CommunityMemberRepository communityMemberRepository;
     private final UserRepository userRepository;
+    private final TrustScoreService trustScoreService;
 
     @Transactional
     public BorrowRequestResponse createRequest(CreateBorrowRequestRequest request) {
@@ -61,7 +63,7 @@ public class BorrowRequestService {
         validateWithinListingWindow(listing, request.getStartDate(), request.getEndDate());
 
         boolean overlapsApproved = borrowRequestRepository
-                .existsByListingIdAndStatusAndStartDateLessThanAndEndDateGreaterThan(
+                .existsByListingIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
                         listing.getId(), BorrowRequestStatus.APPROVED, request.getEndDate(), request.getStartDate());
         if (overlapsApproved) {
             throw new CustomExceptions.BorrowRequestDateConflictException(
@@ -135,7 +137,7 @@ public class BorrowRequestService {
                 .orElseThrow(CustomExceptions.ListingNotFoundException::new);
 
         boolean overlapsApproved = borrowRequestRepository
-                .existsByListingIdAndStatusAndStartDateLessThanAndEndDateGreaterThan(
+                .existsByListingIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
                         request.getListingId(), BorrowRequestStatus.APPROVED, request.getEndDate(), request.getStartDate());
         if (overlapsApproved) {
             throw new CustomExceptions.BorrowRequestDateConflictException(
@@ -149,7 +151,7 @@ public class BorrowRequestService {
         listingRepository.save(listing);
 
         List<BorrowRequest> overlappingPending = borrowRequestRepository
-                .findByListingIdAndStatusAndStartDateLessThanAndEndDateGreaterThan(
+                .findByListingIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
                         request.getListingId(), BorrowRequestStatus.PENDING, request.getEndDate(), request.getStartDate());
 
         for (BorrowRequest pending : overlappingPending) {
@@ -193,7 +195,9 @@ public class BorrowRequestService {
         if (request.getStatus() == BorrowRequestStatus.PENDING) {
             request.setStatus(BorrowRequestStatus.CANCELLED);
             request.setCancelledAt(LocalDateTime.now());
-            return toResponse(borrowRequestRepository.save(request));
+            BorrowRequest savedRequest = borrowRequestRepository.save(request);
+            trustScoreService.recalculateAndPersist(request.getRequesterId());
+            return toResponse(savedRequest);
         }
 
         if (request.getStatus() == BorrowRequestStatus.APPROVED) {
@@ -212,6 +216,8 @@ public class BorrowRequestService {
                     listingRepository.save(listing);
                 });
             }
+
+            trustScoreService.recalculateAndPersist(request.getRequesterId());
             return toResponse(request);
         }
 
@@ -226,6 +232,11 @@ public class BorrowRequestService {
         assertOwner(request, currentUser.getId());
         assertStatus(request, BorrowRequestStatus.APPROVED, "Only approved requests can be completed.");
 
+        if (LocalDate.now().isBefore(request.getStartDate())) {
+            throw new CustomExceptions.InvalidBorrowRequestDateException(
+                    "You can only mark this request as complete on or after the start date.");
+        }
+
         Listing listing = listingRepository.findById(request.getListingId())
                 .orElseThrow(CustomExceptions.ListingNotFoundException::new);
 
@@ -235,7 +246,10 @@ public class BorrowRequestService {
         listing.setStatus(ListingStatus.AVAILABLE);
         listingRepository.save(listing);
 
-        return toResponse(borrowRequestRepository.save(request));
+        BorrowRequest savedRequest = borrowRequestRepository.save(request);
+        trustScoreService.recalculateAndPersist(request.getRequesterId());
+
+        return toResponse(savedRequest);
     }
 
     @Transactional
@@ -255,7 +269,7 @@ public class BorrowRequestService {
             approved = borrowRequestRepository.findByListingIdAndStatusOrderByStartDateAsc(
                     listingId, BorrowRequestStatus.APPROVED);
         } else {
-            approved = borrowRequestRepository.findByListingIdAndStatusAndStartDateLessThanAndEndDateGreaterThanOrderByStartDateAsc(
+            approved = borrowRequestRepository.findByListingIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByStartDateAsc(
                     listingId, BorrowRequestStatus.APPROVED, toDate, fromDate);
         }
 
@@ -270,7 +284,7 @@ public class BorrowRequestService {
         Boolean requestedRangeAvailable = null;
         if (fromDate != null) {
             requestedRangeAvailable = !borrowRequestRepository
-                    .existsByListingIdAndStatusAndStartDateLessThanAndEndDateGreaterThan(
+                    .existsByListingIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
                             listingId, BorrowRequestStatus.APPROVED, toDate, fromDate);
         }
 
@@ -284,9 +298,9 @@ public class BorrowRequestService {
     }
 
     private void validateDateRange(LocalDate startDate, LocalDate endDate) {
-        if (!startDate.isBefore(endDate)) {
+        if (endDate.isBefore(startDate)) {
             throw new CustomExceptions.InvalidBorrowRequestDateException(
-                    "endDate must be after startDate (exclusive checkout-style end)."
+                    "endDate must be on or after startDate."
             );
         }
     }
@@ -325,7 +339,7 @@ public class BorrowRequestService {
     }
 
     private BorrowRequestResponse toResponse(BorrowRequest request) {
-        return toResponse(request, null, null, null, true);
+        return toResponse(request, null, null, null, null, null, true);
     }
 
     private BorrowRequestResponse toResponse(
@@ -333,12 +347,16 @@ public class BorrowRequestService {
             String requesterName,
             String ownerName,
             String listingTitle,
+            Integer requesterTrustIndex,
+            Integer requesterTrustXp,
             boolean includeOwnerDetails
     ) {
         return BorrowRequestResponse.builder()
                 .id(request.getId())
                 .listingId(request.getListingId())
                 .requesterId(request.getRequesterId())
+                .requesterTrustIndex(requesterTrustIndex)
+                .requesterTrustXp(requesterTrustXp)
                 .ownerId(includeOwnerDetails ? request.getOwnerId() : null)
                 .ownerName(includeOwnerDetails ? ownerName : null)
                 .requesterName(requesterName)
@@ -366,8 +384,8 @@ public class BorrowRequestService {
         var listingTitles = listingRepository.findAllById(extractListingIds(requests)).stream()
                 .collect(Collectors.toMap(Listing::getId, Listing::getTitle));
 
-        var requesterNames = userRepository.findAllById(extractRequesterIds(requests)).stream()
-                .collect(Collectors.toMap(User::getId, User::getName));
+        var requesterUsers = userRepository.findAllById(extractRequesterIds(requests)).stream()
+                .collect(Collectors.toMap(User::getId, user -> user));
 
         var ownerNames = includeOwnerDetails
                 ? userRepository.findAllById(extractOwnerIds(requests)).stream()
@@ -377,9 +395,17 @@ public class BorrowRequestService {
         List<BorrowRequestResponse> content = requests.stream()
                 .map(request -> toResponse(
                         request,
-                        requesterNames.get(request.getRequesterId()),
+                        requesterUsers.get(request.getRequesterId()) != null
+                                ? requesterUsers.get(request.getRequesterId()).getName()
+                                : null,
                         ownerNames.get(request.getOwnerId()),
                         listingTitles.get(request.getListingId()),
+                        requesterUsers.get(request.getRequesterId()) != null
+                                ? requesterUsers.get(request.getRequesterId()).getTrustIndex()
+                                : null,
+                        requesterUsers.get(request.getRequesterId()) != null
+                                ? requesterUsers.get(request.getRequesterId()).getTrustXp()
+                                : null,
                         includeOwnerDetails
                 ))
                 .toList();

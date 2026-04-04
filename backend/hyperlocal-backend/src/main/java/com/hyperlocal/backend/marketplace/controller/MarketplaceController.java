@@ -2,6 +2,7 @@ package com.hyperlocal.backend.marketplace.controller;
 
 import com.hyperlocal.backend.common.dto.PagedResponseDto;
 import com.hyperlocal.backend.marketplace.dto.*;
+import com.hyperlocal.backend.marketplace.enums.ListingAvailabilityFilter;
 import com.hyperlocal.backend.marketplace.enums.ListingCategory;
 import com.hyperlocal.backend.marketplace.enums.ListingStatus;
 import com.hyperlocal.backend.marketplace.service.MarketplaceService;
@@ -52,21 +53,21 @@ public class MarketplaceController {
         /**
          * GET /api/marketplace/listings
          * Browse listings scoped to the current user's communities.
-         * Optional filters: search, category, status, communityId, page, size.
+         * Optional filters: search, category, filter, communityId, page, size.
          */
         @Operation(summary = "Browse listings (scoped to user's communities)")
         @GetMapping
         public ResponseEntity<PagedResponseDto<ListingSummaryResponse>> getListings(
                 @RequestParam(required = false) String search,
                 @RequestParam(required = false) ListingCategory category,
-                @RequestParam(required = false) ListingStatus status,
+                @RequestParam(required = false) ListingAvailabilityFilter filter,
                 @RequestParam(required = false) Long communityId,
                 @RequestParam(defaultValue = "0") int page,
                 @RequestParam(defaultValue = "20") int size) {
 
             Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
             return ResponseEntity.ok(
-                    marketplaceService.getListings(search, category, status, communityId, pageable));
+                    marketplaceService.getListings(search, category, filter, communityId, pageable));
         }
 
         /**

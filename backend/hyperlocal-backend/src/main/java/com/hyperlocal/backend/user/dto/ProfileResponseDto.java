@@ -20,8 +20,8 @@ public class ProfileResponseDto {
     private boolean verified;
     private LocalDateTime memberSince;
 
-    private Double averageRating;
-    private Integer totalReviews;
+    private Integer trustIndex;
+    private Integer trustXp;
 
     private ProfileStatsDto stats;
 
@@ -37,4 +37,3 @@ public class ProfileResponseDto {
         private long listingsPosted;
     }
 }
-

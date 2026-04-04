@@ -8,9 +8,13 @@ import com.hyperlocal.backend.community.enums.MemberStatus;
 import com.hyperlocal.backend.community.repository.CommunityMemberRepository;
 import com.hyperlocal.backend.community.repository.CommunityRepository;
 import com.hyperlocal.backend.marketplace.dto.*;
+import com.hyperlocal.backend.marketplace.entity.BorrowRequest;
 import com.hyperlocal.backend.marketplace.entity.Listing;
+import com.hyperlocal.backend.marketplace.enums.BorrowRequestStatus;
+import com.hyperlocal.backend.marketplace.enums.ListingAvailabilityFilter;
 import com.hyperlocal.backend.marketplace.enums.ListingCategory;
 import com.hyperlocal.backend.marketplace.enums.ListingStatus;
+import com.hyperlocal.backend.marketplace.repository.BorrowRequestRepository;
 import com.hyperlocal.backend.marketplace.repository.ListingRepository;
 import com.hyperlocal.backend.marketplace.repository.ListingSpecification;
 import com.hyperlocal.backend.marketplace.repository.ReviewRepository;
@@ -22,14 +26,17 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -43,6 +50,7 @@ public class MarketplaceService {
     private final CommunityMemberRepository communityMemberRepository;
     private final UserRepository userRepository;
     private final ReviewRepository reviewRepository;
+    private final BorrowRequestRepository borrowRequestRepository;
     private final FileStorageService fileStorageService;
 
     // ── Create ────────────────────────────────────────────────────────────────
@@ -84,7 +92,7 @@ public class MarketplaceService {
 
     @Transactional
     public PagedResponseDto<ListingSummaryResponse> getListings(
-            String search, ListingCategory category, ListingStatus status,
+            String search, ListingCategory category, ListingAvailabilityFilter filter,
             Long communityId, Pageable pageable) {
 
         User currentUser = getAuthenticatedUser();
@@ -98,7 +106,7 @@ public class MarketplaceService {
                     .filter(cm -> cm.getStatus() == MemberStatus.APPROVED)
                     .orElseThrow(CustomExceptions.NotCommunityMemberException::new);
 
-            spec = ListingSpecification.browseInCommunity(communityId, status, category, search);
+            spec = ListingSpecification.browseInCommunity(communityId, category, search);
         } else {
             // Query community_members directly — source of truth, never stale
             List<Long> communityIds = communityMemberRepository
@@ -107,19 +115,35 @@ public class MarketplaceService {
             if (communityIds.isEmpty()) {
                 return PagedResponseDto.from(Page.empty(pageable));
             }
-            spec = ListingSpecification.browse(communityIds, status, category, search);
+            spec = ListingSpecification.browse(communityIds, category, search);
         }
 
-        // Get the accurate total count with a separate count query
-        long totalElements = listingRepository.count(spec);
+        List<Listing> listings;
+        long totalElements;
 
-        // Fetch just the page of listings
-        List<Listing> listings = listingRepository.findAll(spec, pageable).getContent();
+        if (filter == null) {
+            Page<Listing> listingPage = listingRepository.findAll(spec, pageable);
+            listings = listingPage.getContent();
+            totalElements = listingPage.getTotalElements();
+        } else {
+            List<Listing> allNonExpired = listingRepository.findAll(spec, Sort.by("createdAt").descending());
+            Map<Long, Boolean> fullBookingMap = computeIsFullyBookedMap(allNonExpired);
+            List<Listing> filteredListings = allNonExpired.stream()
+                    .filter(l -> matchesAvailabilityFilter(fullBookingMap.getOrDefault(l.getId(), false), filter))
+                    .toList();
+
+            totalElements = filteredListings.size();
+            int fromIndex = (int) Math.min(pageable.getOffset(), totalElements);
+            int toIndex = Math.min(fromIndex + pageable.getPageSize(), filteredListings.size());
+            listings = filteredListings.subList(fromIndex, toIndex);
+        }
 
         // Batch-load owners and communities
         List<Long> ownerIds = listings.stream().map(Listing::getOwnerId).distinct().collect(Collectors.toList());
         List<Long> communityIds = listings.stream().map(Listing::getCommunityId).distinct().collect(Collectors.toList());
         List<Long> listingIds = listings.stream().map(Listing::getId).collect(Collectors.toList());
+
+        Map<Long, Boolean> fullBookingMap = computeIsFullyBookedMap(listings);
 
         Map<Long, User> usersById = userRepository.findAllById(ownerIds).stream()
                 .collect(Collectors.toMap(User::getId, u -> u));
@@ -139,7 +163,8 @@ public class MarketplaceService {
                             usersById.get(l.getOwnerId()),
                             communitiesById.get(l.getCommunityId()),
                             rating != null ? rating.getAverageRating() : 0.0,
-                            rating != null ? rating.getTotalReviews() : 0L
+                            rating != null ? rating.getTotalReviews() : 0L,
+                            fullBookingMap.getOrDefault(l.getId(), false)
                     );
                 })
                 .collect(Collectors.toList());
@@ -296,8 +321,6 @@ public class MarketplaceService {
                     .userId(owner.getId())
                     .name(owner.getName())
                     .profilePhotoUrl(owner.getProfilePhotoUrl())
-                    .averageRating(owner.getAverageRating())
-                    .totalReviews(owner.getTotalReviews())
                     .verified(owner.getVerificationStatus() == VerificationStatus.VERIFIED)
                     .build();
         }
@@ -326,15 +349,14 @@ public class MarketplaceService {
             User owner,
             Community community,
             Double averageRating,
-            Long totalReviews) {
+            Long totalReviews,
+            Boolean isFullyBooked) {
         ListingOwnerDto ownerDto = null;
         if (owner != null) {
             ownerDto = ListingOwnerDto.builder()
                     .userId(owner.getId())
                     .name(owner.getName())
                     .profilePhotoUrl(owner.getProfilePhotoUrl())
-                    .averageRating(owner.getAverageRating())
-                    .totalReviews(owner.getTotalReviews())
                     .verified(owner.getVerificationStatus() == VerificationStatus.VERIFIED)
                     .build();
         }
@@ -357,8 +379,83 @@ public class MarketplaceService {
                 .owner(ownerDto)
                 .averageRating(averageRating)
                 .totalReviews(totalReviews)
+                .isFullyBooked(isFullyBooked)
                 .createdAt(listing.getCreatedAt())
                 .build();
+    }
+
+    private boolean matchesAvailabilityFilter(boolean isFullyBooked, ListingAvailabilityFilter filter) {
+        return switch (filter) {
+            case AVAILABLE -> !isFullyBooked;
+            case FULLY_BOOKED -> isFullyBooked;
+        };
+    }
+
+    private Map<Long, Boolean> computeIsFullyBookedMap(List<Listing> listings) {
+        if (listings == null || listings.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        List<Long> listingIds = listings.stream().map(Listing::getId).toList();
+        List<BorrowRequest> blockingRequests = borrowRequestRepository
+                .findByListingIdInAndStatusInOrderByListingIdAscStartDateAsc(
+                        listingIds,
+                        List.of(BorrowRequestStatus.APPROVED, BorrowRequestStatus.COMPLETED)
+                );
+
+        Map<Long, List<BorrowRequest>> requestsByListingId = blockingRequests.stream()
+                .collect(Collectors.groupingBy(BorrowRequest::getListingId));
+
+        Map<Long, Boolean> result = new HashMap<>();
+        for (Listing listing : listings) {
+            boolean fullyBooked = isFullyBookedWithinAvailability(
+                    listing,
+                    requestsByListingId.getOrDefault(listing.getId(), Collections.emptyList())
+            );
+            result.put(listing.getId(), fullyBooked);
+        }
+        return result;
+    }
+
+    private boolean isFullyBookedWithinAvailability(Listing listing, List<BorrowRequest> requests) {
+        if (listing.getAvailableFrom() == null || listing.getAvailableTo() == null) {
+            return false;
+        }
+
+        LocalDate cursor = listing.getAvailableFrom();
+        LocalDate availabilityEnd = listing.getAvailableTo();
+
+        if (cursor.isAfter(availabilityEnd)) {
+            return false;
+        }
+
+        for (BorrowRequest request : requests) {
+            LocalDate coveredStart = maxDate(cursor, request.getStartDate());
+            LocalDate coveredEnd = minDate(availabilityEnd, request.getEndDate());
+
+            if (coveredEnd.isBefore(coveredStart)) {
+                continue;
+            }
+
+            if (coveredStart.isAfter(cursor)) {
+                return false;
+            }
+
+            cursor = coveredEnd.plusDays(1);
+            if (cursor.isAfter(availabilityEnd)) {
+                return true;
+            }
+        }
+
+        return cursor.isAfter(availabilityEnd);
+    }
+
+    private LocalDate maxDate(LocalDate a, LocalDate b) {
+        return a.isAfter(b) ? a : b;
+    }
+
+    private LocalDate minDate(LocalDate a, LocalDate b) {
+        return a.isBefore(b) ? a : b;
     }
 
     private User getAuthenticatedUser() {

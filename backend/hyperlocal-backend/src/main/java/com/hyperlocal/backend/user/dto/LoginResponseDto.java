@@ -24,6 +24,8 @@ public class LoginResponseDto {
     private List<String> pendingSteps;
     private String status;
     private String rejectionReason;
+    private Integer trustIndex;
+    private Integer trustXp;
 
     /** IDs of all communities the user has joined (approved membership). */
     private List<Long> joinedCommunityIds;

@@ -14,6 +14,8 @@ public class BorrowRequestResponse {
     private Long id;
     private Long listingId;
     private Long requesterId;
+    private Integer requesterTrustIndex;
+    private Integer requesterTrustXp;
     private Long ownerId;
     private String ownerName;
     private String requesterName;

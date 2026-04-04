@@ -18,8 +18,7 @@ public class PublicProfileResponseDto {
     private String profilePhotoUrl;
     private boolean verified;
     private LocalDateTime memberSince;
-    private Double averageRating;
-    private Integer totalReviews;
+    private Integer trustIndex;
+    private Integer trustXp;
     private long listingsPosted;
 }
-
