@@ -8,7 +8,7 @@ import api from './api';
 /**
  * Get the currently authenticated user's profile
  * GET /api/profile/me
- * @returns {Promise<{ userId, name, email, phone, address, bio, profilePhotoUrl, verified, memberSince, averageRating, totalReviews, stats, joinedCommunityIds, createdCommunityIds }>}
+ * @returns {Promise<{ userId, name, email, phone, address, bio, profilePhotoUrl, verified, memberSince, trustIndex, trustXp, stats, joinedCommunityIds, createdCommunityIds }>}
  */
 export const getMyProfile = async () => {
   const response = await api.get('/api/profile/me');
@@ -19,7 +19,7 @@ export const getMyProfile = async () => {
  * Get a user's public profile by their ID
  * GET /api/profile/{userId}
  * @param {number} userId - The user's ID
- * @returns {Promise<{ userId, name, email, phone, address, bio, profilePhotoUrl, verified, memberSince, averageRating, totalReviews, stats, joinedCommunityIds, createdCommunityIds }>}
+ * @returns {Promise<{ userId, name, profilePhotoUrl, verified, memberSince, trustIndex, trustXp, listingsPosted }>}
  */
 export const getUserProfileById = async (userId) => {
   const response = await api.get(`/api/profile/${userId}`);

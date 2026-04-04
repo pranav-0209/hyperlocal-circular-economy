@@ -3,24 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import AppFooter from '../components/ui/AppFooter';
 import HomeNavbar from '../components/ui/HomeNavbar';
+import RatingStars from '../components/ui/RatingStars';
 import SecureImage from '../components/ui/SecureImage';
 import { ROUTES } from '../constants';
 import { getMyProfile, updateMyProfile } from '../services/profileService';
-import { getUserTrustScoreSummary } from '../utils/reviewMocks';
+import { getTrustTierLabel, normalizeTrustValues } from '../utils/trust';
 
 // ── Star rating ───────────────────────────────────────────────────────────────
-function Stars({ rating = 5 }) {
-    const full = Math.floor(rating);
-    const half = rating % 1 >= 0.5;
-    return (
-        <span className="inline-flex items-center gap-0.5">
-            {[...Array(full)].map((_, i) => (
-                <span key={i} className="material-symbols-outlined text-amber-400 text-base" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-            ))}
-            {half && <span className="material-symbols-outlined text-amber-400 text-base" style={{ fontVariationSettings: "'FILL' 1" }}>star_half</span>}
-        </span>
-    );
-}
 
 // ── Mock recent activity (placeholder until activity API is available) ─────────
 const MOCK_ACTIVITY = [
@@ -187,11 +176,10 @@ export default function ProfilePage() {
     const initials = name.trim().split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase();
     const photoUrl = profile?.profilePhotoUrl ?? user?.profile?.photo ?? null;
 
-    const rating = profile?.averageRating ?? 0;
-    const totalReviews = profile?.totalReviews ?? 0;
     const listingsPosted = profile?.stats?.listingsPosted ?? 0;
     const verified = profile?.verified ?? false;
-    const trustSummary = getUserTrustScoreSummary(profile?.id ?? user?.id);
+    const { trustIndex, trustXp } = normalizeTrustValues(profile?.trustIndex, profile?.trustXp);
+    const trustTier = getTrustTierLabel(trustIndex);
     const memberSince = profile?.memberSince
         ? new Date(profile.memberSince).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
         : null;
@@ -255,15 +243,6 @@ export default function ProfilePage() {
                                         <span className="material-symbols-outlined text-xs">verified</span>
                                         Verified Member
                                     </span>
-                                </div>
-                                )}
-
-                                {/* Rating */}
-                                {totalReviews > 0 && (
-                                <div className="flex items-center gap-2 mt-3">
-                                    <Stars rating={rating} />
-                                    <span className="text-sm font-bold text-charcoal">{rating.toFixed(1)}</span>
-                                    <span className="text-xs text-muted-green">({totalReviews} reviews)</span>
                                 </div>
                                 )}
 
@@ -439,24 +418,21 @@ export default function ProfilePage() {
                                     <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
                                         <circle cx="18" cy="18" r="15.9" fill="none" stroke="#e5e7eb" strokeWidth="3" />
                                         <circle cx="18" cy="18" r="15.9" fill="none" stroke="currentColor" strokeWidth="3"
-                                            strokeDasharray={`${trustSummary.score} 100`}
+                                            strokeDasharray={`${trustIndex} 100`}
                                             strokeLinecap="round" className="text-primary" />
                                     </svg>
                                     <div className="absolute inset-0 flex items-center justify-center">
-                                        <span className="text-lg font-bold text-charcoal">{trustSummary.score}</span>
+                                        <span className="text-lg font-bold text-charcoal">{trustIndex}</span>
                                     </div>
                                 </div>
                                 <div className="flex-1 space-y-2">
                                     <div>
                                         <p className="text-xs text-muted-green">Trust tier</p>
-                                        <p className="text-base font-bold text-charcoal">{trustSummary.tier}</p>
+                                        <p className="text-base font-bold text-charcoal">{trustTier}</p>
                                     </div>
                                     <div>
                                         <p className="text-xs text-muted-green">Trust XP</p>
-                                        <p className="text-sm font-semibold text-charcoal">{trustSummary.xp} XP</p>
-                                    </div>
-                                    <div className="text-[11px] text-muted-green">
-                                        Next tier: {trustSummary.nextTier}
+                                        <p className="text-sm font-semibold text-charcoal">{trustXp} XP</p>
                                     </div>
                                 </div>
                             </div>
@@ -464,8 +440,8 @@ export default function ProfilePage() {
                                 {[
                                     { label: 'Profile verified', done: verified },
                                     { label: 'Community member', done: (profile?.joinedCommunityIds?.length ?? 0) > 0 },
-                                    { label: 'On-time returns', done: trustSummary.score >= 65 },
-                                    { label: 'Consistent reviews', done: totalReviews >= 3 },
+                                    { label: 'On-time returns', done: trustIndex >= 70 },
+                                    { label: 'Trust XP gained', done: trustXp > 0 },
                                 ].map((t) => (
                                     <div key={t.label} className="flex items-center gap-2 text-xs">
                                         <span className={`material-symbols-outlined text-sm ${t.done ? 'text-green-600' : 'text-gray-300'}`} style={{ fontVariationSettings: "'FILL' 1" }}>

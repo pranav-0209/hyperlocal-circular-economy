@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from 'sonner';
 import { getListingAvailability, requestItem } from '../../services/marketplaceService';
 import SecureImage from '../ui/SecureImage';
+import RatingStars from '../ui/RatingStars';
 import useSecureImageSource from '../../hooks/useSecureImageSource';
 
 // Condition colour map
@@ -23,20 +24,6 @@ const CAT_ICON = {
     'Books': 'menu_book', 'Fashion': 'checkroom', 'Tools': 'hardware',
     'Sports': 'sports_soccer', 'Kids': 'child_care', 'Other': 'category',
 };
-
-// Star rating display
-function Stars({ rating = 5 }) {
-    const full = Math.floor(rating);
-    const half = rating % 1 >= 0.5;
-    return (
-        <span className="inline-flex items-center gap-0.5">
-            {[...Array(full)].map((_, i) => (
-                <span key={i} className="material-symbols-outlined text-amber-400 text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-            ))}
-            {half && <span className="material-symbols-outlined text-amber-400 text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>star_half</span>}
-        </span>
-    );
-}
 
 // Photo gallery
 function Gallery({ images }) {
@@ -316,7 +303,7 @@ const ItemDetailModal = ({ item, open, onOpenChange }) => {
                                 <div>
                                     <p className="font-bold text-charcoal text-sm">{item.owner?.name}</p>
                                     <div className="flex items-center gap-1.5 mt-0.5">
-                                        <Stars rating={item.owner?.rating ?? 4.5} />
+                                        <RatingStars rating={item.owner?.rating ?? 4.5} size={14} />
                                         <span className="text-xs text-muted-green">{item.owner?.rating ?? '4.5'}</span>
                                         <span className="text-xs text-muted-green">·</span>
                                         <span className="text-xs text-muted-green">{item.owner?.itemsListed ?? 1} item{(item.owner?.itemsListed ?? 1) !== 1 ? 's' : ''} listed</span>

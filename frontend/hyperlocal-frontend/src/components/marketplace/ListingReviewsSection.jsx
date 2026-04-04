@@ -1,7 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Star } from 'lucide-react';
 import { toast } from 'sonner';
 import { getListingReviews, submitReview } from '../../services/marketplaceService';
+import RatingStars from '../ui/RatingStars';
 
 const formatReviewDate = (value) => {
     const parsed = new Date(value);
@@ -12,31 +14,6 @@ const formatReviewDate = (value) => {
         year: 'numeric',
     });
 };
-
-function RatingStars({ rating, sizeClass = 'text-base' }) {
-    const rounded = Math.round((Number(rating) || 0) * 2) / 2;
-
-    return (
-        <span className="inline-flex items-center gap-0.5" aria-label={`Rating ${rounded} out of 5`}>
-            {Array.from({ length: 5 }, (_, index) => {
-                const starValue = index + 1;
-                const icon = rounded >= starValue
-                    ? 'star'
-                    : (rounded >= starValue - 0.5 ? 'star_half' : 'star_outline');
-
-                return (
-                    <span
-                        key={`${icon}-${starValue}`}
-                        className={`material-symbols-outlined text-amber-400 ${sizeClass}`}
-                        style={{ fontVariationSettings: "'FILL' 1" }}
-                    >
-                        {icon}
-                    </span>
-                );
-            })}
-        </span>
-    );
-}
 
 export default function ListingReviewsSection({ itemId, itemTitle, reviewContext, reviewsData, isLoading, isError, onRefresh }) {
     const queryClient = useQueryClient();
@@ -62,7 +39,6 @@ export default function ListingReviewsSection({ itemId, itemTitle, reviewContext
     const [pendingRating, setPendingRating] = useState(5);
     const [pendingComment, setPendingComment] = useState('');
     const [pendingRecommend, setPendingRecommend] = useState(true);
-    const [localReviews, setLocalReviews] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const normalizedReviews = useMemo(() => reviews.map((review, index) => ({
@@ -75,28 +51,17 @@ export default function ListingReviewsSection({ itemId, itemTitle, reviewContext
         recommend: Boolean(review.recommend),
     })), [reviews]);
 
-    const weightedAverage = useMemo(() => {
-        const localTotal = localReviews.reduce((sum, review) => sum + review.rating, 0);
-        const denominator = summary.totalReviews + localReviews.length;
-
-        if (!denominator) return 0;
-
-        const baseWeighted = summary.averageRating * summary.totalReviews;
-        return (baseWeighted + localTotal) / denominator;
-    }, [summary, localReviews]);
-
-    const recommendRate = useMemo(() => {
-        const localRecommendCount = localReviews.filter((review) => review.recommend).length;
-        const reviewRecommendCount = normalizedReviews.filter((review) => review.recommend).length;
-        const denominator = normalizedReviews.length + localReviews.length;
-
-        if (!denominator) return 0;
-
-        return Math.round(((reviewRecommendCount + localRecommendCount) / denominator) * 100);
-    }, [normalizedReviews, localReviews]);
-
-    const totalRatings = summary.totalReviews + localReviews.length;
-    const reviewsToRender = [...localReviews, ...normalizedReviews];
+    const averageRating = Number(summary.averageRating ?? 0);
+    const totalRatings = Number(summary.totalReviews ?? 0);
+    const recommendRate = Number(
+        summary.recommendRate
+        ?? summary.recommendationRate
+        ?? summary.recommendPercentage
+        ?? (normalizedReviews.length
+            ? Math.round((normalizedReviews.filter((review) => review.recommend).length / normalizedReviews.length) * 100)
+            : 0)
+    );
+    const reviewsToRender = normalizedReviews;
     const canReview = Boolean(reviewContext?.transactionId && reviewContext?.revieweeUserId && itemId);
     const showTopEmptyHint = !loadingState && !errorState && totalRatings === 0;
 
@@ -115,7 +80,7 @@ export default function ListingReviewsSection({ itemId, itemTitle, reviewContext
 
         setIsSubmitting(true);
         try {
-            const response = await submitReview({
+            await submitReview({
                 transactionId: reviewContext.transactionId,
                 listingId: itemId,
                 revieweeUserId: reviewContext.revieweeUserId,
@@ -123,19 +88,6 @@ export default function ListingReviewsSection({ itemId, itemTitle, reviewContext
                 comment: pendingComment.trim(),
                 recommend: pendingRecommend,
             });
-
-            setLocalReviews((prev) => [
-                {
-                    id: response?.id ?? `local-${Date.now()}`,
-                    author: response?.reviewerName ?? 'You',
-                    avatar: (response?.reviewerName ?? 'You').slice(0, 2).toUpperCase(),
-                    rating: response?.rating ?? pendingRating,
-                    date: response?.createdAt ?? new Date().toISOString(),
-                    text: response?.comment ?? pendingComment.trim(),
-                    recommend: response?.recommend ?? pendingRecommend,
-                },
-                ...prev,
-            ]);
 
             setPendingComment('');
             setPendingRating(5);
@@ -159,8 +111,11 @@ export default function ListingReviewsSection({ itemId, itemTitle, reviewContext
             toast.success('Review submitted successfully.');
             queryClient.invalidateQueries({ queryKey: ['pendingReviews'] });
             queryClient.invalidateQueries({ queryKey: ['listingReviews', itemId] });
-            if (onRefresh) onRefresh();
-            if (refetch) refetch();
+            if (onRefresh) {
+                await onRefresh();
+            } else if (refetch) {
+                await refetch();
+            }
         } catch (error) {
             toast.error(error?.message ?? 'Failed to submit review. Please try again.');
         } finally {
@@ -191,9 +146,9 @@ export default function ListingReviewsSection({ itemId, itemTitle, reviewContext
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
                     <p className="text-[11px] uppercase tracking-wide font-semibold text-muted-green">Average rating</p>
-                    <p className="text-2xl font-bold text-charcoal mt-1">{weightedAverage.toFixed(1)}</p>
+                    <p className="text-2xl font-bold text-charcoal mt-1">{averageRating.toFixed(1)}</p>
                     <div className="mt-1">
-                        <RatingStars rating={weightedAverage} />
+                        <RatingStars rating={averageRating} size={18} />
                     </div>
                 </div>
                 <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
@@ -224,7 +179,7 @@ export default function ListingReviewsSection({ itemId, itemTitle, reviewContext
                             <div className="min-w-0 flex-1">
                                 <p className="text-sm font-semibold text-charcoal truncate">{review.author}</p>
                                 <div className="flex items-center gap-2 flex-wrap">
-                                    <RatingStars rating={review.rating} sizeClass="text-sm" />
+                                    <RatingStars rating={review.rating} size={14} />
                                     <span className="text-xs text-muted-green">{formatReviewDate(review.date)}</span>
                                     {review.recommend && (
                                         <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold">
@@ -253,6 +208,7 @@ export default function ListingReviewsSection({ itemId, itemTitle, reviewContext
                     <div className="inline-flex items-center gap-1 rounded-xl bg-gray-50 border border-gray-200 px-2 py-1.5">
                         {Array.from({ length: 5 }, (_, index) => {
                             const starValue = index + 1;
+                            const filled = starValue <= pendingRating;
                             return (
                                 <button
                                     key={starValue}
@@ -262,12 +218,11 @@ export default function ListingReviewsSection({ itemId, itemTitle, reviewContext
                                     className="p-0.5"
                                     aria-label={`Set rating to ${starValue}`}
                                 >
-                                    <span
-                                        className={`material-symbols-outlined text-xl ${starValue <= pendingRating ? 'text-amber-400' : 'text-gray-300'}`}
-                                        style={{ fontVariationSettings: "'FILL' 1" }}
-                                    >
-                                        star
-                                    </span>
+                                    <Star
+                                        size={20}
+                                        strokeWidth={1.9}
+                                        className={filled ? 'text-amber-500 fill-amber-500' : 'text-gray-300'}
+                                    />
                                 </button>
                             );
                         })}

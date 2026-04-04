@@ -123,7 +123,6 @@ export default function DiscoverPage() {
             search: searchQuery,
             category: selectedCategory === 'All' ? undefined : selectedCategory,
             communityId: selectedCommunityId === COMMUNITY_FILTER_ALL ? undefined : selectedCommunityId,
-            status: 'AVAILABLE',
         }),
     });
 
@@ -136,8 +135,7 @@ export default function DiscoverPage() {
     const categories = ['All', ...(categoryOptions.length ? categoryOptions : ITEM_CATEGORIES)];
 
     const sortedItems = useMemo(() => {
-        // Defensive filtering in case backend returns mixed statuses.
-        const copy = items.filter((item) => item.status === 'AVAILABLE');
+        const copy = [...items];
         if (sortBy === 'price_asc') return copy.sort((a, b) => (a.price ?? 0) - (b.price ?? 0));
         if (sortBy === 'price_desc') return copy.sort((a, b) => (b.price ?? 0) - (a.price ?? 0));
         return copy.sort((a, b) => new Date(b.createdAt ?? 0) - new Date(a.createdAt ?? 0));

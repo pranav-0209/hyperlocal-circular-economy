@@ -4,17 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from '../../context/AuthContext';
 import useSecureImageSource from '../../hooks/useSecureImageSource';
-
-const renderRatingStars = (rating) => {
-    const rounded = Math.round((Number(rating) || 0) * 2) / 2;
-
-    return Array.from({ length: 5 }, (_, index) => {
-        const starValue = index + 1;
-        if (rounded >= starValue) return 'star';
-        if (rounded >= starValue - 0.5) return 'star_half';
-        return 'star_outline';
-    });
-};
+import RatingStars from '../ui/RatingStars';
 
 const ItemCard = ({ item, onRequest }) => {
     const { user } = useAuth();
@@ -27,6 +17,8 @@ const ItemCard = ({ item, onRequest }) => {
     const currentUserId = user?.id ?? user?.userId;
     const ownerId = item?.owner?.userId ?? item?.owner?.id;
     const isOwner = currentUserId != null && ownerId != null && String(currentUserId) === String(ownerId);
+    const isFullyBooked = Boolean(item?.isFullyBooked);
+    const canBorrow = !isOwner && !isFullyBooked;
     const listingAverage = Number(item?.averageRating ?? item?.rating ?? 0);
     const listingTotal = Number(item?.totalReviews ?? 0);
 
@@ -74,6 +66,15 @@ const ItemCard = ({ item, onRequest }) => {
                     </Badge>
                 </div>
 
+                {isFullyBooked && (
+                    <div className="absolute top-3 right-3">
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full border border-rose-200 bg-rose-50 text-rose-700">
+                            <span className="material-symbols-outlined text-sm">event_busy</span>
+                            Fully Booked
+                        </span>
+                    </div>
+                )}
+
                 {/* Price Tag */}
                 <div className="absolute bottom-3 right-3">
                     <div className="bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-bold shadow-sm text-charcoal">
@@ -98,17 +99,7 @@ const ItemCard = ({ item, onRequest }) => {
                     {listingTotal > 0 ? (
                         <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-100">
                             <span className="text-[11px] font-bold text-amber-800">{listingAverage.toFixed(1)}</span>
-                            <span className="inline-flex items-center gap-0.5">
-                                {renderRatingStars(listingAverage).map((icon, index) => (
-                                    <span
-                                        key={`${icon}-${index}`}
-                                        className="material-symbols-outlined text-[15px] text-amber-500"
-                                        style={{ fontVariationSettings: "'FILL' 1" }}
-                                    >
-                                        {icon}
-                                    </span>
-                                ))}
-                            </span>
+                            <RatingStars rating={listingAverage} size={14} />
                             <span className="text-[11px] text-amber-700">{listingTotal} review{listingTotal === 1 ? '' : 's'}</span>
                         </div>
                     ) : (
@@ -135,13 +126,21 @@ const ItemCard = ({ item, onRequest }) => {
                     {/* Action Button */}
                     <Button
                         size="sm"
-                        className={`rounded-full px-4 h-8 shadow-none ${isOwner ? 'bg-primary/10 hover:bg-primary/15 text-primary' : 'bg-black hover:bg-gray-800 text-white'}`}
+                        disabled={!isOwner && !canBorrow}
+                        className={`rounded-full px-4 h-8 shadow-none ${
+                            isOwner
+                                ? 'bg-primary/10 hover:bg-primary/15 text-primary'
+                                : canBorrow
+                                    ? 'bg-black hover:bg-gray-800 text-white'
+                                    : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                        }`}
                         onClick={(event) => {
                             event.stopPropagation();
+                            if (!isOwner && !canBorrow) return;
                             onRequest(item);
                         }}
                     >
-                        {isOwner ? 'Manage' : 'Request'}
+                        {isOwner ? 'Manage' : (canBorrow ? 'Request' : 'Fully Booked')}
                     </Button>
                 </div>
             </div>

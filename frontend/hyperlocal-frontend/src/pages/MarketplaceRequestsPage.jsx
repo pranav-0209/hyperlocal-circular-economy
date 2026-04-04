@@ -35,6 +35,31 @@ const formatRequestDate = (dateValue) => {
   });
 };
 
+const toLocalStartOfDay = (dateValue) => {
+  if (!dateValue) return null;
+
+  // Handle YYYY-MM-DD as a local calendar date to avoid timezone shifts.
+  if (typeof dateValue === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+    const [year, month, day] = dateValue.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  }
+
+  const parsed = new Date(dateValue);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+};
+
+const canShowSentCancelButton = (request, status) => {
+  if (!['PENDING', 'APPROVED'].includes(status)) return false;
+
+  const today = new Date();
+  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const requestStartDate = toLocalStartOfDay(request?.startDate);
+
+  if (!requestStartDate) return false;
+  return todayStart < requestStartDate;
+};
+
 export default function MarketplaceRequestsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -212,7 +237,7 @@ export default function MarketplaceRequestsPage() {
                         </button>
                       )}
 
-                      {tab === 'sent' && status === 'PENDING' && (
+                      {tab === 'sent' && canShowSentCancelButton(request, status) && (
                         <button
                           type="button"
                           onClick={() => cancelMutation.mutate(request.id)}

@@ -6,11 +6,13 @@ import AppFooter from '../components/ui/AppFooter';
 import HomeNavbar from '../components/ui/HomeNavbar';
 import { Badge } from '../components/ui/badge';
 import SecureImage from '../components/ui/SecureImage';
+import RatingStars from '../components/ui/RatingStars';
 import ListingReviewsSection from '../components/marketplace/ListingReviewsSection';
 import { getItemById, getListingAvailability, getListingReviews, requestItem } from '../services/marketplaceService';
 import { getUserProfileById } from '../services/profileService';
 import { useAuth } from '../context/AuthContext';
 import { ROUTES } from '../constants';
+import { getTrustTierLabel, normalizeTrustValues } from '../utils/trust';
 
 // ── Condition colour map ──────────────────────────────────────────────────────
 
@@ -119,17 +121,6 @@ const countDaysInclusive = (fromDate, toDate) => {
     if (!start) return 1;
     if (!end || end < start) return 1;
     return Math.floor((end - start) / DAY_MS) + 1;
-};
-
-const ratingStarIcons = (rating) => {
-    const rounded = Math.round((Number(rating) || 0) * 2) / 2;
-
-    return Array.from({ length: 5 }, (_, index) => {
-        const starValue = index + 1;
-        if (rounded >= starValue) return 'star';
-        if (rounded >= starValue - 0.5) return 'star_half';
-        return 'star_outline';
-    });
 };
 
 // ── Gallery ───────────────────────────────────────────────────────────────────
@@ -728,8 +719,11 @@ export default function ItemDetailPage() {
     const ownerName = ownerProfileData?.name ?? item.owner?.name ?? 'Community Member';
     const ownerAvatarUrl = ownerProfileData?.profilePhotoUrl ?? item.owner?.avatarUrl ?? null;
     const ownerVerified = ownerProfileData?.verified ?? item.owner?.verified ?? false;
-    const ownerAverageRating = Number(ownerProfileData?.averageRating ?? item.owner?.averageRating ?? item.owner?.rating ?? 0);
-    const ownerTotalReviews = Number(ownerProfileData?.totalReviews ?? item.owner?.totalReviews ?? 0);
+    const { trustIndex: ownerTrustIndex, trustXp: ownerTrustXp } = normalizeTrustValues(
+        ownerProfileData?.trustIndex ?? item.owner?.trustIndex,
+        ownerProfileData?.trustXp ?? item.owner?.trustXp,
+    );
+    const ownerTrustTier = getTrustTierLabel(ownerTrustIndex);
     const ownerListingsPosted = Number(ownerProfileData?.listingsPosted ?? item.owner?.itemsListed ?? 0);
     const ownerMemberSinceLabel = formatMemberSince(ownerProfileData?.memberSince ?? item.owner?.memberSince);
 
@@ -803,17 +797,7 @@ export default function ItemDetailPage() {
                                 {listingRatingSummary.totalReviews > 0 ? (
                                     <>
                                         <span className="text-sm font-bold text-charcoal">{listingRatingSummary.averageRating.toFixed(1)}</span>
-                                        <span className="inline-flex items-center gap-0.5">
-                                            {ratingStarIcons(listingRatingSummary.averageRating).map((icon, index) => (
-                                                <span
-                                                    key={`${icon}-${index}`}
-                                                    className="material-symbols-outlined text-amber-500 text-sm"
-                                                    style={{ fontVariationSettings: "'FILL' 1" }}
-                                                >
-                                                    {icon}
-                                                </span>
-                                            ))}
-                                        </span>
+                                        <RatingStars rating={listingRatingSummary.averageRating} size={14} />
                                         <span className="text-xs text-amber-800">{listingRatingSummary.totalReviews} ratings</span>
                                     </>
                                 ) : (
@@ -922,6 +906,7 @@ export default function ItemDetailPage() {
                                         <div className="flex-1 min-w-0">
                                             <p className="font-bold text-charcoal text-base">{ownerName}</p>
                                             <p className="text-xs text-muted-green mt-0.5">{ownerMemberSinceLabel}</p>
+                                            <p className="text-xs text-primary mt-1 font-semibold">{ownerTrustTier}</p>
                                             {ownerVerified && (
                                                 <p className="text-xs text-green-600 flex items-center gap-1 mt-1 font-medium">
                                                     <span className="material-symbols-outlined text-sm">verified</span>
@@ -934,8 +919,8 @@ export default function ItemDetailPage() {
                                     {/* Owner stats */}
                                     <div className="grid grid-cols-3 gap-3 mt-4 pt-4 border-t border-gray-100">
                                         {[
-                                            { label: 'Rating', value: ownerAverageRating.toFixed(1), icon: 'star' },
-                                            { label: 'Reviews', value: ownerTotalReviews, icon: 'reviews' },
+                                            { label: 'Trust score', value: ownerTrustIndex, icon: 'shield' },
+                                            { label: 'Trust XP', value: ownerTrustXp, icon: 'military_tech' },
                                             { label: 'Listings posted', value: ownerListingsPosted, icon: 'inventory_2' },
                                         ].map(s => (
                                             <div key={s.label} className="text-center bg-gray-50 rounded-xl p-3">

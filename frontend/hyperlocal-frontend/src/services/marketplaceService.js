@@ -126,6 +126,7 @@ export const normalizeListing = (listing = {}) => ({
     owner: normalizeOwner(listing.owner),
     averageRating: Number(listing.averageRating ?? 0),
     totalReviews: Number(listing.totalReviews ?? 0),
+    isFullyBooked: Boolean(listing.isFullyBooked),
     availableFrom: listing.availableFrom ?? '',
     availableTo: listing.availableTo ?? '',
     createdAt: listing.createdAt ?? '',
