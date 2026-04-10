@@ -129,13 +129,13 @@ export default function VerifyDocumentsPage() {
 
   return (
     <VerificationLayout stepNumber={2} totalSteps={3} title="Verify your Identity">
-      <div className="max-w-3xl mx-auto bg-white rounded-lg p-8 border border-gray-200">
-        <p className="text-charcoal mb-8">
+      <div className="bg-white rounded-lg p-6 border border-gray-200">
+        <p className="text-sm text-charcoal mb-4">
           Please upload clear photos or scans of the following documents. This usually takes less
           than 2 minutes.
         </p>
 
-        <form onSubmit={handleSubmit} className="space-y-8">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {/* Government ID Upload */}
           <DocumentUpload
             title="Government ID"
@@ -168,7 +168,7 @@ export default function VerifyDocumentsPage() {
           </div>
 
           {/* Action Buttons */}
-          <div className="flex gap-4 pt-6">
+          <div className="flex gap-4 pt-3">
             <button
               type="button"
               onClick={() => navigate('/verify/profile')}

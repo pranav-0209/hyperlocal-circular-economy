@@ -24,7 +24,22 @@ export const registerUser = async (userData) => {
 /**
  * Login user
  * @param {Object} credentials - { email, password }
- * @returns {Promise<{ token, userId, name, email, role, profileCompleted, profileCompletionPercentage, currentStep, pendingSteps }>}
+ * @returns {Promise<{
+ *   token,
+ *   userId,
+ *   name,
+ *   email,
+ *   role,
+ *   status,
+ *   profileCompleted,
+ *   profileCompletionPercentage,
+ *   currentStep,
+ *   pendingSteps,
+ *   rejectionReason?,
+ *   trustIndex?,
+ *   trustXp?
+ * }>}
+ * Note: frontend does not consume joinedCommunity/createdCommunity from login payload.
  */
 export const loginUser = async (credentials) => {
   const response = await api.post('/api/v1/auth/login', {

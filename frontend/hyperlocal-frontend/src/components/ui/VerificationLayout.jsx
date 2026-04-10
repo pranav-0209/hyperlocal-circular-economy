@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useState, useEffect } from "react";
+import { useDarkMode } from "../../hooks/useDarkMode";
 
 /**
  * VerificationLayout Component
@@ -15,6 +16,7 @@ export default function VerificationLayout({
 }) {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { dark, toggle } = useDarkMode();
 
   // Use actual profile completion from backend, fallback to step-based calculation
   const completionPercentage = user?.profileCompletion ?? Math.round((stepNumber / totalSteps) * 100);
@@ -26,17 +28,10 @@ export default function VerificationLayout({
     return () => clearTimeout(timer);
   }, [completionPercentage]);
 
-  const handleLogout = () => {
-    // Clear auth state and redirect to login
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("user");
-    navigate("/login");
-  };
-
   return (
-    <div className="min-h-screen bg-background-light">
-      {/* Navbar - Logo and Logout only */}
-      <nav className="bg-white border-b border-gray-200">
+    <div className="min-h-screen bg-background-light flex flex-col">
+      {/* Navbar - Logo and Dark Mode only */}
+      <nav className="bg-white border-b border-gray-200 shrink-0">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <button
             onClick={() => navigate('/home')}
@@ -49,32 +44,35 @@ export default function VerificationLayout({
             </div>
             <span className="text-lg font-bold text-charcoal">ShareMore</span>
           </button>
+
+          {/* Dark Mode Toggle */}
           <button
-            onClick={handleLogout}
-            className="flex items-center gap-2 text-muted-green hover:text-charcoal transition-colors cursor-pointer"
+            onClick={toggle}
+            aria-label="Toggle dark mode"
+            className="w-9 h-9 rounded-lg flex items-center justify-center text-muted-green hover:text-charcoal hover:bg-gray-100 transition-all"
           >
-            <span className="material-symbols-outlined text-xl">logout</span>
-            <span className="text-sm font-medium">Logout</span>
+            <span className="material-symbols-outlined text-xl">
+              {dark ? 'light_mode' : 'dark_mode'}
+            </span>
           </button>
         </div>
       </nav>
 
       {/* Progress Section - Below Navbar */}
-      <section className="my-10 mx-60 bg-white border rounded-lg border-gray-200">
-        <div className="max-w-5xl px-4 py-5">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-xl font-bold text-charcoal">
+      <section className="bg-white mt-5 border-b border-gray-200 shrink-0">
+        <div className="max-w-4xl mx-auto px-6 py-3">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-base font-bold text-charcoal">
               Step {stepNumber} of {totalSteps}: {title}
             </h2>
-            <span className="text-sm text-muted-green">
-              {completionPercentage}% COMPLETE
+            <span className="text-xs font-semibold text-primary uppercase tracking-wide">
+              {completionPercentage}% Complete
             </span>
           </div>
-
           {/* Progress Bar */}
-          <div className="w-full bg-gray-300 rounded-full h-2">
+          <div className="w-full bg-gray-200 rounded-full h-1.5">
             <div
-              className="bg-primary h-2 rounded-full transition-[width] duration-700 ease-out"
+              className="bg-primary h-1.5 rounded-full transition-[width] duration-700 ease-out"
               style={{ width: `${animatedWidth}%` }}
             ></div>
           </div>
@@ -82,13 +80,13 @@ export default function VerificationLayout({
       </section>
 
       {/* Main Content */}
-      <main className="pb-16 px-4 max-w-6xl mx-auto">
+      <main className="flex-1 py-6 px-4 max-w-4xl mx-auto w-full">
         {children}
       </main>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 py-6 px-4">
-        <div className="max-w-6xl mx-auto text-center text-sm text-muted-green">
+      <footer className="bg-white border-t border-gray-200 py-3 px-4 shrink-0">
+        <div className="max-w-4xl mx-auto text-center text-xs text-muted-green">
           <p>✓ Your information is securely encrypted and never shared without permission.</p>
         </div>
       </footer>

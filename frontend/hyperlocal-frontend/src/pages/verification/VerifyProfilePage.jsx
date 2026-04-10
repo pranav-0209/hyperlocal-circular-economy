@@ -111,19 +111,19 @@ export default function VerifyProfilePage() {
 
   return (
     <VerificationLayout stepNumber={1} totalSteps={3} title="Build Your Profile">
-      <div className="max-w-3xl mx-auto bg-white rounded-lg p-8 border border-gray-200">
-        <p className="text-charcoal mb-6">
+      <div className="bg-white rounded-lg p-6 border border-gray-200">
+        <p className="text-sm text-charcoal mb-4">
           ShareMore relies on real people. Please provide accurate details to get verified and start
           sharing with your neighbors.
         </p>
 
         <Form {...profileForm}>
-          <form onSubmit={profileForm.handleSubmit(handleSubmit)} className="space-y-6">
+          <form onSubmit={profileForm.handleSubmit(handleSubmit)} className="space-y-4">
             {/* Profile Photo Section */}
-            <div className="mb-8 pb-8 border-b border-gray-200">
+            <div className="mb-4 pb-4 border-b border-gray-200">
               <div className="flex items-start gap-6">
                 <div className="shrink-0">
-                  <div className="w-24 h-24 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 overflow-hidden">
+                  <div className="w-16 h-16 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 overflow-hidden">
                     {profilePhotoPreview ? (
                       <img
                         src={profilePhotoPreview}
@@ -160,7 +160,7 @@ export default function VerifyProfilePage() {
             </div>
 
             {/* Form Fields */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormInput
                 label="Full Legal Name"
                 name="fullName"
@@ -182,7 +182,7 @@ export default function VerifyProfilePage() {
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={profileForm.control}
                 name="phoneNumber"
@@ -273,7 +273,7 @@ export default function VerifyProfilePage() {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex gap-4 pt-6">
+            <div className="flex gap-4 pt-3">
               <button
                 type="button"
                 onClick={() => navigate('/home')}

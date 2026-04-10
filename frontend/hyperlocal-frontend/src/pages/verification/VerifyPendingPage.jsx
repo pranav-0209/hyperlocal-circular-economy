@@ -85,10 +85,10 @@ export default function VerifyPendingPage() {
 
   return (
     <VerificationLayout stepNumber={3} totalSteps={3} title="Verification Under Review">
-      <div className="max-w-3xl mx-auto">
+      <div>
         {/* Status Card */}
-        <div className="bg-white rounded-lg p-8 border border-gray-200 mb-8 text-center">
-          <div className="mb-6 flex justify-center">
+        <div className="bg-white rounded-lg p-6 border border-gray-200 mb-4 text-center">
+          <div className="mb-3 flex justify-center">
             <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
               <span className="material-symbols-outlined text-green-600 text-3xl">
                 check_circle
@@ -100,7 +100,7 @@ export default function VerifyPendingPage() {
             Documents Received
           </h2>
 
-          <p className="text-muted-green mb-8">
+          <p className="text-muted-green mb-4 text-sm">
             Thanks for joining ShareMore! We are currently verifying your neighborhood details to
             ensure our community stays trusted and safe.
           </p>
@@ -109,7 +109,7 @@ export default function VerifyPendingPage() {
           <VerificationTimeline />
 
           {/* Timeline Note */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 my-8 flex gap-3 items-start">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 my-4 flex gap-3 items-start">
             <span className="material-symbols-outlined text-blue-600 flex-shrink-0 mt-0.5">
               info
             </span>
@@ -125,7 +125,7 @@ export default function VerifyPendingPage() {
           </div>
 
           {/* Message */}
-          <p className="text-charcoal text-sm mb-6">
+          <p className="text-charcoal text-sm mb-4">
             You don't need to stay here. Feel free to explore or come back anytime to check your
             status.
           </p>
@@ -157,7 +157,7 @@ export default function VerifyPendingPage() {
         </div>
 
         {/* FAQ Section */}
-        <div className="bg-gray-50 rounded-lg p-6">
+        <div className="bg-gray-50 rounded-lg p-4">
           <h3 className="font-semibold text-charcoal mb-4">
             Why is verification required?
           </h3>

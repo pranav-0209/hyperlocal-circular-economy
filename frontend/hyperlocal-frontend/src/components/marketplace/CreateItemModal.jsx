@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { marketplaceSchema, ITEM_CATEGORIES, CONDITIONS } from '../../schemas/marketplaceSchema';
 import { createItem, getListingCategories, updateItem } from '../../services/marketplaceService';
 import { getMyCommunities } from '../../services/communityService';
+import { suggestCategory, suggestPrice } from '../../services/aiService';
 import { toast } from 'sonner';
 import 'react-day-picker/style.css';
 
@@ -190,35 +191,6 @@ const toDateInputValue = (value) => {
     return String(value).slice(0, 10);
 };
 
-// ── AI mock helpers ──────────────────────────────────────────────────────────
-
-const AI_PRICE_MAP = {
-    'Like New': [120, 150, 200, 250],
-    'New':      [150, 200, 250, 300],
-    'Good':     [60,  80,  100, 120],
-    'Fair':     [30,  40,  50,  60],
-    'Poor':     [10,  15,  20,  25],
-};
-
-function mockAiPrice(condition) {
-    const pool = AI_PRICE_MAP[condition] ?? [50, 80, 100];
-    return pool[Math.floor(Math.random() * pool.length)];
-}
-
-function mockAiCategory(title) {
-    const t = title.toLowerCase();
-    if (/phone|laptop|camera|tablet|headphone|tv|computer|printer|speaker|drone/.test(t)) return 'Electronics';
-    if (/car|bike|bicycle|scooter|activa|vehicle|cycle|moped/.test(t))                   return 'Vehicles';
-    if (/table|chair|sofa|bed|desk|almirah|wardrobe|shelf|cabinet|stool|furniture/.test(t)) return 'Furniture';
-    if (/washing|fridge|microwave|cooker|blender|mixer|oven|toaster|air.?condition/.test(t)) return 'Appliances';
-    if (/drill|hammer|ladder|saw|wrench|spanner|screwdriver|tool/.test(t))              return 'Tools';
-    if (/book|novel|textbook|comic|magazine/.test(t))                                    return 'Books';
-    if (/shirt|dress|jacket|shoes|saree|lehenga|kurta|fashion|cloth|outfit/.test(t))    return 'Fashion';
-    if (/tent|racket|cricket|football|yoga|gym|badminton|cycle|sports/.test(t))         return 'Sports';
-    if (/toy|stroller|cradle|baby|kids|child|pram/.test(t))                             return 'Kids';
-    return 'Other';
-}
-
 // ── Photo uploader sub-component ─────────────────────────────────────────────
 
 function PhotoUploader({ photos, setPhotos }) {
@@ -321,9 +293,7 @@ const CreateItemModal = ({
 }) => {
     const [photos, setPhotos] = useState([]);
     const [aiPriceLoading, setAiPriceLoading] = useState(false);
-    const [aiPriceSuggestion, setAiPriceSuggestion] = useState(null);
     const [aiCatLoading, setAiCatLoading] = useState(false);
-    const [aiCatSuggestion, setAiCatSuggestion] = useState(null);
     const wasOpenRef = useRef(false);
     const isEditMode = mode === 'edit';
 
@@ -364,8 +334,6 @@ const CreateItemModal = ({
 
     const resetTransientState = () => {
         setPhotos([]);
-        setAiPriceSuggestion(null);
-        setAiCatSuggestion(null);
     };
 
     const handleDialogOpenChange = (nextOpen) => {
@@ -427,38 +395,50 @@ const CreateItemModal = ({
     }, [open, isEditMode, selectableCommunities, form]);
 
     const handleSuggestPrice = async () => {
-        const title = form.getValues('title');
+        const title = form.getValues('title')?.trim();
+        const category = form.getValues('category');
         const condition = form.getValues('condition');
-        if (!title || title.length < 3) { toast.info('Enter a title first'); return; }
-        if (!condition) { toast.info('Select a condition first'); return; }
-        setAiPriceLoading(true);
-        setAiPriceSuggestion(null);
-        await new Promise(r => setTimeout(r, 1500));
-        setAiPriceSuggestion(mockAiPrice(condition));
-        setAiPriceLoading(false);
-    };
 
-    const applyAiPrice = () => {
-        if (aiPriceSuggestion != null) {
-            form.setValue('price', aiPriceSuggestion, { shouldValidate: true });
-            setAiPriceSuggestion(null);
+        if (!title || !category || !condition) {
+            toast.info('Please enter item title, category, and condition before requesting a price suggestion.');
+            return;
+        }
+
+        setAiPriceLoading(true);
+        try {
+            const suggestedPrice = await suggestPrice({
+                itemName: title,
+                category,
+                condition,
+            });
+
+            form.setValue('price', String(suggestedPrice), { shouldValidate: true });
+            toast.success('AI price suggestion applied.');
+        } catch (error) {
+            toast.error(error?.message || 'Unable to fetch AI price suggestion.');
+        } finally {
+            setAiPriceLoading(false);
         }
     };
 
     const handleSuggestCategory = async () => {
-        const title = form.getValues('title');
-        if (!title || title.length < 3) { toast.info('Enter a title first'); return; }
-        setAiCatLoading(true);
-        setAiCatSuggestion(null);
-        await new Promise(r => setTimeout(r, 1200));
-        setAiCatSuggestion(mockAiCategory(title));
-        setAiCatLoading(false);
-    };
+        const title = form.getValues('title')?.trim();
 
-    const applyAiCategory = () => {
-        if (aiCatSuggestion) {
-            form.setValue('category', aiCatSuggestion, { shouldValidate: true });
-            setAiCatSuggestion(null);
+        if (!title) {
+            toast.info('Please enter item title before requesting a category suggestion.');
+            return;
+        }
+
+        setAiCatLoading(true);
+        try {
+            const predictedCategory = await suggestCategory({ itemName: title });
+
+            form.setValue('category', predictedCategory, { shouldValidate: true });
+            toast.success('AI category suggestion applied.');
+        } catch (error) {
+            toast.error(error?.message || 'Unable to fetch AI category suggestion.');
+        } finally {
+            setAiCatLoading(false);
         }
     };
 
@@ -638,16 +618,6 @@ const CreateItemModal = ({
                                         AI Suggest
                                     </button>
                                 </div>
-                                {aiCatSuggestion && (
-                                    <div className="flex items-center gap-2 mt-2 p-2.5 bg-violet-50 rounded-xl border border-violet-100">
-                                        <span className="material-symbols-outlined text-violet-500 text-base">auto_awesome</span>
-                                        <span className="text-xs text-violet-700 font-medium flex-1">AI suggests: <strong>{aiCatSuggestion}</strong></span>
-                                        <button type="button" onClick={applyAiCategory} className="text-xs font-semibold text-violet-700 hover:underline">Apply</button>
-                                        <button type="button" onClick={() => setAiCatSuggestion(null)}>
-                                            <span className="material-symbols-outlined text-xs text-muted-green">close</span>
-                                        </button>
-                                    </div>
-                                )}
                                 <FormMessage />
                             </FormItem>
                         )} />
@@ -716,16 +686,6 @@ const CreateItemModal = ({
                                             AI
                                         </button>
                                     </div>
-                                    {aiPriceSuggestion != null && (
-                                        <div className="flex items-center gap-2 mt-2 p-2.5 bg-amber-50 rounded-xl border border-amber-100">
-                                            <span className="material-symbols-outlined text-amber-500 text-base">auto_awesome</span>
-                                            <span className="text-xs text-amber-700 font-medium flex-1">Suggested: <strong>₹{aiPriceSuggestion}/day</strong></span>
-                                            <button type="button" onClick={applyAiPrice} className="text-xs font-semibold text-amber-700 hover:underline">Use</button>
-                                            <button type="button" onClick={() => setAiPriceSuggestion(null)}>
-                                                <span className="material-symbols-outlined text-xs text-muted-green">close</span>
-                                            </button>
-                                        </div>
-                                    )}
                                     <FormMessage />
                                 </FormItem>
                             )} />

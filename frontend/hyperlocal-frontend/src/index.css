@@ -1,5 +1,8 @@
 /* 1. External fonts */
-@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&family=Epilogue:wght@400;600;700&display=swap");
+/* Gilroy — display/heading font (ExtraBold 800, Light 300 available in free tier) */
+@import url("https://fonts.cdnfonts.com/css/gilroy-free");
+/* Manrope — body font fallback (full weight range) */
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700&display=swap");
 
 /* 2. Tailwind core */
@@ -10,10 +13,10 @@
 
 /* 4. Theme + custom styles */
 @theme {
-  --color-primary: #31816d;
+  --color-primary: #058074;
   --color-primary-dark: #246152;
   --color-accent: #d97757;
-  --color-background-light: #f8f7f7;
+  --color-background-light: #f8f7f4;
   --color-charcoal: #111816;
   --color-muted-green: #5e877d;
   
@@ -22,15 +25,40 @@
   --radius-xl: 0.75rem;
   --radius-full: 9999px;
   
-  --font-family-display: "Manrope", system-ui, sans-serif;
-  --font-family-heading: "Epilogue", sans-serif;
+  /* Gilroy for headings (ExtraBold 800); Manrope as body + fallback */
+  --font-family-display: "Gilroy", "Manrope", system-ui, sans-serif;
+  --font-family-heading: "Gilroy", "Manrope", sans-serif;
 }
 
 /* Base styles */
-body {
-  font-family: var(--font-family-display);
+html {
+  scroll-behavior: smooth;
 }
 
+body {
+  font-family: var(--font-family-display);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* ============================================================
+   DARK MODE TOKENS
+   ============================================================ */
+:root[data-theme="dark"] {
+  --color-background-light: #0d1f1b;
+  --color-charcoal: #e2ede9;
+  --color-muted-green: #9ec8bf;
+  color-scheme: dark;
+}
+
+:root[data-theme="dark"] .bg-background-light { background-color: #0d1f1b; }
+:root[data-theme="dark"] .text-charcoal { color: #e2ede9; }
+:root[data-theme="dark"] .text-muted-green { color: #9ec8bf; }
+:root[data-theme="dark"] .border-gray-200 { border-color: rgba(255,255,255,0.1); }
+:root[data-theme="dark"] .border-gray-100 { border-color: rgba(255,255,255,0.07); }
+
+/* ============================================================
+   FONT UTILITIES
+   ============================================================ */
 .font-heading {
   font-family: var(--font-family-heading);
 }
@@ -39,7 +67,9 @@ body {
   font-family: var(--font-family-display);
 }
 
-/* Custom utilities */
+/* ============================================================
+   LAYOUT UTILITIES
+   ============================================================ */
 .h-13 {
   height: 3.25rem;
 }
@@ -52,7 +82,9 @@ body {
   box-shadow: 0 10px 40px -10px rgba(0,0,0,0.04);
 }
 
-/* Color utilities */
+/* ============================================================
+   COLOR UTILITIES
+   ============================================================ */
 .bg-primary { background-color: var(--color-primary); }
 .hover\:bg-primary-dark:hover { background-color: var(--color-primary-dark); }
 .text-primary { color: var(--color-primary); }
@@ -61,7 +93,162 @@ body {
 .text-charcoal { color: var(--color-charcoal); }
 .text-muted-green { color: var(--color-muted-green); }
 
-/* Material Symbols */
+/* Card surface — white in light mode, warm off-white #f8f7f4 in dark mode */
+.bg-card-surface { background-color: #ffffff; }
+:root[data-theme="dark"] .bg-card-surface { background-color: #f8f7f4; }
+
+/* Restore light-mode text colors inside cards that use the light surface in dark mode */
+:root[data-theme="dark"] .bg-card-surface .text-charcoal,
+:root[data-theme="dark"] .bg-card-surface.text-charcoal { color: #111816; }
+:root[data-theme="dark"] .bg-card-surface .text-muted-green,
+:root[data-theme="dark"] .bg-card-surface.text-muted-green { color: #5e877d; }
+:root[data-theme="dark"] .bg-card-surface .border-gray-100,
+:root[data-theme="dark"] .bg-card-surface.border-gray-100 { border-color: #f3f4f6; }
+
+/* ============================================================
+   GLASSMORPHISM
+   ============================================================ */
+.glass-card {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
+}
+
+:root[data-theme="dark"] .glass-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.glass-nav {
+  background: rgba(248, 247, 247, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+:root[data-theme="dark"] .glass-nav {
+  background: rgba(13, 31, 27, 0.85);
+}
+
+/* ============================================================
+   HERO GRADIENT MESH BACKGROUND
+   ============================================================ */
+.hero-mesh {
+  position: relative;
+  background: linear-gradient(135deg, #0d1f1b 0%, #1a3329 50%, #0d1f1b 100%);
+  overflow: hidden;
+}
+
+.hero-mesh::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 60% 50% at 20% 30%, rgba(49, 129, 109, 0.35) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 60% at 80% 70%, rgba(217, 119, 87, 0.2) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 40% at 60% 20%, rgba(49, 129, 109, 0.15) 0%, transparent 50%);
+  z-index: 0;
+}
+
+/* ============================================================
+   BLOB ANIMATION
+   ============================================================ */
+@keyframes blob {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25%       { transform: translate(30px, -20px) scale(1.08); }
+  50%       { transform: translate(-20px, 30px) scale(0.95); }
+  75%       { transform: translate(20px, 20px) scale(1.05); }
+}
+
+@keyframes blob-reverse {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25%       { transform: translate(-25px, 20px) scale(0.95); }
+  50%       { transform: translate(20px, -25px) scale(1.08); }
+  75%       { transform: translate(-15px, -15px) scale(1.03); }
+}
+
+.animate-blob {
+  animation: blob 12s ease-in-out infinite;
+}
+
+.animate-blob-reverse {
+  animation: blob-reverse 15s ease-in-out infinite;
+}
+
+.animation-delay-2000 { animation-delay: 2s; }
+.animation-delay-4000 { animation-delay: 4s; }
+
+/* ============================================================
+   FLOAT ANIMATION (trust badge)
+   ============================================================ */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-8px); }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* ============================================================
+   SHIMMER / SKELETON
+   ============================================================ */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.shimmer {
+  background: linear-gradient(90deg, #e8e8e8 25%, #f5f5f5 50%, #e8e8e8 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+/* ============================================================
+   GRADIENT TEXT
+   ============================================================ */
+.gradient-text {
+  background: linear-gradient(135deg, #31816d 0%, #5eb89e 50%, #d97757 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ============================================================
+   STAT COUNTER PULSE
+   ============================================================ */
+@keyframes counter-pulse {
+  0%, 100% { transform: scale(1); }
+  50%       { transform: scale(1.04); }
+}
+
+.animate-counter-pulse {
+  animation: counter-pulse 2s ease-in-out infinite;
+}
+
+/* ============================================================
+   GRADIENT BORDER GLOW
+   ============================================================ */
+.glow-primary {
+  box-shadow: 0 0 0 1px rgba(49,129,109,0.3), 0 4px 24px rgba(49,129,109,0.15);
+}
+
+.glow-accent {
+  box-shadow: 0 0 0 1px rgba(217,119,87,0.3), 0 4px 24px rgba(217,119,87,0.15);
+}
+
+/* ============================================================
+   CONNECTOR LINE (How It Works)
+   ============================================================ */
+.step-connector {
+  background: linear-gradient(90deg, var(--color-primary), rgba(49,129,109,0.2));
+}
+
+/* ============================================================
+   MATERIAL SYMBOLS
+   ============================================================ */
 .material-symbols-outlined {
   font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
   font-family: 'Material Symbols Outlined';
@@ -83,7 +270,9 @@ body {
   color: var(--color-primary);
 }
 
-/* Modal animations */
+/* ============================================================
+   MODAL ANIMATIONS
+   ============================================================ */
 @keyframes scale-in {
   0% {
     opacity: 0;
@@ -99,6 +288,39 @@ body {
   animation: scale-in 0.2s ease-out;
 }
 
+/* ============================================================
+   MISC UTILITIES
+   ============================================================ */
 /* Hide scrollbar for horizontal scroll areas */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Card hover lift */
+.hover-lift {
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.12);
+}
+
+/* Ripple effect for buttons */
+.btn-ripple {
+  position: relative;
+  overflow: hidden;
+}
+.btn-ripple::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%);
+  opacity: 0;
+  transform: scale(0);
+  transition: transform 0.4s ease, opacity 0.4s ease;
+}
+.btn-ripple:active::after {
+  opacity: 1;
+  transform: scale(2.5);
+  transition: 0s;
+}
+

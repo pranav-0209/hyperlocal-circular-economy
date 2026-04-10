@@ -2,6 +2,8 @@ import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import ProfileAvatar from './ProfileAvatar';
 import { ROUTES } from '../../constants';
+import { useDarkMode } from '../../hooks/useDarkMode';
+import { Sun, Moon } from 'lucide-react';
 
 /**
  * HomeNavbar Component
@@ -15,6 +17,7 @@ export default function HomeNavbar({ hideNavLinks = false }) {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { user, logout } = useAuth();
+  const { dark, toggle: toggleDark } = useDarkMode();
 
   // When viewing a specific community (/dashboard?community=xxx), treat My Communities as active
   const isCommunityView = location.pathname === ROUTES.DASHBOARD && !!searchParams.get('community');
@@ -35,7 +38,13 @@ export default function HomeNavbar({ hideNavLinks = false }) {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white/70 backdrop-blur-xl border-b border-gray-200/40">
+    <header
+      className="fixed top-0 left-0 right-0 z-50 border-b backdrop-blur-xl transition-colors duration-300"
+      style={{
+        background: dark ? 'rgba(13,31,27,0.88)' : 'rgba(255,255,255,0.80)',
+        borderColor: dark ? 'rgba(255,255,255,0.07)' : 'rgba(229,231,235,0.5)',
+      }}
+    >
       <div className="w-full px-2 sm:px-4 lg:px-6 h-[72px] flex items-center justify-between">
         {/* Logo */}
         <button
@@ -105,7 +114,15 @@ export default function HomeNavbar({ hideNavLinks = false }) {
         )}
 
         {/* Right Section */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          {/* Dark mode toggle */}
+          <button
+            onClick={toggleDark}
+            aria-label="Toggle dark mode"
+            className="w-9 h-9 rounded-xl flex items-center justify-center text-muted-green hover:text-primary hover:bg-primary/8 transition-all"
+          >
+            {dark ? <Sun className="w-4.5 h-4.5" /> : <Moon className="w-4.5 h-4.5" />}
+          </button>
           {/* Profile Avatar with Dropdown */}
           <ProfileAvatar user={user} onLogout={logout} />
         </div>

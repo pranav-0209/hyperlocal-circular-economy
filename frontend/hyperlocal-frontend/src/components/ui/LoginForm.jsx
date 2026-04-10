@@ -49,10 +49,7 @@ const LoginForm = () => {
       // Save token to localStorage
       saveAuthData(response.token, null);
 
-      // Set user in context from backend response
-      // hasCommunities: backend should send communityCount (int) in login response.
-      // We use it as a hint so DashboardPage can block until useMyCommunities fetches real data,
-      // preventing the "Select your path" screen from flashing for users who already have communities.
+      // Set user in context from backend login response DTO.
       login({
         id: response.userId,
         email: response.email,
@@ -67,8 +64,10 @@ const LoginForm = () => {
           : !response.pendingSteps?.includes('UPLOAD_DOCUMENTS'),
         verificationStatus: response.status,
         rejectionReason: response.rejectionReason,
-        // If backend sends communityCount, use it; fallback to 0 (safe default)
-        hasCommunities: (response.communityCount ?? 0) > 0,
+        trustIndex: response.trustIndex ?? 0,
+        trustXp: response.trustXp ?? 0,
+        // Determined after communities query resolves.
+        hasCommunities: false,
         communities: [],
         profile: {
           name: response.name,
@@ -131,7 +130,7 @@ const LoginForm = () => {
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-gray-400 text-lg">
                       mail
                     </span>
-                    <Input placeholder="your@email.com" type="email" className="pl-10" {...field} />
+                    <Input placeholder="your@email.com" type="email" className="pl-10 bg-background-light" {...field} />
                   </div>
                 </FormControl>
                 <FormMessage />
@@ -154,7 +153,7 @@ const LoginForm = () => {
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-gray-400 text-lg">
                       lock
                     </span>
-                    <Input placeholder="••••••••" type="password" className="pl-10" {...field} />
+                    <Input placeholder="••••••••" type="password" className="pl-10 bg-background-light" {...field} />
                   </div>
                 </FormControl>
                 <FormMessage />

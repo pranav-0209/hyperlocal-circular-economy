@@ -26,6 +26,8 @@ export const CONDITIONS = [
     'Poor',
 ];
 
+const normalizeSelectValue = (value) => (typeof value === 'string' ? value : '');
+
 export const marketplaceSchema = z.object({
     communityId: z
         .string()
@@ -41,17 +43,29 @@ export const marketplaceSchema = z.object({
         .max(500, 'Description must be less than 500 characters')
         .trim(),
     category: z
-        .enum(ITEM_CATEGORIES, {
-            errorMap: () => ({ message: 'Please select a valid category' }),
-        }),
+        .preprocess(
+            normalizeSelectValue,
+            z
+                .string()
+                .min(1, 'Please select a valid category')
+                .refine((value) => ITEM_CATEGORIES.includes(value), {
+                    message: 'Please select a valid category',
+                })
+        ),
     type: z.literal('RENT').default('RENT'),
     price: z
         .coerce.number()
         .min(1, 'Price per day must be at least ₹1'),
     condition: z
-        .enum(CONDITIONS, {
-            errorMap: () => ({ message: 'Please select item condition' }),
-        }),
+        .preprocess(
+            normalizeSelectValue,
+            z
+                .string()
+                .min(1, 'Please select a valid condition')
+                .refine((value) => CONDITIONS.includes(value), {
+                    message: 'Please select a valid condition',
+                })
+        ),
     availableFrom: z
         .string()
         .min(1, 'Please select available from date'),
