@@ -1,4 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom';
+import { Moon, Sun } from 'lucide-react';
+import { useDarkMode } from '../../hooks/useDarkMode';
 
 /**
  * SuperAdminSidebar Component
@@ -6,6 +8,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
  */
 export default function SuperAdminSidebar() {
   const navigate = useNavigate();
+  const { dark, toggle: toggleDark } = useDarkMode();
 
   const handleLogout = () => {
     localStorage.removeItem('adminToken');
@@ -60,8 +63,23 @@ export default function SuperAdminSidebar() {
         </ul>
       </nav>
 
-      {/* Logout */}
-      <div className="p-4 border-t border-gray-800">
+      {/* Sidebar Controls */}
+      <div className="p-4 border-t border-gray-800 space-y-2">
+        <button
+          onClick={toggleDark}
+          className="flex items-center justify-between gap-3 px-4 py-3 w-full text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg transition-colors"
+          aria-label="Toggle dark mode"
+          title="Toggle dark mode"
+        >
+          <span className="flex items-center gap-3">
+            <span className="material-symbols-outlined text-xl">contrast</span>
+            <span className="font-medium">Dark Mode</span>
+          </span>
+          <span className="inline-flex w-7 h-7 items-center justify-center rounded-md bg-white/10">
+            {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </span>
+        </button>
+
         <button
           onClick={handleLogout}
           className="flex items-center gap-3 px-4 py-3 w-full text-gray-400 hover:bg-gray-800 hover:text-white rounded-lg transition-colors"

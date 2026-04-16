@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import SuperAdminLayout from '../../components/superadmin/SuperAdminLayout';
 import DataTable from '../../components/superadmin/DataTable';
+import PaginationControls from '../../components/superadmin/PaginationControls';
 import { getAllUsers } from '../../services/authService';
 
 /**
@@ -48,15 +49,16 @@ export default function SuperAdminUsers() {
       console.log('Verified Users response:', response);
       return response;
     },
-    onSuccess: (response) => {
-      setPagination({
-        pageNumber: response.page,
-        pageSize: response.size,
-        totalElements: response.totalElements,
-        totalPages: response.totalPages,
-      });
-    },
   });
+
+  const resolvedPageNumber = Number(data?.pageNumber ?? data?.page ?? pagination.pageNumber) || 0;
+  const resolvedPageSize = Number(data?.pageSize ?? data?.size ?? pagination.pageSize) || pagination.pageSize;
+  const resolvedTotalElements = Number(data?.totalElements ?? data?.total ?? data?.count ?? data?.content?.length ?? 0) || 0;
+  const resolvedTotalPages = Number(
+    data?.totalPages
+    ?? data?.pages
+    ?? (resolvedPageSize > 0 ? Math.ceil(resolvedTotalElements / resolvedPageSize) : 0)
+  ) || 0;
 
   // Process data
   const users = data?.content.map((user) => ({
@@ -64,7 +66,6 @@ export default function SuperAdminUsers() {
     name: user.name,
     email: user.email,
     phone: user.phone || 'N/A',
-    community: user.community || 'Not Assigned',
     role: user.role === 'ROLE_ADMIN' ? 'Community Admin' : 'User',
     joinedAt: new Date(user.createdAt).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -145,7 +146,6 @@ export default function SuperAdminUsers() {
       ),
     },
     { key: 'phone', label: 'Phone' },
-    { key: 'community', label: 'Community' },
     {
       key: 'role',
       label: 'Role',
@@ -236,37 +236,14 @@ export default function SuperAdminUsers() {
             emptyMessage="🎉 No verified users yet. They will appear here once you approve their verification requests."
           />
 
-          {/* Pagination */}
-          {pagination.totalPages > 1 && (
-            <div className="mt-6 flex items-center justify-between bg-white rounded-xl border border-gray-200 p-4">
-              <div className="text-sm text-gray-600">
-                Showing {pagination.pageNumber * pagination.pageSize + 1} to{' '}
-                {Math.min((pagination.pageNumber + 1) * pagination.pageSize, pagination.totalElements)} of{' '}
-                {pagination.totalElements} users
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handlePageChange(pagination.pageNumber - 1)}
-                  disabled={pagination.pageNumber === 0}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Previous
-                </button>
-                <div className="flex items-center gap-2 px-4">
-                  <span className="text-sm text-gray-600">
-                    Page {pagination.pageNumber + 1} of {pagination.totalPages}
-                  </span>
-                </div>
-                <button
-                  onClick={() => handlePageChange(pagination.pageNumber + 1)}
-                  disabled={pagination.pageNumber >= pagination.totalPages - 1}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Next
-                </button>
-              </div>
-            </div>
-          )}
+          <PaginationControls
+            pageNumber={resolvedPageNumber}
+            pageSize={resolvedPageSize}
+            totalElements={resolvedTotalElements}
+            totalPages={resolvedTotalPages}
+            itemLabel="users"
+            onPageChange={handlePageChange}
+          />
         </>
       )}
     </SuperAdminLayout>

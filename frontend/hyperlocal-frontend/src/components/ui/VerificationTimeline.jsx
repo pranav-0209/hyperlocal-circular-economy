@@ -2,7 +2,7 @@
  * VerificationTimeline Component
  * Visual timeline for verification process status.
  */
-export default function VerificationTimeline() {
+export default function VerificationTimeline({ dark = false }) {
   return (
     <div className="my-10 px-4">
       <div className="relative">
@@ -10,7 +10,7 @@ export default function VerificationTimeline() {
         <div className="flex items-center justify-between">
           {/* Step 1: Submitted */}
           <div className="flex flex-col items-center gap-3 flex-1">
-            <div className="w-14 h-14 rounded-full bg-green-500 flex items-center justify-center text-white font-bold text-xl border-4 border-white shadow-md">
+            <div className={`w-14 h-14 rounded-full bg-green-500 flex items-center justify-center text-white font-bold text-xl border-4 shadow-md ${dark ? 'border-white/15' : 'border-white'}`}>
               ✓
             </div>
             <p className="text-sm font-semibold text-charcoal whitespace-nowrap">
@@ -26,7 +26,7 @@ export default function VerificationTimeline() {
 
           {/* Step 2: Under Review */}
           <div className="flex flex-col items-center gap-3 flex-1">
-            <div className="w-14 h-14 rounded-full bg-yellow-500 flex items-center justify-center text-white font-bold text-xl border-4 border-white shadow-md animate-pulse">
+            <div className={`w-14 h-14 rounded-full bg-yellow-500 flex items-center justify-center text-white font-bold text-xl border-4 shadow-md animate-pulse ${dark ? 'border-white/15' : 'border-white'}`}>
               ⏱
             </div>
             <p className="text-sm font-semibold text-charcoal whitespace-nowrap">
@@ -38,11 +38,11 @@ export default function VerificationTimeline() {
           </div>
 
           {/* Connector Line 2 */}
-          <div className="flex-1 h-1 bg-gray-300 mx-3 mb-12"></div>
+          <div className={`flex-1 h-1 mx-3 mb-12 ${dark ? 'bg-white/18' : 'bg-gray-300'}`}></div>
 
           {/* Step 3: Approved */}
           <div className="flex flex-col items-center gap-3 flex-1">
-            <div className="w-14 h-14 rounded-full bg-gray-300 flex items-center justify-center text-white font-bold text-xl border-4 border-white shadow-md">
+            <div className={`w-14 h-14 rounded-full flex items-center justify-center text-white font-bold text-xl border-4 shadow-md ${dark ? 'bg-white/20 border-white/15' : 'bg-gray-300 border-white'}`}>
               ✓
             </div>
             <p className="text-sm font-semibold text-charcoal whitespace-nowrap">

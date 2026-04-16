@@ -14,9 +14,9 @@
 /* 4. Theme + custom styles */
 @theme {
   --color-primary: #058074;
-  --color-primary-dark: #246152;
+  --color-primary-dark: #0d544e;
   --color-accent: #d97757;
-  --color-background-light: #f8f7f4;
+  --color-background-light: #f5f8f7;
   --color-charcoal: #111816;
   --color-muted-green: #5e877d;
   
@@ -193,6 +193,64 @@ body {
 }
 
 /* ============================================================
+   CATEGORY MARQUEE
+   ============================================================ */
+@keyframes category-marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.category-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: category-marquee 28s linear infinite;
+  will-change: transform;
+}
+
+.category-chip {
+  transition: background-color 0.2s ease;
+}
+
+.category-edge-fade-left,
+.category-edge-fade-right {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2.25rem;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.category-edge-fade-left {
+  left: 0;
+  background: linear-gradient(90deg, var(--color-background-light) 0%, rgba(248, 247, 244, 0) 100%);
+}
+
+.category-edge-fade-right {
+  right: 0;
+  background: linear-gradient(270deg, var(--color-background-light) 0%, rgba(248, 247, 244, 0) 100%);
+}
+
+:root[data-theme="dark"] .category-edge-fade-left {
+  background: linear-gradient(90deg, #0d1f1b 0%, rgba(13, 31, 27, 0) 100%);
+}
+
+:root[data-theme="dark"] .category-edge-fade-right {
+  background: linear-gradient(270deg, #0d1f1b 0%, rgba(13, 31, 27, 0) 100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .category-marquee-track {
+    animation: none;
+    transform: none;
+  }
+}
+
+/* ============================================================
    SHIMMER / SKELETON
    ============================================================ */
 @keyframes shimmer {
@@ -322,5 +380,168 @@ body {
   opacity: 1;
   transform: scale(2.5);
   transition: 0s;
+}
+
+/* ============================================================
+   SUPERADMIN THEME + INTERACTION CURSORS
+   ============================================================ */
+.superadmin-theme {
+  background-color: var(--color-background-light);
+  color: var(--color-charcoal);
+}
+
+.superadmin-theme .bg-gray-100,
+.superadmin-theme .bg-gray-50 {
+  background-color: #ffffff;
+}
+
+.superadmin-theme .bg-white {
+  background-color: #ffffff;
+}
+
+.superadmin-theme .border-gray-200,
+.superadmin-theme .border-gray-300,
+.superadmin-theme .divide-gray-200 {
+  border-color: rgba(17, 24, 22, 0.08);
+}
+
+.superadmin-theme .text-gray-900,
+.superadmin-theme .text-gray-800,
+.superadmin-theme .text-gray-700,
+.superadmin-theme .text-gray-600 {
+  color: var(--color-charcoal);
+}
+
+.superadmin-theme .text-gray-500,
+.superadmin-theme .text-gray-400,
+.superadmin-theme .text-gray-300 {
+  color: var(--color-muted-green);
+}
+
+:root[data-theme="dark"] .superadmin-theme .bg-gray-100,
+:root[data-theme="dark"] .superadmin-theme .bg-gray-50,
+:root[data-theme="dark"] .superadmin-theme .bg-white,
+:root[data-theme="dark"] .superadmin-theme .bg-white\/80 {
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+:root[data-theme="dark"] .superadmin-theme .from-gray-50,
+:root[data-theme="dark"] .superadmin-theme .to-gray-100 {
+  --tw-gradient-from: rgba(255, 255, 255, 0.08);
+  --tw-gradient-to: rgba(255, 255, 255, 0.03);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+:root[data-theme="dark"] .superadmin-theme .border-gray-200,
+:root[data-theme="dark"] .superadmin-theme .border-gray-300,
+:root[data-theme="dark"] .superadmin-theme .divide-gray-200,
+:root[data-theme="dark"] .superadmin-theme .border-gray-700,
+:root[data-theme="dark"] .superadmin-theme .border-gray-800 {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+:root[data-theme="dark"] .superadmin-theme .text-gray-900,
+:root[data-theme="dark"] .superadmin-theme .text-gray-800,
+:root[data-theme="dark"] .superadmin-theme .text-gray-700,
+:root[data-theme="dark"] .superadmin-theme .text-gray-600 {
+  color: #e2ede9;
+}
+
+:root[data-theme="dark"] .superadmin-theme .text-gray-500,
+:root[data-theme="dark"] .superadmin-theme .text-gray-400,
+:root[data-theme="dark"] .superadmin-theme .text-gray-300 {
+  color: #9ec8bf;
+}
+
+/* Preserve semantic color separation for KPI cards and badges in dark mode */
+:root[data-theme="dark"] .superadmin-theme .bg-blue-100 { background-color: rgba(59, 130, 246, 0.2); }
+:root[data-theme="dark"] .superadmin-theme .bg-yellow-100 { background-color: rgba(245, 158, 11, 0.2); }
+:root[data-theme="dark"] .superadmin-theme .bg-purple-100 { background-color: rgba(168, 85, 247, 0.2); }
+:root[data-theme="dark"] .superadmin-theme .bg-green-100 { background-color: rgba(34, 197, 94, 0.2); }
+:root[data-theme="dark"] .superadmin-theme .bg-red-100 { background-color: rgba(239, 68, 68, 0.2); }
+
+:root[data-theme="dark"] .superadmin-theme .text-blue-900,
+:root[data-theme="dark"] .superadmin-theme .text-blue-800,
+:root[data-theme="dark"] .superadmin-theme .text-blue-700,
+:root[data-theme="dark"] .superadmin-theme .text-blue-600 { color: #93c5fd; }
+
+:root[data-theme="dark"] .superadmin-theme .text-yellow-900,
+:root[data-theme="dark"] .superadmin-theme .text-yellow-800,
+:root[data-theme="dark"] .superadmin-theme .text-yellow-700,
+:root[data-theme="dark"] .superadmin-theme .text-yellow-600 { color: #fcd34d; }
+
+:root[data-theme="dark"] .superadmin-theme .text-purple-900,
+:root[data-theme="dark"] .superadmin-theme .text-purple-800,
+:root[data-theme="dark"] .superadmin-theme .text-purple-700,
+:root[data-theme="dark"] .superadmin-theme .text-purple-600 { color: #d8b4fe; }
+
+:root[data-theme="dark"] .superadmin-theme .text-green-900,
+:root[data-theme="dark"] .superadmin-theme .text-green-800,
+:root[data-theme="dark"] .superadmin-theme .text-green-700,
+:root[data-theme="dark"] .superadmin-theme .text-green-600 { color: #86efac; }
+
+:root[data-theme="dark"] .superadmin-theme .border-blue-200 { border-color: rgba(59, 130, 246, 0.45); }
+:root[data-theme="dark"] .superadmin-theme .border-yellow-200 { border-color: rgba(245, 158, 11, 0.45); }
+:root[data-theme="dark"] .superadmin-theme .border-purple-200 { border-color: rgba(168, 85, 247, 0.45); }
+:root[data-theme="dark"] .superadmin-theme .border-green-200 { border-color: rgba(34, 197, 94, 0.45); }
+
+:root[data-theme="dark"] .superadmin-theme .from-blue-50 {
+  --tw-gradient-from: rgba(59, 130, 246, 0.2);
+  --tw-gradient-to: rgba(59, 130, 246, 0.08);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+:root[data-theme="dark"] .superadmin-theme .to-blue-100 {
+  --tw-gradient-to: rgba(59, 130, 246, 0.08);
+}
+
+:root[data-theme="dark"] .superadmin-theme .from-yellow-50 {
+  --tw-gradient-from: rgba(245, 158, 11, 0.2);
+  --tw-gradient-to: rgba(245, 158, 11, 0.08);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+:root[data-theme="dark"] .superadmin-theme .to-yellow-100 {
+  --tw-gradient-to: rgba(245, 158, 11, 0.08);
+}
+
+:root[data-theme="dark"] .superadmin-theme .from-purple-50 {
+  --tw-gradient-from: rgba(168, 85, 247, 0.2);
+  --tw-gradient-to: rgba(168, 85, 247, 0.08);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+:root[data-theme="dark"] .superadmin-theme .to-purple-100 {
+  --tw-gradient-to: rgba(168, 85, 247, 0.08);
+}
+
+:root[data-theme="dark"] .superadmin-theme .to-indigo-100 {
+  --tw-gradient-to: rgba(99, 102, 241, 0.1);
+}
+
+:root[data-theme="dark"] .superadmin-theme .hover\:bg-gray-50:hover,
+:root[data-theme="dark"] .superadmin-theme .hover\:bg-gray-200:hover,
+:root[data-theme="dark"] .superadmin-theme .hover\:bg-gray-800:hover,
+:root[data-theme="dark"] .superadmin-theme .hover\:bg-red-50:hover,
+:root[data-theme="dark"] .superadmin-theme .hover\:bg-green-50:hover,
+:root[data-theme="dark"] .superadmin-theme .hover\:bg-orange-50:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.superadmin-theme button:not(:disabled),
+.superadmin-theme [role="button"]:not([aria-disabled="true"]),
+.superadmin-theme a,
+.superadmin-theme [type="button"]:not(:disabled),
+.superadmin-theme [type="submit"]:not(:disabled),
+.superadmin-theme summary,
+.superadmin-theme [onclick] {
+  cursor: pointer;
+}
+
+.superadmin-theme button:disabled,
+.superadmin-theme [type="button"]:disabled,
+.superadmin-theme [type="submit"]:disabled,
+.superadmin-theme [aria-disabled="true"] {
+  cursor: not-allowed;
 }
 

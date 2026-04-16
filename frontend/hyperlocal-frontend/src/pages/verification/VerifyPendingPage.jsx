@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { checkVerificationStatus } from '../../services/authService';
 import VerificationLayout from '../../components/ui/VerificationLayout';
 import VerificationTimeline from '../../components/ui/VerificationTimeline';
+import { useDarkMode } from '../../hooks/useDarkMode';
 
 /**
  * VerifyPendingPage (/verify/pending)
@@ -16,6 +17,7 @@ import VerificationTimeline from '../../components/ui/VerificationTimeline';
 export default function VerifyPendingPage() {
   const navigate = useNavigate();
   const { markVerified, updateUser } = useAuth();
+  const { dark } = useDarkMode();
   const [isChecking, setIsChecking] = useState(false);
   const [showRejectionModal, setShowRejectionModal] = useState(false);
   const [showPendingModal, setShowPendingModal] = useState(false);
@@ -87,9 +89,9 @@ export default function VerifyPendingPage() {
     <VerificationLayout stepNumber={3} totalSteps={3} title="Verification Under Review">
       <div>
         {/* Status Card */}
-        <div className="bg-white rounded-lg p-6 border border-gray-200 mb-4 text-center">
+        <div className={`rounded-xl p-6 border mb-4 text-center ${dark ? 'bg-white/6 border-white/12 shadow-black/20' : 'bg-white border-gray-200 shadow-sm'} backdrop-blur-sm`}>
           <div className="mb-3 flex justify-center">
-            <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center ${dark ? 'bg-primary/18' : 'bg-green-100'}`}>
               <span className="material-symbols-outlined text-green-600 text-3xl">
                 check_circle
               </span>
@@ -106,18 +108,18 @@ export default function VerifyPendingPage() {
           </p>
 
           {/* Timeline */}
-          <VerificationTimeline />
+          <VerificationTimeline dark={dark} />
 
           {/* Timeline Note */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 my-4 flex gap-3 items-start">
+          <div className={`border rounded-lg p-3 my-4 flex gap-3 items-start ${dark ? 'bg-primary/10 border-primary/25' : 'bg-blue-50 border-blue-200'}`}>
             <span className="material-symbols-outlined text-blue-600 flex-shrink-0 mt-0.5">
               info
             </span>
             <div className="text-left">
-              <p className="text-sm font-medium text-blue-900 mb-1">
+              <p className={`text-sm font-medium mb-1 ${dark ? 'text-charcoal' : 'text-blue-900'}`}>
                 Estimated Time
               </p>
-              <p className="text-sm text-blue-800">
+              <p className={`text-sm ${dark ? 'text-muted-green' : 'text-blue-800'}`}>
                 Usually completed within 24–48 hours. We'll notify you via email once verification
                 is complete.
               </p>
@@ -135,7 +137,7 @@ export default function VerifyPendingPage() {
             <button
               onClick={handleCheckStatus}
               disabled={isChecking}
-              className="px-6 py-3 border border-primary text-primary rounded-lg font-medium hover:bg-primary/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className={`px-6 py-3 border border-primary text-primary rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${dark ? 'hover:bg-primary/15' : 'hover:bg-primary/5'}`}
             >
               {isChecking ? (
                 <>
@@ -157,7 +159,7 @@ export default function VerifyPendingPage() {
         </div>
 
         {/* FAQ Section */}
-        <div className="bg-gray-50 rounded-lg p-4">
+        <div className={`rounded-lg p-4 ${dark ? 'bg-white/6 border border-white/12' : 'bg-gray-50'}`}>
           <h3 className="font-semibold text-charcoal mb-4">
             Why is verification required?
           </h3>

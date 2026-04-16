@@ -6,7 +6,7 @@ import SuperAdminSidebar from './SuperAdminSidebar';
  */
 export default function SuperAdminLayout({ children, title }) {
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-100">
+    <div className="superadmin-theme flex h-screen overflow-hidden bg-gray-100">
       {/* Sidebar */}
       <SuperAdminSidebar />
 

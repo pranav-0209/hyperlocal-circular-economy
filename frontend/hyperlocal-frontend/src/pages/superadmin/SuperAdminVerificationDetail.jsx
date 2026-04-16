@@ -250,7 +250,11 @@ export default function SuperAdminVerificationDetail() {
   };
 
   const hasDocuments = userData.documents.length > 0;
-  const allChecklistItemsChecked = Object.values(checklist).every(item => item === true);
+  const hasAddressProof = Boolean(user.addressProofUrl);
+  const allChecklistItemsChecked = checklist.documentClear
+    && checklist.nameMatches
+    && checklist.noTampering
+    && (!hasAddressProof || checklist.addressValid);
 
   return (
     <SuperAdminLayout title="Review Verification">
@@ -430,7 +434,7 @@ export default function SuperAdminVerificationDetail() {
                   onChange={(e) => setChecklist({...checklist, addressValid: e.target.checked})}
                   className="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary" 
                 />
-                <span className="text-gray-700">Address proof is valid</span>
+                <span className="text-gray-700">Address proof is valid (if provided)</span>
               </label>
               <label className="flex items-center gap-3 cursor-pointer">
                 <input 

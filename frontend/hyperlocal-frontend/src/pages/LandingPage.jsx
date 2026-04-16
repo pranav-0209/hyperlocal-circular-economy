@@ -227,6 +227,7 @@ export default function LandingPage() {
     { emoji: '⚽', label: 'Sports' },
     { emoji: '🧒', label: 'Kids' },
   ];
+  const marqueeCategories = [...categories, ...categories];
 
   /* ────────────────────────────────────────────────────────
      RENDER
@@ -503,21 +504,36 @@ export default function LandingPage() {
         {/* ════════════════════════════════════════════════════
             CATEGORY STRIP — real item types from DiscoverPage
             ════════════════════════════════════════════════════ */}
-        <section className="w-full border-b border-gray-100 py-5 px-6 lg:px-10">
+        <section className={`w-full border-b border-gray-100 py-12 ${dark ? 'bg-primary/6' : 'bg-card-surface'}`}>
           <Reveal>
-            <div className="max-w-7xl mx-auto flex items-center justify-center gap-3 flex-wrap">
-              <span className="text-[0.85rem] font-semibold text-muted-green mr-1 flex-shrink-0">
+            <div className="w-full space-y-3">
+              <span className="block text-center text-[0.95rem] font-semibold text-muted-green mb-5 px-6 lg:px-10">
                 What gets shared:
               </span>
-              {categories.map((c) => (
-                <span
-                  key={c.label}
-                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-primary/6 border border-primary/12 text-[0.82rem] font-semibold text-primary flex-shrink-0"
-                >
-                  <span className="text-base">{c.emoji}</span>
-                  {c.label}
-                </span>
-              ))}
+
+              <div className="relative w-full overflow-hidden">
+                <div className="w-full px-6 sm:px-8 lg:px-10">
+                  <div className="category-marquee-track min-w-max">
+                    {[0, 1].map((cloneIndex) => (
+                      <div
+                        key={cloneIndex}
+                        className="flex items-center gap-4 pr-4 shrink-0 min-w-max"
+                        aria-hidden={cloneIndex === 1}
+                      >
+                        {marqueeCategories.map((c, itemIndex) => (
+                          <span
+                            key={`${cloneIndex}-${itemIndex}-${c.label}`}
+                            className="category-chip flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary/6 border border-primary/12 text-[0.95rem] sm:text-base font-semibold text-primary flex-shrink-0"
+                          >
+                            <span className="text-lg">{c.emoji}</span>
+                            {c.label}
+                          </span>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
           </Reveal>
         </section>
@@ -525,7 +541,7 @@ export default function LandingPage() {
         {/* ════════════════════════════════════════════════════
             HOW IT WORKS
             ════════════════════════════════════════════════════ */}
-        <section id="how-it-works" className="w-full py-24 lg:py-32 px-6 lg:px-10">
+        <section id="how-it-works" className={`w-full py-12 lg:py-16 px-6 lg:px-10 ${dark ? '' : 'bg-background-light'}`}>
           <div className="max-w-7xl mx-auto">
 
             {/* Section header */}
@@ -568,9 +584,9 @@ export default function LandingPage() {
                 whileInView="visible"
                 viewport={{ once: true, margin: '-60px' }}
               >
-                {steps.map(({ Icon, title, desc }, i) => (
+                {steps.map((step, i) => (
                   <motion.div
-                    key={title}
+                    key={step.title}
                     variants={fadeUp}
                     className="flex flex-col items-center text-center"
                     onMouseEnter={() => setHoveredStep(i)}
@@ -593,7 +609,7 @@ export default function LandingPage() {
                         animate={{ color: hoveredStep === i ? '#ffffff' : 'var(--color-primary)' }}
                         transition={{ duration: 0.2 }}
                       >
-                        <Icon className="w-7 h-7" />
+                        <step.Icon className="w-7 h-7" />
                       </motion.div>
 
                       {/* Step number badge */}
@@ -611,10 +627,10 @@ export default function LandingPage() {
                       className="text-charcoal mb-2"
                       style={{ ...SUBHEADING, fontSize: '0.95rem' }}
                     >
-                      {title}
+                      {step.title}
                     </p>
                     <p className="text-muted-green leading-relaxed" style={{ fontSize: '0.875rem', lineHeight: 1.65 }}>
-                      {desc}
+                      {step.desc}
                     </p>
                   </motion.div>
                 ))}
@@ -640,8 +656,7 @@ export default function LandingPage() {
             ════════════════════════════════════════════════════ */}
         <section
           id="features"
-          className="w-full py-24 lg:py-32 px-6 lg:px-10"
-          style={{ background: dark ? 'rgba(49,129,109,0.04)' : 'rgba(49,129,109,0.025)' }}
+          className={`w-full py-14 lg:py-20 px-6 lg:px-10 ${dark ? 'bg-primary/6' : 'bg-card-surface'}`}
         >
           <div className="max-w-7xl mx-auto">
 
@@ -668,53 +683,53 @@ export default function LandingPage() {
               whileInView="visible"
               viewport={{ once: true, margin: '-60px' }}
             >
-              {features.map(({ Icon, title, desc, tag, accent }) => (
+              {features.map((feature) => (
                 <motion.div
-                  key={title}
+                  key={feature.title}
                   variants={fadeUp}
                   className={`rounded-2xl p-8 border flex flex-col gap-5 hover-lift relative overflow-hidden ${
-                    accent
+                    feature.accent
                       ? 'bg-primary text-white border-primary shadow-xl shadow-primary/20'
-                      : 'bg-card-surface text-charcoal border-gray-100'
+                      : `${dark ? 'bg-card-surface' : 'bg-background-light'} text-charcoal border-gray-100`
                   }`}
-                  whileHover={accent ? {} : { borderColor: 'rgba(49,129,109,0.22)' }}
+                  whileHover={feature.accent ? {} : { borderColor: 'rgba(49,129,109,0.22)' }}
                 >
                   {/* Tag */}
                   <span
                     className={`self-start text-[0.7rem] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${
-                      accent
+                      feature.accent
                         ? 'bg-white/15 text-white/90'
                         : 'bg-primary/8 text-primary border border-primary/15'
                     }`}
                   >
-                    {tag}
+                    {feature.tag}
                   </span>
 
                   <div className="flex items-start gap-4">
                     <div
                       className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center ${
-                        accent ? 'bg-white/20' : 'bg-primary/10 text-primary'
+                        feature.accent ? 'bg-white/20' : 'bg-primary/10 text-primary'
                       }`}
                     >
-                      <Icon className={`w-6 h-6 ${accent ? 'text-white' : ''}`} />
+                      <feature.Icon className={`w-6 h-6 ${feature.accent ? 'text-white' : ''}`} />
                     </div>
                     <div>
                       <h3
-                        className={`mb-2 ${accent ? 'text-white' : 'text-charcoal'}`}
+                        className={`mb-2 ${feature.accent ? 'text-white' : 'text-charcoal'}`}
                         style={{ ...SUBHEADING, fontSize: '1.05rem' }}
                       >
-                        {title}
+                        {feature.title}
                       </h3>
                       <p
-                        className={`leading-relaxed ${accent ? 'text-white/75' : 'text-muted-green'}`}
+                        className={`leading-relaxed ${feature.accent ? 'text-white/75' : 'text-muted-green'}`}
                         style={{ fontSize: '0.95rem', lineHeight: 1.7 }}
                       >
-                        {desc}
+                        {feature.desc}
                       </p>
                     </div>
                   </div>
 
-                  {accent && (
+                  {feature.accent && (
                     <div
                       className="absolute -top-8 -right-8 w-36 h-36 rounded-full pointer-events-none"
                       style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.12), transparent 70%)' }}
@@ -726,7 +741,7 @@ export default function LandingPage() {
 
             {/* Verification step callout */}
             <Reveal className="mt-6" delay={0.08}>
-              <div className="bg-card-surface border border-gray-100 rounded-2xl px-7 py-5 flex flex-col sm:flex-row sm:items-center gap-5">
+              <div className={`${dark ? 'bg-card-surface' : 'bg-background-light'} border border-gray-100 rounded-2xl px-7 py-5 flex flex-col sm:flex-row sm:items-center gap-5`}>
                 <div className="flex items-center gap-3.5 flex-shrink-0">
                   <div className="w-11 h-11 rounded-xl bg-green-100 flex items-center justify-center flex-shrink-0">
                     <Lock className="w-5 h-5 text-green-700" />
@@ -752,7 +767,7 @@ export default function LandingPage() {
         {/* ════════════════════════════════════════════════════
             COMMUNITY TYPES
             ════════════════════════════════════════════════════ */}
-        <section id="communities" className="w-full py-16 lg:py-24 px-6 lg:px-10">
+        <section id="communities" className={`w-full py-12 lg:py-20 px-6 lg:px-10 ${dark ? '' : 'bg-background-light'}`}>
           <div className="max-w-7xl mx-auto">
 
             <Reveal className="text-center mb-14 space-y-4">
@@ -781,9 +796,9 @@ export default function LandingPage() {
               whileInView="visible"
               viewport={{ once: true, margin: '-60px' }}
             >
-              {communityTypes.map(({ Icon, label, desc }) => (
+              {communityTypes.map((communityType) => (
                 <motion.div
-                  key={label}
+                  key={communityType.label}
                   variants={fadeUp}
                   className="bg-card-surface rounded-2xl border border-gray-100 p-6 hover-lift group cursor-default"
                   whileHover={{ borderColor: 'rgba(49,129,109,0.22)' }}
@@ -795,17 +810,17 @@ export default function LandingPage() {
                       animate={{}}
                       style={{ backgroundColor: 'rgba(49,129,109,0.08)', color: 'var(--color-primary)' }}
                     >
-                      <Icon className="w-5 h-5" />
+                      <communityType.Icon className="w-5 h-5" />
                     </motion.div>
                     <h3
                       className="text-charcoal"
                       style={{ ...SUBHEADING, fontSize: '0.95rem' }}
                     >
-                      {label}
+                      {communityType.label}
                     </h3>
                   </div>
                   <p className="text-muted-green leading-relaxed" style={{ fontSize: '0.9rem', lineHeight: 1.65 }}>
-                    {desc}
+                    {communityType.desc}
                   </p>
                 </motion.div>
               ))}
@@ -859,7 +874,7 @@ export default function LandingPage() {
         {/* ════════════════════════════════════════════════════
             FINAL CTA
             ════════════════════════════════════════════════════ */}
-        <section className="w-full py-16 px-6 lg:px-10">
+        <section className={`w-full pt-10 pb-20 px-6 lg:px-10 ${dark ? 'bg-primary/6' : 'bg-card-surface'}`}>
           <div className="max-w-4xl mx-auto">
             <Reveal>
               <div

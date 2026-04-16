@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { loginUser, saveAuthData } from '../../services/authService';
 import { loginSchema } from '../../schemas/authSchemas';
@@ -24,8 +25,17 @@ const LoginForm = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
   const [showRejectionModal, setShowRejectionModal] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const passwordInputRef = React.useRef(null);
   // eslint-disable-next-line no-unused-vars -- setRejectionDetails kept for future wiring when REJECTED status returns modal
   const [rejectionDetails, setRejectionDetails] = useState({ reason: '', email: '' });
+
+  const togglePasswordVisibility = () => {
+    setShowPassword((prev) => !prev);
+    requestAnimationFrame(() => {
+      passwordInputRef.current?.focus();
+    });
+  };
 
   // 1. Define your form.
   const form = useForm({
@@ -153,7 +163,37 @@ const LoginForm = () => {
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-gray-400 text-lg">
                       lock
                     </span>
-                    <Input placeholder="••••••••" type="password" className="pl-10 bg-background-light" {...field} />
+                    <Input
+                      ref={passwordInputRef}
+                      placeholder="••••••••"
+                      type={showPassword ? 'text' : 'password'}
+                      className="pl-10 pr-10 bg-background-light"
+                      {...field}
+                    />
+                    <button
+                      type="button"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={togglePasswordVisibility}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center w-5 h-5 text-muted-green hover:text-primary transition-colors"
+                    >
+                      <span className="relative w-5 h-5 block">
+                        <span
+                          className={`absolute inset-0 flex items-center justify-center transition-all duration-150 ${
+                            showPassword ? 'opacity-0 scale-90' : 'opacity-100 scale-100'
+                          }`}
+                        >
+                          <Eye className="w-5 h-5" aria-hidden="true" />
+                        </span>
+                        <span
+                          className={`absolute inset-0 flex items-center justify-center transition-all duration-150 ${
+                            showPassword ? 'opacity-100 scale-100' : 'opacity-0 scale-90'
+                          }`}
+                        >
+                          <EyeOff className="w-5 h-5" aria-hidden="true" />
+                        </span>
+                      </span>
+                    </button>
                   </div>
                 </FormControl>
                 <FormMessage />

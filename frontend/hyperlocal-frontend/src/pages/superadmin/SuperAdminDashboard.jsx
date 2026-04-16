@@ -174,7 +174,7 @@ export default function SuperAdminDashboard() {
           icon="location_city"
           label="Active Communities"
           value={stats.activeCommunities}
-          color="primary"
+          color="purple"
         />
         <StatsCard
           icon="verified"

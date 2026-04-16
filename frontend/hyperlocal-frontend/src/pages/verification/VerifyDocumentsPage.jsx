@@ -7,6 +7,7 @@ import SubmitButton from '../../components/ui/SubmitButton';
 import { uploadDocuments } from '../../services/authService';
 import { toast } from 'sonner';
 import { documentValidation } from '../../schemas/verificationSchemas';
+import { useDarkMode } from '../../hooks/useDarkMode';
 
 /**
  * VerifyDocumentsPage (/verify/documents)
@@ -18,6 +19,7 @@ import { documentValidation } from '../../schemas/verificationSchemas';
 export default function VerifyDocumentsPage() {
   const navigate = useNavigate();
   const { updateUser } = useAuth();
+  const { dark } = useDarkMode();
   const [isLoading, setIsLoading] = useState(false);
   const [documents, setDocuments] = useState({
     governmentId: null,
@@ -129,7 +131,7 @@ export default function VerifyDocumentsPage() {
 
   return (
     <VerificationLayout stepNumber={2} totalSteps={3} title="Verify your Identity">
-      <div className="bg-white rounded-lg p-6 border border-gray-200">
+      <div className={`rounded-xl p-6 border ${dark ? 'bg-white/6 border-white/12 shadow-black/20' : 'bg-white border-gray-200 shadow-sm'} backdrop-blur-sm`}>
         <p className="text-sm text-charcoal mb-4">
           Please upload clear photos or scans of the following documents. This usually takes less
           than 2 minutes.
@@ -145,6 +147,7 @@ export default function VerifyDocumentsPage() {
             selectedFile={documents.governmentId}
             error={errors.governmentId}
             icon="badge"
+            dark={dark}
           />
 
           {/* Address Proof Upload */}
@@ -156,11 +159,12 @@ export default function VerifyDocumentsPage() {
             selectedFile={documents.addressProof}
             error={errors.addressProof}
             icon="home"
+            dark={dark}
           />
 
           {/* Security Message */}
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-            <p className="text-sm text-green-700 flex items-start gap-2">
+          <div className={`border rounded-lg p-4 ${dark ? 'bg-primary/12 border-primary/25' : 'bg-green-50 border-green-200'}`}>
+            <p className={`text-sm flex items-start gap-2 ${dark ? 'text-muted-green' : 'text-green-700'}`}>
               <span className="material-symbols-outlined shrink-0 text-lg mt-0.5">lock</span>
               Your documents are encrypted and reviewed by admins only. We never share your personal
               data.
@@ -172,7 +176,7 @@ export default function VerifyDocumentsPage() {
             <button
               type="button"
               onClick={() => navigate('/verify/profile')}
-              className="px-6 py-3 border border-gray-300 rounded-lg text-charcoal font-medium hover:bg-gray-50 transition-colors"
+              className={`px-6 py-3 border rounded-lg text-charcoal font-medium transition-colors ${dark ? 'border-white/20 hover:bg-white/8' : 'border-gray-300 hover:bg-gray-50'}`}
             >
               Back
             </button>

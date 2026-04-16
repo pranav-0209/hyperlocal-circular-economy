@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import SuperAdminLayout from '../../components/superadmin/SuperAdminLayout';
 import DataTable from '../../components/superadmin/DataTable';
+import PaginationControls from '../../components/superadmin/PaginationControls';
 import {
   getAdminCommunities,
   getAdminCommunityById,
@@ -62,10 +63,16 @@ export default function SuperAdminCommunities() {
       console.log('[Communities] GET /api/v1/admin/communities (list):', res);
       return res;
     },
-    onSuccess: (res) => {
-      setPagination((p) => ({ ...p, totalElements: res.totalElements, totalPages: res.totalPages }));
-    },
   });
+
+  const resolvedPageNumber = Number(listData?.pageNumber ?? listData?.page ?? pagination.pageNumber) || 0;
+  const resolvedPageSize = Number(listData?.pageSize ?? listData?.size ?? pagination.pageSize) || pagination.pageSize;
+  const resolvedTotalElements = Number(listData?.totalElements ?? listData?.total ?? listData?.count ?? listData?.content?.length ?? 0) || 0;
+  const resolvedTotalPages = Number(
+    listData?.totalPages
+    ?? listData?.pages
+    ?? (resolvedPageSize > 0 ? Math.ceil(resolvedTotalElements / resolvedPageSize) : 0)
+  ) || 0;
 
   const { data: activeData } = useQuery({
     queryKey: ['adminCommunities-active'],
@@ -374,27 +381,14 @@ export default function SuperAdminCommunities() {
             onRowClick={(row) => { setSelectedId(String(row.id)); setDetailMembersPage(0); }}
             emptyMessage="No communities found"
           />
-          {pagination.totalPages > 1 && (
-            <div className="mt-4 flex items-center justify-between bg-white rounded-xl border border-gray-200 p-4">
-              <p className="text-sm text-gray-500">
-                Showing {pagination.pageNumber * pagination.pageSize + 1}–
-                {Math.min((pagination.pageNumber + 1) * pagination.pageSize, pagination.totalElements)} of {pagination.totalElements}
-              </p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setPagination((p) => ({ ...p, pageNumber: p.pageNumber - 1 }))}
-                  disabled={pagination.pageNumber === 0}
-                  className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >Previous</button>
-                <span className="px-3 py-1.5 text-sm text-gray-600">{pagination.pageNumber + 1} / {pagination.totalPages}</span>
-                <button
-                  onClick={() => setPagination((p) => ({ ...p, pageNumber: p.pageNumber + 1 }))}
-                  disabled={pagination.pageNumber >= pagination.totalPages - 1}
-                  className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >Next</button>
-              </div>
-            </div>
-          )}
+          <PaginationControls
+            pageNumber={resolvedPageNumber}
+            pageSize={resolvedPageSize}
+            totalElements={resolvedTotalElements}
+            totalPages={resolvedTotalPages}
+            itemLabel="communities"
+            onPageChange={(newPage) => setPagination((p) => ({ ...p, pageNumber: newPage }))}
+          />
         </>
       )}
 

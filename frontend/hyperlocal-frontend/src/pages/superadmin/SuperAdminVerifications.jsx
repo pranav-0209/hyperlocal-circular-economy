@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import SuperAdminLayout from '../../components/superadmin/SuperAdminLayout';
 import DataTable from '../../components/superadmin/DataTable';
+import PaginationControls from '../../components/superadmin/PaginationControls';
 import { getAllUsers } from '../../services/authService';
 
 /**
@@ -55,6 +56,7 @@ export default function SuperAdminVerifications() {
         size: pagination.pageSize,
         sortBy: 'updatedAt',
         sortDir: 'desc',
+        verificationStatus: 'NOT_VERIFIED',
       };
 
       if (debouncedSearch.trim()) {
@@ -73,19 +75,19 @@ export default function SuperAdminVerifications() {
       console.log('Verifications response:', response);
       return response;
     },
-    onSuccess: (response) => {
-      setPagination({
-        pageNumber: response.page,
-        pageSize: response.size,
-        totalElements: response.totalElements,
-        totalPages: response.totalPages,
-      });
-    },
   });
+
+  const resolvedPageNumber = Number(data?.pageNumber ?? data?.page ?? pagination.pageNumber) || 0;
+  const resolvedPageSize = Number(data?.pageSize ?? data?.size ?? pagination.pageSize) || pagination.pageSize;
+  const resolvedTotalElements = Number(data?.totalElements ?? data?.total ?? data?.count ?? data?.content?.length ?? 0) || 0;
+  const resolvedTotalPages = Number(
+    data?.totalPages
+    ?? data?.pages
+    ?? (resolvedPageSize > 0 ? Math.ceil(resolvedTotalElements / resolvedPageSize) : 0)
+  ) || 0;
 
   // Process data
   const verifications = data?.content
-    .filter((user) => user.currentStep !== 'COMPLETE')
     .map((user) => ({
       id: user.id,
       name: user.name,
@@ -183,10 +185,10 @@ export default function SuperAdminVerifications() {
           DOCUMENT_VERIFICATION: 'bg-blue-100 text-blue-800 border-blue-200',
           REVIEW: 'bg-purple-100 text-purple-800 border-purple-200',
         };
+
         return (
           <span
-            className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium border ${colors[row.currentStep] || 'bg-gray-100 text-gray-800 border-gray-200'
-              }`}
+            className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium border ${colors[row.currentStep] || 'bg-gray-100 text-gray-700 border-gray-200'}`}
           >
             {row.currentStepLabel}
           </span>
@@ -344,37 +346,14 @@ export default function SuperAdminVerifications() {
             emptyMessage="🎉 No users in verification queue. All users have completed verification!"
           />
 
-          {/* Pagination */}
-          {pagination.totalPages > 1 && (
-            <div className="mt-6 flex items-center justify-between bg-white rounded-xl border border-gray-200 p-4">
-              <div className="text-sm text-gray-600">
-                Showing {pagination.pageNumber * pagination.pageSize + 1} to{' '}
-                {Math.min((pagination.pageNumber + 1) * pagination.pageSize, pagination.totalElements)} of{' '}
-                {pagination.totalElements} requests
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handlePageChange(pagination.pageNumber - 1)}
-                  disabled={pagination.pageNumber === 0}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Previous
-                </button>
-                <div className="flex items-center gap-2 px-4">
-                  <span className="text-sm text-gray-600">
-                    Page {pagination.pageNumber + 1} of {pagination.totalPages}
-                  </span>
-                </div>
-                <button
-                  onClick={() => handlePageChange(pagination.pageNumber + 1)}
-                  disabled={pagination.pageNumber >= pagination.totalPages - 1}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Next
-                </button>
-              </div>
-            </div>
-          )}
+          <PaginationControls
+            pageNumber={resolvedPageNumber}
+            pageSize={resolvedPageSize}
+            totalElements={resolvedTotalElements}
+            totalPages={resolvedTotalPages}
+            itemLabel="requests"
+            onPageChange={handlePageChange}
+          />
         </>
       )}
     </SuperAdminLayout>

@@ -4,11 +4,11 @@ import { useAuth } from '../../context/AuthContext';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import VerificationLayout from '../../components/ui/VerificationLayout';
-import FormInput from '../../components/ui/FormInput';
 import SubmitButton from '../../components/ui/SubmitButton';
 import { updateProfile } from '../../services/authService';
 import { toast } from 'sonner';
 import { profileSchema } from '../../schemas/verificationSchemas';
+import { useDarkMode } from '../../hooks/useDarkMode';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -25,6 +25,7 @@ import { Textarea } from "@/components/ui/textarea";
 export default function VerifyProfilePage() {
   const navigate = useNavigate();
   const { user, updateUser } = useAuth();
+  const { dark } = useDarkMode();
   const [isLoading, setIsLoading] = useState(false);
   const [profilePhotoFile, setProfilePhotoFile] = useState(null); // Actual file for upload
   const [profilePhotoPreview, setProfilePhotoPreview] = useState(null); // Preview URL
@@ -111,19 +112,19 @@ export default function VerifyProfilePage() {
 
   return (
     <VerificationLayout stepNumber={1} totalSteps={3} title="Build Your Profile">
-      <div className="bg-white rounded-lg p-6 border border-gray-200">
+      <div className={`rounded-xl p-6 border ${dark ? 'bg-white/6 border-white/12 shadow-black/20' : 'bg-white border-gray-200 shadow-sm'} backdrop-blur-sm`}>
         <p className="text-sm text-charcoal mb-4">
           ShareMore relies on real people. Please provide accurate details to get verified and start
           sharing with your neighbors.
         </p>
 
         <Form {...profileForm}>
-          <form onSubmit={profileForm.handleSubmit(handleSubmit)} className="space-y-4">
+          <form onSubmit={profileForm.handleSubmit(handleSubmit)} className="space-y-5">
             {/* Profile Photo Section */}
-            <div className="mb-4 pb-4 border-b border-gray-200">
+            <div className={`mb-4 pb-4 border-b ${dark ? 'border-white/12' : 'border-gray-200'}`}>
               <div className="flex items-start gap-6">
                 <div className="shrink-0">
-                  <div className="w-16 h-16 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 overflow-hidden">
+                  <div className={`w-16 h-16 rounded-full border-2 border-dashed flex items-center justify-center overflow-hidden ${dark ? 'border-white/20 bg-white/8' : 'border-gray-300 bg-gray-50'}`}>
                     {profilePhotoPreview ? (
                       <img
                         src={profilePhotoPreview}
@@ -131,7 +132,7 @@ export default function VerifyProfilePage() {
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <span className="material-symbols-outlined text-gray-400 text-4xl">
+                      <span className={`material-symbols-outlined text-4xl ${dark ? 'text-white/50' : 'text-gray-400'}`}>
                         person
                       </span>
                     )}
@@ -161,44 +162,55 @@ export default function VerifyProfilePage() {
 
             {/* Form Fields */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormInput
-                label="Full Legal Name"
-                name="fullName"
-                value={user?.name || user?.profile?.name || ''}
-                onChange={() => { }}
-                placeholder="e.g. Priya Sharma"
-                icon="person"
-                disabled={true}
-              />
-              <FormInput
-                label="Email Address"
-                name="email"
-                type="email"
-                value={user?.email || ''}
-                onChange={() => { }}
-                placeholder="e.g. priya@gmail.com"
-                icon="mail"
-                disabled={true}
-              />
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="fullName" className="text-sm font-medium text-charcoal">Full Name</label>
+                <div className="relative">
+                  <span className={`absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-xl ${dark ? 'text-white/55' : 'text-gray-400'}`}>
+                    person
+                  </span>
+                  <Input
+                    id="fullName"
+                    value={user?.name || user?.profile?.name || ''}
+                    disabled
+                    className={`pl-10 h-11 ${dark ? 'bg-white/8 border-white/12 text-charcoal' : 'bg-gray-50 border-gray-200 text-muted-green'} cursor-not-allowed`}
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="email" className="text-sm font-medium text-charcoal">Email Address</label>
+                <div className="relative">
+                  <span className={`absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-xl ${dark ? 'text-white/55' : 'text-gray-400'}`}>
+                    mail
+                  </span>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={user?.email || ''}
+                    disabled
+                    className={`pl-10 h-11 ${dark ? 'bg-white/8 border-white/12 text-charcoal' : 'bg-gray-50 border-gray-200 text-muted-green'} cursor-not-allowed`}
+                  />
+                </div>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-2">
               <FormField
                 control={profileForm.control}
                 name="phoneNumber"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="space-y-2">
                     <FormLabel>Phone Number</FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-gray-400 text-xl">
+                        <span className={`absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-xl ${dark ? 'text-white/55' : 'text-gray-400'}`}>
                           phone
                         </span>
                         <Input
                           {...field}
                           type="tel"
                           placeholder="+91 98765 43210"
-                          className="pl-10"
+                          className={`pl-10 ${dark ? 'bg-white/8 border-white/12 text-charcoal placeholder:text-muted-green/70' : ''}`}
                         />
                       </div>
                     </FormControl>
@@ -211,17 +223,17 @@ export default function VerifyProfilePage() {
                 control={profileForm.control}
                 name="address"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="space-y-2">
                     <FormLabel>Address</FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-gray-400 text-xl">
+                        <span className={`absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-xl ${dark ? 'text-white/55' : 'text-gray-400'}`}>
                           location_on
                         </span>
                         <Input
                           {...field}
                           placeholder="e.g. Pune, Maharashtra"
-                          className="pl-10"
+                          className={`pl-10 ${dark ? 'bg-white/8 border-white/12 text-charcoal placeholder:text-muted-green/70' : ''}`}
                         />
                       </div>
                     </FormControl>
@@ -236,18 +248,18 @@ export default function VerifyProfilePage() {
               control={profileForm.control}
               name="bio"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="space-y-2">
                   <FormLabel>About You</FormLabel>
                   <FormControl>
                     <div className="relative">
-                      <span className="absolute left-3 top-3 material-symbols-outlined text-gray-400 text-xl">
+                      <span className={`absolute left-3 top-3 material-symbols-outlined text-xl ${dark ? 'text-white/55' : 'text-gray-400'}`}>
                         description
                       </span>
                       <Textarea
                         {...field}
                         placeholder="I love gardening and have plenty of tools to share with the neighborhood..."
                         rows={4}
-                        className="pl-10"
+                        className={`pl-10 ${dark ? 'bg-white/8 border-white/12 text-charcoal placeholder:text-muted-green/70' : ''}`}
                       />
                     </div>
                   </FormControl>
@@ -265,8 +277,8 @@ export default function VerifyProfilePage() {
             />
 
             {/* Security Message */}
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <p className="text-sm text-green-700 flex items-start gap-2">
+            <div className={`border rounded-lg p-4 ${dark ? 'bg-primary/12 border-primary/25' : 'bg-green-50 border-green-200'}`}>
+              <p className={`text-sm flex items-start gap-2 ${dark ? 'text-muted-green' : 'text-green-700'}`}>
                 <span className="material-symbols-outlined shrink-0 text-lg mt-0.5">lock</span>
                 Your information is securely encrypted and never shared without permission.
               </p>
@@ -277,7 +289,7 @@ export default function VerifyProfilePage() {
               <button
                 type="button"
                 onClick={() => navigate('/home')}
-                className="px-6 py-3 border border-gray-300 rounded-lg text-charcoal font-medium hover:bg-gray-50 transition-colors"
+                className={`px-6 py-3 border rounded-lg text-charcoal font-medium transition-colors ${dark ? 'border-white/20 hover:bg-white/8' : 'border-gray-300 hover:bg-gray-50'}`}
               >
                 Back
               </button>
