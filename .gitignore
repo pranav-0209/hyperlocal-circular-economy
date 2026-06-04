@@ -2,7 +2,7 @@
 # Java / Maven
 # ===============================
 target/
-
+backend/hyperlocal-backend/src/test/    
 # ===============================
 # Node / React
 # ===============================
@@ -33,3 +33,24 @@ uploads/
 profile-photos/
 src/main/resources/uploads/
 src/main/resources/static/uploads/
+
+PROJECT_DOCUMENTATION.md
+backend/hyperlocal-backend/docs/
+frontend/hyperlocal-frontend/BACKEND_API_ENDPOINTS.md
+
+
+# Python
+__pycache__/
+*.pyc
+
+# Logs
+*.log
+
+# ML models
+*.pkl
+
+# Dataset (optional)
+*.csv
+
+ai-ml/hyperlocal_ai_service.postman_collection.json
+(-h)\357\200\242git log --pretty=format\357\200\272\357\200\242- -s (-h)\357\200\242
