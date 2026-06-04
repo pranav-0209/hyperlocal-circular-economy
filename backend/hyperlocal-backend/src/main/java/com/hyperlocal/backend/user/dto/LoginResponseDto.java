@@ -27,9 +27,4 @@ public class LoginResponseDto {
     private Integer trustIndex;
     private Integer trustXp;
 
-    /** IDs of all communities the user has joined (approved membership). */
-    private List<Long> joinedCommunityIds;
-
-    /** IDs of all communities the user has created. */
-    private List<Long> createdCommunityIds;
 }

@@ -140,8 +140,6 @@ public class UserService {
                 .rejectionReason(user.getRejectionReason())
                 .trustIndex(user.getTrustIndex())
                 .trustXp(user.getTrustXp())
-                .joinedCommunityIds(user.getJoinedCommunityIds())
-                .createdCommunityIds(user.getCreatedCommunityIds())
                 .build();
     }
 
