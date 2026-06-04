@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { marketplaceSchema, ITEM_CATEGORIES, CONDITIONS } from '../../schemas/marketplaceSchema';
 import { createItem, getListingCategories, updateItem } from '../../services/marketplaceService';
 import { getMyCommunities } from '../../services/communityService';
-import { suggestCategory, suggestPrice } from '../../services/aiService';
+import { suggestCategory, suggestDescription, suggestPrice } from '../../services/aiService';
 import { toast } from 'sonner';
 import 'react-day-picker/style.css';
 
@@ -294,6 +294,7 @@ const CreateItemModal = ({
     const [photos, setPhotos] = useState([]);
     const [aiPriceLoading, setAiPriceLoading] = useState(false);
     const [aiCatLoading, setAiCatLoading] = useState(false);
+    const [aiDescriptionLoading, setAiDescriptionLoading] = useState(false);
     const wasOpenRef = useRef(false);
     const isEditMode = mode === 'edit';
 
@@ -331,6 +332,13 @@ const CreateItemModal = ({
         defaultValues: DEFAULT_FORM_VALUES,
     });
     const selectedAvailableFrom = form.watch('availableFrom');
+    const watchedTitle = form.watch('title');
+    const watchedCategory = form.watch('category');
+    const watchedCondition = form.watch('condition');
+
+    const canGenerateDescription = useMemo(() => {
+        return Boolean(watchedTitle?.trim() && watchedCategory && watchedCondition);
+    }, [watchedTitle, watchedCategory, watchedCondition]);
 
     const resetTransientState = () => {
         setPhotos([]);
@@ -439,6 +447,33 @@ const CreateItemModal = ({
             toast.error(error?.message || 'Unable to fetch AI category suggestion.');
         } finally {
             setAiCatLoading(false);
+        }
+    };
+
+    const handleGenerateDescription = async () => {
+        const title = form.getValues('title')?.trim();
+        const category = form.getValues('category');
+        const condition = form.getValues('condition');
+
+        if (!title || !category || !condition) {
+            toast.info('Please enter item title, category, and condition before generating a description.');
+            return;
+        }
+
+        setAiDescriptionLoading(true);
+        try {
+            const description = await suggestDescription({
+                title,
+                category,
+                condition,
+            });
+
+            form.setValue('description', description, { shouldValidate: true, shouldDirty: true });
+            toast.success('AI description generated.');
+        } catch (error) {
+            toast.error(error?.message || 'Unable to generate AI description.');
+        } finally {
+            setAiDescriptionLoading(false);
         }
     };
 
@@ -622,22 +657,6 @@ const CreateItemModal = ({
                             </FormItem>
                         )} />
 
-                        {/* Description */}
-                        <FormField control={form.control} name="description" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Description <span className="text-red-500">*</span></FormLabel>
-                                <FormControl>
-                                    <Textarea
-                                        placeholder="Describe the item — features, what's included, any wear, size or usage notes…"
-                                        rows={3}
-                                        {...field}
-                                        className="rounded-xl resize-none"
-                                    />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )} />
-
                         {/* Condition + Price/day */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <FormField control={form.control} name="condition" render={({ field }) => (
@@ -690,6 +709,37 @@ const CreateItemModal = ({
                                 </FormItem>
                             )} />
                         </div>
+
+                        {/* Description */}
+                        <FormField control={form.control} name="description" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="flex items-center justify-between gap-3">
+                                    <span>Description <span className="text-red-500">*</span></span>
+                                    <button
+                                        type="button"
+                                        onClick={handleGenerateDescription}
+                                        disabled={aiDescriptionLoading}
+                                        className={`flex items-center gap-1.5 h-8 px-3 rounded-xl text-xs font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 transition-colors disabled:opacity-60 whitespace-nowrap ${
+                                            !canGenerateDescription ? 'opacity-80' : ''
+                                        }`}
+                                    >
+                                        {aiDescriptionLoading
+                                            ? <span className="material-symbols-outlined text-sm animate-spin">progress_activity</span>
+                                            : <span className="material-symbols-outlined text-sm">auto_awesome</span>}
+                                        AI Generate
+                                    </button>
+                                </FormLabel>
+                                <FormControl>
+                                    <Textarea
+                                        placeholder="Describe the item — features, what's included, any wear, size or usage notes…"
+                                        rows={3}
+                                        {...field}
+                                        className="rounded-xl resize-none"
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
 
                         {/* Availability Window */}
                         <div className="space-y-4 p-4 bg-gray-50 rounded-2xl border border-gray-200">

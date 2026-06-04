@@ -111,3 +111,24 @@ export const suggestPrice = async ({ itemName, category, condition }) => {
 
   return price;
 };
+
+export const suggestDescription = async ({ title, category, condition }) => {
+  const trimmedTitle = title?.trim();
+
+  if (!trimmedTitle || !category || !condition) {
+    throw new Error('Item title, category, and condition are required for description generation.');
+  }
+
+  const response = await callAiApi('/ai/listing-enhancement', {
+    title: trimmedTitle,
+    category,
+    condition,
+  });
+
+  const description = response?.description?.trim();
+  if (!description) {
+    throw new Error(response?.error || 'AI service returned an empty description.');
+  }
+
+  return description;
+};
