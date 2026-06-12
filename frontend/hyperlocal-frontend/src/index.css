@@ -13,7 +13,7 @@
 
 /* 4. Theme + custom styles */
 @theme {
-  --color-primary: #058074;
+  --color-primary: #00a18f;
   --color-primary-dark: #0d544e;
   --color-accent: #d97757;
   --color-background-light: #f5f8f7;
@@ -41,12 +41,43 @@ body {
 }
 
 /* ============================================================
-   DARK MODE TOKENS
+   DARK MODE TOKENS & BRAND SYSTEM VARIABLES
    ============================================================ */
+:root {
+  /* Surface colors */
+  --hero-bg-base: #f8faf9;
+  
+  /* Brand gradients */
+  --gradient-brand: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+  --gradient-brand-hover: linear-gradient(135deg, #069688 0%, var(--color-primary) 100%);
+  
+  /* Glow effects */
+  --hero-glow-1: rgba(5, 128, 116, 0.12);
+  --hero-glow-2: rgba(217, 119, 87, 0.08);
+  --grid-line: rgba(5, 128, 116, 0.035);
+  
+  /* Button shadows */
+  --shadow-primary-btn: 0 4px 14px rgba(5, 128, 116, 0.22);
+  --shadow-primary-btn-hover: 0 10px 22px rgba(5, 128, 116, 0.38);
+}
+
 :root[data-theme="dark"] {
   --color-background-light: #0d1f1b;
   --color-charcoal: #e2ede9;
   --color-muted-green: #9ec8bf;
+  
+  /* Surface colors */
+  --hero-bg-base: #0d1f1b;
+  
+  /* Glow effects */
+  --hero-glow-1: rgba(5, 128, 116, 0.22);
+  --hero-glow-2: rgba(217, 119, 87, 0.12);
+  --grid-line: rgba(255, 255, 255, 0.02);
+  
+  /* Button shadows */
+  --shadow-primary-btn: 0 4px 16px rgba(5, 128, 116, 0.3);
+  --shadow-primary-btn-hover: 0 10px 24px rgba(5, 128, 116, 0.48);
+  
   color-scheme: dark;
 }
 
@@ -133,23 +164,149 @@ body {
 }
 
 /* ============================================================
-   HERO GRADIENT MESH BACKGROUND
+   HERO ENTERPRISE BACKGROUND & LAYERS
    ============================================================ */
-.hero-mesh {
+.hero-section {
   position: relative;
-  background: linear-gradient(135deg, #0d1f1b 0%, #1a3329 50%, #0d1f1b 100%);
+  /* background-color: var(--color-background); */
+  z-index: 0;
+}
+
+.hero-grid-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      var(--grid-line) 0px,
+      var(--grid-line) 1px,
+      transparent 1px,
+      transparent 40px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      var(--grid-line) 0px,
+      var(--grid-line) 1px,
+      transparent 1px,
+      transparent 40px
+    );
+
+  -webkit-mask-image: radial-gradient(
+    circle at 50% 45%,
+    rgba(0, 0, 0, 0.3) 0%,
+    rgba(0, 0, 0, 0.6) 40%,
+    rgba(0, 0, 0, 0.95) 80%,
+    #000000 100%
+  );
+
+  mask-image: radial-gradient(
+    circle at 50% 45%,
+    rgba(0, 0, 0, 0.3) 0%,
+    rgba(0, 0, 0, 0.6) 40%,
+    rgba(0, 0, 0, 0.95) 80%,
+    #000000 100%
+  );
+
+  z-index: 1;
+}
+
+.hero-radial-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 45%, var(--hero-glow-1) 0%, transparent 60%),
+    radial-gradient(circle at 45% 40%, var(--hero-glow-2) 0%, transparent 50%);
+  filter: blur(80px);
+  z-index: 2;
+  opacity: 0.9;
+}
+
+.brand-btn-primary {
+  background: var(--gradient-brand);
+  color: #ffffff;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+  box-shadow: var(--shadow-primary-btn);
+  cursor: pointer;
+}
+
+.brand-btn-primary:hover {
+  background: var(--gradient-brand-hover);
+  box-shadow: var(--shadow-primary-btn-hover);
+}
+
+.hero-secondary-btn {
+  background-color: rgba(255, 255, 255, 0.65);
+  color: var(--color-charcoal);
+  border-color: rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.01);
+}
+
+.hero-secondary-btn:hover {
+  background-color: rgba(255, 255, 255, 0.95);
+  border-color: rgba(5, 128, 116, 0.22);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+}
+
+:root[data-theme="dark"] .hero-secondary-btn {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: #e2ede9;
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+:root[data-theme="dark"] .hero-secondary-btn:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+.btn-white-on-primary {
+  background-color: #ffffff;
+  color: var(--color-primary-dark);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+  transition: background-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+}
+
+.btn-white-on-primary:hover {
+  background-color: #f3f5f4;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.16);
+  color: var(--color-primary);
+}
+
+/* ============================================================
+   INVITE SYSTEM & FINAL CTA CULMINATION
+   ============================================================ */
+.invite-code-card {
+  background: var(--gradient-brand);
+  position: relative;
+}
+
+.brand-gradient-card {
+  background: var(--gradient-brand);
+  position: relative;
+  box-shadow: 0 20px 40px -10px rgba(5, 128, 116, 0.25);
+}
+
+.final-cta-section {
+  position: relative;
+  background-color: var();
+  border-top: 1px solid rgba(5, 128, 116, 0.06);
+  z-index: 0;
   overflow: hidden;
 }
 
-.hero-mesh::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(ellipse 60% 50% at 20% 30%, rgba(49, 129, 109, 0.35) 0%, transparent 60%),
-    radial-gradient(ellipse 50% 60% at 80% 70%, rgba(217, 119, 87, 0.2) 0%, transparent 60%),
-    radial-gradient(ellipse 40% 40% at 60% 20%, rgba(49, 129, 109, 0.15) 0%, transparent 50%);
-  z-index: 0;
+:root[data-theme="dark"] .final-cta-section {
+  border-top-color: rgba(255, 255, 255, 0.05);
 }
 
 /* ============================================================

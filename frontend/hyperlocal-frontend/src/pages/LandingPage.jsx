@@ -121,8 +121,8 @@ export default function LandingPage() {
   /* ── Data ──────────────────────────────────────────────── */
   const navLinks = [
     { label: 'How It Works', href: '#how-it-works' },
-    { label: 'Features',     href: '#features' },
-    { label: 'Communities',  href: '#communities' },
+    { label: 'Features', href: '#features' },
+    { label: 'Communities', href: '#communities' },
   ];
 
   const steps = [
@@ -240,9 +240,8 @@ export default function LandingPage() {
           ══════════════════════════════════════════════════════ */}
       <header
         style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50 }}
-        className={`glass-nav transition-all duration-300 ${
-          scrolled ? 'shadow-[0_1px_20px_rgba(0,0,0,0.09)] border-b border-gray-200/70' : 'border-b border-transparent'
-        }`}
+        className={`glass-nav transition-all duration-300 ${scrolled ? 'shadow-[0_1px_20px_rgba(0,0,0,0.09)] border-b border-gray-200/70' : 'border-b border-transparent'
+          }`}
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between h-[70px]">
 
@@ -326,7 +325,7 @@ export default function LandingPage() {
             <button
               id="nav-join"
               onClick={() => navigate(ROUTES.REGISTER)}
-              className="btn-ripple px-5 py-2 bg-primary text-white text-[0.9rem] font-bold rounded-xl shadow-sm shadow-primary/25 hover:brightness-110 transition-all"
+              className="brand-btn-primary px-5 py-2 text-[0.9rem] rounded-xl"
             >
               Get Started
             </button>
@@ -384,7 +383,7 @@ export default function LandingPage() {
                   </button>
                   <button
                     onClick={() => { navigate(ROUTES.REGISTER); setMenuOpen(false); }}
-                    className="flex-1 py-2.5 text-sm font-bold rounded-xl bg-primary text-white"
+                    className="brand-btn-primary flex-1 py-2.5 text-sm rounded-xl"
                   >
                     Get Started
                   </button>
@@ -395,43 +394,36 @@ export default function LandingPage() {
         </AnimatePresence>
       </header>
 
-      {/* Fixed nav spacer */}
-      <div style={{ height: '70px' }} aria-hidden="true" />
-
       <main>
         {/* ════════════════════════════════════════════════════
             HERO
             ════════════════════════════════════════════════════ */}
-        <section className="relative hero-mesh min-h-[88vh] flex items-center justify-center px-6 lg:px-10 py-24 overflow-hidden">
+        <section className={`relative hero-section min-h-[88vh] flex items-center justify-center px-6 lg:px-10 pt-36 pb-24 overflow-hidden ${dark ? 'bg-primary/6' : 'bg-card-surface'}`}>
 
-          {/* Decorative blobs */}
-          <div
-            className="absolute top-1/3 left-1/4 w-[480px] h-[480px] rounded-full pointer-events-none animate-blob opacity-20"
-            style={{ background: 'radial-gradient(circle, #31816d, transparent 65%)', filter: 'blur(72px)' }}
-          />
-          <div
-            className="absolute bottom-1/4 right-1/4 w-[360px] h-[360px] rounded-full pointer-events-none animate-blob-reverse animation-delay-2000 opacity-12"
-            style={{ background: 'radial-gradient(circle, #d97757, transparent 65%)', filter: 'blur(60px)' }}
-          />
+          {/* Grid overlay */}
+          <div className="hero-grid-overlay" />
+
+          {/* Radial glow */}
+          <div className="hero-radial-glow" />
 
           <div className="relative z-10 max-w-4xl mx-auto text-center">
 
             {/* Pill label */}
             <motion.div
-              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-white/15 mb-9 backdrop-blur-sm"
+              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/8 border border-primary/15 mb-9 backdrop-blur-sm"
               initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.05 }}
             >
-              <MapPin className="w-3.5 h-3.5 text-primary/90" />
-              <span className="text-[0.78rem] font-semibold text-white/70 tracking-wide">
+              <MapPin className="w-3.5 h-3.5 text-primary" />
+              <span className="text-[0.78rem] font-semibold text-muted-green tracking-wide">
                 Hyperlocal · Verified Members Only
               </span>
             </motion.div>
 
             {/* Headline */}
             <motion.h1
-              className="text-white leading-[1.07] tracking-tight"
+              className="text-charcoal leading-[1.07] tracking-tight"
               style={{
                 ...HEADING,
                 fontSize: 'clamp(2.8rem, 6.5vw, 5rem)',
@@ -447,7 +439,7 @@ export default function LandingPage() {
 
             {/* Sub-text */}
             <motion.p
-              className="mt-7 text-white/65 leading-relaxed max-w-2xl mx-auto"
+              className="mt-7 text-muted-green leading-relaxed max-w-2xl mx-auto"
               style={{ fontSize: 'clamp(1.05rem, 2vw, 1.2rem)', lineHeight: 1.75 }}
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
@@ -467,19 +459,19 @@ export default function LandingPage() {
               <motion.button
                 id="hero-cta-primary"
                 onClick={() => navigate(ROUTES.REGISTER)}
-                className="btn-ripple group w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-4 bg-primary text-white font-bold rounded-2xl shadow-xl shadow-primary/30 hover:brightness-110 transition-all text-[0.95rem]"
-                whileHover={{ scale: 1.04 }}
-                whileTap={{ scale: 0.97 }}
+                className="brand-btn-primary group w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-4 rounded-2xl text-[0.95rem]"
+                whileHover={{ scale: 1.03, y: -2 }}
+                whileTap={{ scale: 0.98 }}
               >
                 Create an Account
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300 ease-out" />
               </motion.button>
               <motion.button
                 id="hero-cta-secondary"
                 onClick={() => navigate(ROUTES.LOGIN)}
-                className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-4 bg-white/10 text-white font-bold rounded-2xl border border-white/20 hover:bg-white/18 backdrop-blur-sm transition-all text-[0.95rem]"
-                whileHover={{ scale: 1.04 }}
-                whileTap={{ scale: 0.97 }}
+                className="hero-secondary-btn w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-4 font-bold rounded-2xl border text-[0.95rem]"
+                whileHover={{ scale: 1.03, y: -2 }}
+                whileTap={{ scale: 0.98 }}
               >
                 I already have an account
                 <ChevronRight className="w-4 h-4 opacity-60" />
@@ -488,7 +480,7 @@ export default function LandingPage() {
 
             {/* Fine print */}
             <motion.p
-              className="mt-8 text-white/32 text-[0.8rem]"
+              className="mt-8 text-muted-green/70 text-[0.8rem]"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5, delay: 0.6 }}
@@ -498,7 +490,7 @@ export default function LandingPage() {
           </div>
 
           {/* Bottom fade */}
-          <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-background-light/30 to-transparent pointer-events-none" />
+          <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-background-light to-transparent pointer-events-none" />
         </section>
 
         {/* ════════════════════════════════════════════════════
@@ -639,14 +631,16 @@ export default function LandingPage() {
 
             {/* CTA below steps */}
             <Reveal className="mt-14 text-center" delay={0.06}>
-              <button
+              <motion.button
                 id="hiw-cta"
                 onClick={() => navigate(ROUTES.REGISTER)}
-                className="btn-ripple inline-flex items-center gap-2 px-7 py-3.5 bg-primary text-white text-[0.9rem] font-bold rounded-xl shadow-md shadow-primary/20 hover:brightness-110 transition-all"
+                className="brand-btn-primary group inline-flex items-center gap-2 px-7 py-3.5 rounded-xl text-[0.9rem]"
+                whileHover={{ scale: 1.03, y: -2 }}
+                whileTap={{ scale: 0.98 }}
               >
                 Start the process
-                <ArrowRight className="w-4 h-4" />
-              </button>
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300 ease-out" />
+              </motion.button>
             </Reveal>
           </div>
         </section>
@@ -687,31 +681,28 @@ export default function LandingPage() {
                 <motion.div
                   key={feature.title}
                   variants={fadeUp}
-                  className={`rounded-2xl p-8 border flex flex-col gap-5 hover-lift relative overflow-hidden ${
-                    feature.accent
-                      ? 'bg-primary text-white border-primary shadow-xl shadow-primary/20'
-                      : `${dark ? 'bg-card-surface' : 'bg-background-light'} text-charcoal border-gray-100`
-                  }`}
-                  whileHover={feature.accent ? {} : { borderColor: 'rgba(49,129,109,0.22)' }}
+                  className={`rounded-2xl p-8 border flex flex-col gap-5 hover-lift relative overflow-hidden ${feature.accent
+                    ? 'brand-gradient-card text-white border-transparent shadow-xl shadow-primary/25'
+                    : `${dark ? 'bg-card-surface' : 'bg-background-light'} text-charcoal border-gray-100`
+                    }`}
+                  whileHover={feature.accent ? { scale: 1.01 } : { borderColor: 'rgba(49,129,109,0.22)' }}
                 >
                   {/* Tag */}
                   <span
-                    className={`self-start text-[0.7rem] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${
-                      feature.accent
-                        ? 'bg-white/15 text-white/90'
-                        : 'bg-primary/8 text-primary border border-primary/15'
-                    }`}
+                    className={`self-start text-[0.7rem] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${feature.accent
+                      ? 'bg-white/15 text-white border border-white/20'
+                      : 'bg-primary/8 text-primary border border-primary/15'
+                      }`}
                   >
                     {feature.tag}
                   </span>
 
                   <div className="flex items-start gap-4">
                     <div
-                      className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center ${
-                        feature.accent ? 'bg-white/20' : 'bg-primary/10 text-primary'
-                      }`}
+                      className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center ${feature.accent ? 'bg-white/15 text-white' : 'bg-primary/10 text-primary'
+                        }`}
                     >
-                      <feature.Icon className={`w-6 h-6 ${feature.accent ? 'text-white' : ''}`} />
+                      <feature.Icon className="w-6 h-6" />
                     </div>
                     <div>
                       <h3
@@ -721,7 +712,7 @@ export default function LandingPage() {
                         {feature.title}
                       </h3>
                       <p
-                        className={`leading-relaxed ${feature.accent ? 'text-white/75' : 'text-muted-green'}`}
+                        className={`leading-relaxed ${feature.accent ? 'text-white/80' : 'text-muted-green'}`}
                         style={{ fontSize: '0.95rem', lineHeight: 1.7 }}
                       >
                         {feature.desc}
@@ -731,8 +722,8 @@ export default function LandingPage() {
 
                   {feature.accent && (
                     <div
-                      className="absolute -top-8 -right-8 w-36 h-36 rounded-full pointer-events-none"
-                      style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.12), transparent 70%)' }}
+                      className="absolute -top-8 -right-8 w-36 h-36 rounded-full pointer-events-none opacity-20"
+                      style={{ background: 'radial-gradient(circle, var(--color-accent), transparent 70%)' }}
                     />
                   )}
                 </motion.div>
@@ -829,18 +820,17 @@ export default function LandingPage() {
             {/* Invite-code callout */}
             <Reveal className="mt-10" delay={0.1}>
               <div
-                className="rounded-2xl p-8 text-white relative overflow-hidden"
-                style={{ background: 'linear-gradient(135deg, #111816 0%, #1e3530 100%)' }}
+                className="invite-code-card rounded-2xl p-8 sm:p-10 text-white relative overflow-hidden shadow-xl shadow-primary/10"
               >
                 <div
-                  className="absolute top-0 right-0 w-64 h-64 rounded-full pointer-events-none opacity-10"
-                  style={{ background: 'radial-gradient(circle, #31816d, transparent 70%)', transform: 'translate(30%, -30%)' }}
+                  className="absolute top-0 right-0 w-64 h-64 rounded-full pointer-events-none opacity-15"
+                  style={{ background: 'radial-gradient(circle, var(--color-accent), transparent 70%)', transform: 'translate(30%, -30%)' }}
                 />
                 <div className="relative z-10 flex flex-col lg:flex-row lg:items-center gap-7">
                   <div className="flex-1 space-y-3">
                     <div className="flex items-center gap-2">
-                      <Key className="w-4 h-4 text-primary/90" />
-                      <span className="text-[0.72rem] font-bold text-primary/90 uppercase tracking-widest">
+                      <Key className="w-4 h-4 text-white" />
+                      <span className="text-[0.72rem] font-bold text-white uppercase tracking-widest">
                         Invite Code System
                       </span>
                     </div>
@@ -850,20 +840,22 @@ export default function LandingPage() {
                     >
                       Private by design — only people you invite can join.
                     </h3>
-                    <p className="text-white/55 leading-relaxed" style={{ fontSize: '0.95rem', lineHeight: 1.7 }}>
+                    <p className="text-white/70 leading-relaxed font-medium" style={{ fontSize: '0.95rem', lineHeight: 1.7 }}>
                       Create a community and get an auto-generated invite code. Share it with your neighbours or
                       colleagues. You control who gets in and whether requests need approval.
                     </p>
                   </div>
                   <div className="flex-shrink-0">
-                    <button
+                    <motion.button
                       id="community-cta"
                       onClick={() => navigate(ROUTES.REGISTER)}
-                      className="btn-ripple inline-flex items-center gap-2 px-7 py-3.5 bg-primary text-white text-[0.9rem] font-bold rounded-xl hover:brightness-110 transition-all shadow-md shadow-primary/25"
+                      className="btn-white-on-primary inline-flex items-center gap-2 px-7 py-3.5 font-bold rounded-xl text-[0.9rem]"
+                      whileHover={{ scale: 1.03, y: -2 }}
+                      whileTap={{ scale: 0.98 }}
                     >
                       Create a Community
                       <ArrowUpRight className="w-4 h-4" />
-                    </button>
+                    </motion.button>
                   </div>
                 </div>
               </div>
@@ -872,66 +864,145 @@ export default function LandingPage() {
         </section>
 
         {/* ════════════════════════════════════════════════════
-            FINAL CTA
-            ════════════════════════════════════════════════════ */}
-        <section className={`w-full pt-10 pb-20 px-6 lg:px-10 ${dark ? 'bg-primary/6' : 'bg-card-surface'}`}>
-          <div className="max-w-4xl mx-auto">
+    FINAL CTA - REDESIGNED CULMINATION
+    ════════════════════════════════════════════════════ */}
+        <section className={`final-cta-section w-full py-24 px-6 lg:px-1 overflow-hidden ${dark ? 'bg-primary/6' : 'bg-card-surface'}`}>
+          <div className="max-w-7xl mx-auto">
             <Reveal>
-              <div
-                className="rounded-3xl overflow-hidden relative px-8 sm:px-14 py-16 text-center"
-                style={{ background: 'linear-gradient(135deg, #0d1f1b 0%, #1a3329 55%, #0d1f1b 100%)' }}
-              >
-                <div
-                  className="absolute top-0 left-1/2 w-72 h-72 rounded-full pointer-events-none opacity-15 animate-blob"
-                  style={{ background: 'radial-gradient(circle, #31816d, transparent 70%)', filter: 'blur(56px)', transform: 'translate(-50%, -30%)' }}
-                />
-                <Leaf className="absolute bottom-5 right-7 w-28 h-28 text-white opacity-[0.04] pointer-events-none" />
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
 
-                <div className="relative z-10 space-y-5">
-                  <span className="inline-block text-[0.72rem] font-bold text-primary/90 uppercase tracking-widest px-3 py-1 rounded-full bg-primary/15">
-                    Ready?
-                  </span>
-                  <h2
-                    className="text-white"
-                    style={{
-                      ...HEADING,
-                      fontSize: 'clamp(1.9rem, 4.5vw, 2.9rem)',
-                    }}
-                  >
-                    Start sharing with the people
-                    <br />
-                    <span className="gradient-text">already around you.</span>
-                  </h2>
-                  <p
-                    className="text-white/50 max-w-md mx-auto"
-                    style={{ fontSize: '1rem', lineHeight: 1.75 }}
-                  >
-                    Register, complete your identity verification, and join or create a community.
-                    Free to get started.
-                  </p>
-                  <div className="pt-3 flex flex-col sm:flex-row gap-3 justify-center">
-                    <motion.button
-                      id="final-cta-register"
-                      onClick={() => navigate(ROUTES.REGISTER)}
-                      className="btn-ripple inline-flex items-center justify-center gap-2 px-9 py-4 bg-primary text-white text-[0.95rem] font-bold rounded-2xl shadow-lg shadow-primary/25 hover:brightness-110 transition-all"
-                      whileHover={{ scale: 1.04 }}
-                      whileTap={{ scale: 0.97 }}
+                {/* Left Column: Outcomes & Value Props */}
+                <div className="lg:col-span-7 space-y-8 text-left">
+                  <div className="space-y-4">
+                    <span className="inline-block text-[0.75rem] font-bold text-primary uppercase tracking-widest px-3 py-1 rounded-full bg-primary/8">
+                      Join ShareMore
+                    </span>
+
+                    <h2
+                      className="text-charcoal leading-[1.15] tracking-tight"
+                      style={{
+                        ...HEADING,
+                        fontSize: 'clamp(2.2rem, 4vw, 3.2rem)',
+                      }}
                     >
-                      Create an Account
-                      <ArrowRight className="w-4 h-4" />
-                    </motion.button>
-                    <button
-                      id="final-cta-login"
-                      onClick={() => navigate(ROUTES.LOGIN)}
-                      className="inline-flex items-center justify-center gap-2 px-9 py-4 bg-white/8 border border-white/15 text-white text-[0.95rem] font-bold rounded-2xl hover:bg-white/14 backdrop-blur-sm transition-all"
-                    >
-                      Log In
-                    </button>
+                      Borrow, share, and build a <br />
+                      <span className="gradient-text">
+                        sustainable community.
+                      </span>
+                    </h2>
+
+                    <p className="text-muted-green max-w-xl text-[1.05rem] leading-relaxed">
+                      Why buy when you can borrow? Connect with verified neighbors
+                      to share tools, equipment, and electronics safely. Together,
+                      we reduce waste, save money, and foster real local collaboration.
+                    </p>
                   </div>
-                  <p className="text-white/28 text-[0.8rem]">
-                    Free to join · Identity verification required · Private communities
-                  </p>
+
+                  {/* Outcome Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
+                    {[
+                      {
+                        title: 'Zero Waste Sharing',
+                        desc: 'Keep functional items in circulation and reduce local waste.',
+                      },
+                      {
+                        title: '100% Verified Members',
+                        desc: 'Every neighbor undergoes identity review for absolute peace of mind.',
+                      },
+                      {
+                        title: 'Invite-Only Privacy',
+                        desc: 'Your listings and community circles stay strictly confidential.',
+                      },
+                      {
+                        title: 'Zero Rental Fees',
+                        desc: 'Completely free neighbor-to-neighbor exchanges based on trust.',
+                      },
+                    ].map((item, index) => (
+                      <div key={index} className="flex gap-3">
+                        <div className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center mt-1">
+                          <svg
+                            className="w-3.5 h-3.5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth="3"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                        </div>
+
+                        <div>
+                          <h4 className="font-bold text-[0.95rem] text-charcoal">
+                            {item.title}
+                          </h4>
+                          <p className="text-[0.85rem] text-muted-green leading-snug">
+                            {item.desc}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
+
+                {/* Right Column: CTA Card */}
+                <div className="lg:col-span-5">
+                  <div className="relative overflow-hidden rounded-3xl  border border-gray-100 p-8 sm:p-10 shadow-[0_20px_50px_rgba(0,0,0,0.04)]">
+
+                    {/* Internal Glow */}
+                    <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-primary/5 blur-3xl pointer-events-none" />
+
+                    <div className="relative z-10 space-y-6 text-center lg:text-left">
+                      <div className="space-y-2">
+                        <h3
+                          className="text-[1.3rem] text-charcoal"
+                          style={HEADING}
+                        >
+                          Get Started Today
+                        </h3>
+
+                        <p className="text-muted-green text-sm">
+                          Create an account or start a neighborhood circle in under
+                          two minutes.
+                        </p>
+                      </div>
+
+                      <div className="space-y-3 pt-2">
+                        <motion.button
+                          id="final-cta-register"
+                          onClick={() => navigate(ROUTES.REGISTER)}
+                          className="brand-btn-primary group w-full flex items-center justify-center gap-2 px-8 py-4 rounded-2xl text-[0.95rem]"
+                          whileHover={{ scale: 1.03, y: -2 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          Create an Account
+                          <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300 ease-out" />
+                        </motion.button>
+
+                        <motion.button
+                          id="final-cta-login"
+                          onClick={() => navigate(ROUTES.LOGIN)}
+                          className="hero-secondary-btn w-full flex items-center justify-center gap-2 px-8 py-4 font-bold rounded-2xl border text-[0.95rem]"
+                          whileHover={{ scale: 1.03, y: -2 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          Log In to Your Circle
+                        </motion.button>
+                      </div>
+
+                      <div className="pt-2 border-t border-gray-100">
+                        <p className="text-[0.78rem] text-muted-green/60 text-center lg:text-left">
+                          Identity verification required · Free to join · Secure data encryption
+                        </p>
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+
               </div>
             </Reveal>
           </div>
@@ -966,16 +1037,16 @@ export default function LandingPage() {
                 title: 'Platform',
                 links: [
                   { label: 'How It Works', href: '#how-it-works' },
-                  { label: 'Features',      href: '#features' },
+                  { label: 'Features', href: '#features' },
                   { label: 'Community Types', href: '#communities' },
-                  { label: 'Marketplace',   href: ROUTES.DISCOVER ?? '#' },
+                  { label: 'Marketplace', href: ROUTES.DISCOVER ?? '#' },
                 ],
               },
               {
                 title: 'Company',
                 links: [
-                  { label: 'About',           href: '#' },
-                  { label: 'Privacy Policy',  href: '#' },
+                  { label: 'About', href: '#' },
+                  { label: 'Privacy Policy', href: '#' },
                   { label: 'Terms of Service', href: '#' },
                 ],
               },
@@ -983,7 +1054,7 @@ export default function LandingPage() {
                 title: 'Support',
                 links: [
                   { label: 'Help Center', href: '#' },
-                  { label: 'Contact Us',  href: '#' },
+                  { label: 'Contact Us', href: '#' },
                 ],
               },
             ].map((col) => (
