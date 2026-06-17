@@ -6,7 +6,7 @@ import { useDarkMode } from '../../hooks/useDarkMode';
  * ProfileAvatar Component
  * Displays user avatar with initials or photo and dropdown menu
  */
-export default function ProfileAvatar({ user, onLogout }) {
+export default function ProfileAvatar({ user, onLogout, hideProfileOption = false }) {
     const [showDropdown, setShowDropdown] = useState(false);
     const dropdownRef = useRef(null);
     const navigate = useNavigate();
@@ -82,26 +82,28 @@ export default function ProfileAvatar({ user, onLogout }) {
                         <p className="text-sm text-muted-green">{user?.email || ''}</p>
                     </div>
 
-                    {/* Menu Items */}
-                    <div className="py-1">
-                        <button
-                            onClick={() => {
-                                if (!canAccessProfile) return;
-                                setShowDropdown(false);
-                                navigate('/profile');
-                            }}
-                            disabled={!canAccessProfile}
-                            title={!canAccessProfile ? 'Complete 100% verification and get approved to access profile' : 'Open profile'}
-                            className={`w-full px-4 py-2.5 text-left text-base transition-colors flex items-center gap-3 ${
-                                canAccessProfile
-                                    ? dark ? 'text-white/90 hover:bg-white/8' : 'text-charcoal hover:bg-gray-50'
-                                    : dark ? 'text-white/45 cursor-not-allowed' : 'text-muted-green/70 cursor-not-allowed'
-                            }`}
-                        >
-                            <span className="material-symbols-outlined text-xl">{canAccessProfile ? 'person' : 'lock'}</span>
-                            {canAccessProfile ? 'Profile' : 'Profile (Locked)'}
-                        </button>
-                    </div>
+                    {/* Menu Items — only shown when user has communities */}
+                    {!hideProfileOption && (
+                        <div className="py-1">
+                            <button
+                                onClick={() => {
+                                    if (!canAccessProfile) return;
+                                    setShowDropdown(false);
+                                    navigate('/profile');
+                                }}
+                                disabled={!canAccessProfile}
+                                title={!canAccessProfile ? 'Complete 100% verification and get approved to access profile' : 'Open profile'}
+                                className={`w-full px-4 py-2.5 text-left text-base transition-colors flex items-center gap-3 ${
+                                    canAccessProfile
+                                        ? dark ? 'text-white/90 hover:bg-white/8' : 'text-charcoal hover:bg-gray-50'
+                                        : dark ? 'text-white/45 cursor-not-allowed' : 'text-muted-green/70 cursor-not-allowed'
+                                }`}
+                            >
+                                <span className="material-symbols-outlined text-xl">{canAccessProfile ? 'person' : 'lock'}</span>
+                                {canAccessProfile ? 'Profile' : 'Profile (Locked)'}
+                            </button>
+                        </div>
+                    )}
 
                     {/* Logout */}
                     <div className={`border-t pt-1 ${dark ? 'border-white/10' : 'border-gray-100'}`}>

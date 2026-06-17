@@ -484,7 +484,8 @@ export default function ProfilePage() {
                                             <circle cx="18" cy="18" r="15.9" fill="none" stroke="#e5e7eb" strokeWidth="3" />
                                             <circle
                                                 cx="18" cy="18" r="15.9" fill="none" stroke="currentColor" strokeWidth="3"
-                                                strokeDasharray={`${trustIndex} 100`}
+                                                strokeDasharray="100"
+                                                strokeDashoffset={`${100 - trustIndex}`}
                                                 strokeLinecap="round"
                                                 className="text-primary transition-all duration-700"
                                             />

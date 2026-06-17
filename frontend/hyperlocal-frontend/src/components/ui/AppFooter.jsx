@@ -14,13 +14,6 @@ export default function AppFooter() {
 
         {/* Copyright */}
         <p className="text-xs text-muted-green">© 2026 ShareMore. Building circular communities.</p>
-
-        {/* Links */}
-        <div className="flex items-center gap-4 text-xs text-muted-green">
-          <a href="#" className="hover:text-primary transition-colors">About</a>
-          <a href="#" className="hover:text-primary transition-colors">Privacy</a>
-          <a href="#" className="hover:text-primary transition-colors">Terms</a>
-        </div>
       </div>
     </footer>
   );

@@ -3,7 +3,6 @@ import { useAuth } from '../../context/AuthContext';
 import ProfileAvatar from './ProfileAvatar';
 import { ROUTES } from '../../constants';
 import { useDarkMode } from '../../hooks/useDarkMode';
-import { Sun, Moon } from 'lucide-react';
 
 /**
  * HomeNavbar Component
@@ -12,12 +11,12 @@ import { Sun, Moon } from 'lucide-react';
  * 
  * @param {boolean} hideNavLinks - Hide nav links (Home, My Communities, Help) for unverified users
  */
-export default function HomeNavbar({ hideNavLinks = false }) {
+export default function HomeNavbar({ hideNavLinks = false, hideProfileOption = false }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { user, logout } = useAuth();
-  const { dark, toggle: toggleDark } = useDarkMode();
+  const { dark } = useDarkMode();
 
   // When viewing a specific community (/dashboard?community=xxx), treat My Communities as active
   const isCommunityView = location.pathname === ROUTES.DASHBOARD && !!searchParams.get('community');
@@ -115,16 +114,8 @@ export default function HomeNavbar({ hideNavLinks = false }) {
 
         {/* Right Section */}
         <div className="flex items-center gap-2">
-          {/* Dark mode toggle */}
-          <button
-            onClick={toggleDark}
-            aria-label="Toggle dark mode"
-            className={`w-11 h-11 rounded-xl mx-1 flex items-center justify-center transition-all ${dark ? 'text-white/80 hover:text-white hover:bg-white/10' : 'text-muted-green hover:text-primary hover:bg-primary/8'}`}
-          >
-            {dark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-          </button>
           {/* Profile Avatar with Dropdown */}
-          <ProfileAvatar user={user} onLogout={logout} />
+          <ProfileAvatar user={user} onLogout={logout} hideProfileOption={hideProfileOption} />
         </div>
       </div>
     </header>
