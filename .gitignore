@@ -54,3 +54,7 @@ __pycache__/
 
 ai-ml/hyperlocal_ai_service.postman_collection.json
 (-h)\357\200\242git log --pretty=format\357\200\272\357\200\242- -s (-h)\357\200\242
+
+# AI Models
+*.safetensors
+ai-ml/sharemore-category-model/

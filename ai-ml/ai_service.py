@@ -1,34 +1,44 @@
-import pandas as pd
-import numpy as np
-import joblib
-import pathlib
-import os
+import re
 import math
 import logging
-import httpx
+import pathlib
+import os
+import asyncio
 from contextlib import asynccontextmanager
 from logging.handlers import RotatingFileHandler
+
+import joblib
+import numpy as np
+import pandas as pd
+import httpx
+import torch
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder, OneHotEncoder
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.ensemble import RandomForestClassifier
-from xgboost import XGBRegressor
-from sklearn.metrics import accuracy_score, classification_report, mean_absolute_error, mean_squared_error, r2_score
 from pydantic import BaseModel
 from scipy.sparse import hstack, csr_matrix
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from xgboost import XGBRegressor
 
 # ──────────────────────────────────────────────────────────────
 # PATHS & CONSTANTS
 # ──────────────────────────────────────────────────────────────
 BASE_DIR = pathlib.Path(__file__).parent
+DISTILBERT_MODEL_DIR = BASE_DIR / "sharemore-category-model"
 DATA_PATH = BASE_DIR / "hyperlocal_dataset_25000.csv"
 MODELS_DIR = BASE_DIR / "models"
 MODELS_DIR.mkdir(exist_ok=True)
 AI_API_KEY = os.getenv("AI_API_KEY", "hy3rL0c@l_ai_2026")
 LOG_PATH = BASE_DIR / "api_requests.log"
-FEATURE_VERSION = 4
+FEATURE_VERSION = 5  # bumped: category_model/cat_encoder retired from artifacts
+
+# Max token length for the DistilBERT category tokenizer. Must match
+# whatever max_length was used when sharemore-category-model was fine-tuned —
+# mismatches here are train/inference skew, not just a truncation risk.
+DISTILBERT_MAX_LENGTH = int(os.getenv("DISTILBERT_MAX_LENGTH", "64"))
 
 CONDITION_ORDER = ["LIKE_NEW", "GOOD", "FAIR"]
 DEFAULT_CONDITION = "GOOD"
@@ -56,6 +66,10 @@ CONDITION_ENUM_MAP = {
     "poor": "FAIR",
 }
 
+# Keyword rules used ONLY by the price pipeline (label cleanup during
+# training, and correcting the client-supplied category string inside
+# predict_price()). These are never consulted by the DistilBERT category
+# endpoint — the two systems solve different problems on different routes.
 CATEGORY_RULE_KEYWORDS = {
     "ELECTRONICS": [
         "phone", "iphone", "android", "mobile", "laptop", "macbook", "tablet", "ipad",
@@ -69,59 +83,45 @@ CATEGORY_RULE_KEYWORDS = {
     "FASHION": ["shirt", "jeans", "dress", "jacket", "shoe", "shoes", "sneaker", "watch", "bag"],
 }
 
-CATEGORY_RESPONSE_MAP = {
-    "ELECTRONICS": "Electronics",
-    "VEHICLES": "Vehicles",
-    "FURNITURE": "Furniture",
-    "APPLIANCES": "Appliances",
-    "BOOKS": "Books",
-    "FASHION": "Fashion",
-    "TOOLS": "Tools",
-    "SPORTS": "Sports",
-    "KIDS": "Kids",
-    "OTHER": "Other",
+# Pre-compile whole-word regexes once at import time rather than re-matching
+# substrings on every call. \b word boundaries stop "cardigan" from matching
+# "car" and "desktop computer" from matching "desk".
+_CATEGORY_RULE_PATTERNS = {
+    mapped_category: [re.compile(rf"\b{re.escape(keyword)}\b") for keyword in keywords]
+    for mapped_category, keywords in CATEGORY_RULE_KEYWORDS.items()
 }
 
 ARTIFACT_PATHS = {
-    "category_model": MODELS_DIR / "category_model.pkl",
-    "price_model":    MODELS_DIR / "price_model.pkl",
-    "vectorizer":     MODELS_DIR / "vectorizer.pkl",
-    "encoder":        MODELS_DIR / "encoder.pkl",
-    "cat_encoder":    MODELS_DIR / "cat_encoder.pkl",
-    "metadata":       MODELS_DIR / "metadata.pkl",
+    "price_model": MODELS_DIR / "price_model.pkl",
+    "vectorizer":  MODELS_DIR / "vectorizer.pkl",
+    "encoder":     MODELS_DIR / "encoder.pkl",
+    "metadata":    MODELS_DIR / "metadata.pkl",
 }
 
 # ──────────────────────────────────────────────────────────────
 # OLLAMA CONFIG
 # ──────────────────────────────────────────────────────────────
-# Set USE_OLLAMA_CATEGORY=false in env to switch back to RandomForest.
-USE_OLLAMA_CATEGORY: bool = os.getenv("USE_OLLAMA_CATEGORY", "true").lower() == "true"
-
-OLLAMA_BASE_URL: str  = os.getenv("OLLAMA_BASE_URL",  "http://localhost:11434")
-OLLAMA_MODEL: str     = os.getenv("OLLAMA_MODEL",     "qwen3:1.7b")
+OLLAMA_BASE_URL: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "qwen3:1.7b")
 OLLAMA_TIMEOUT: float = float(os.getenv("OLLAMA_TIMEOUT", "30"))
 
-_OLLAMA_GENERATE_URL  = f"{OLLAMA_BASE_URL}/api/generate"
-_OLLAMA_TAGS_URL      = f"{OLLAMA_BASE_URL}/api/tags"
-
-# Categories the LLM is allowed to return — must match the project enums.
-_LLM_VALID_CATEGORIES = [
-    "ELECTRONICS", "APPLIANCES", "FURNITURE",
-    "VEHICLES", "TOOLS", "SPORTS", "FASHION", "OTHER",
-]
+_OLLAMA_GENERATE_URL = f"{OLLAMA_BASE_URL}/api/generate"
+_OLLAMA_TAGS_URL = f"{OLLAMA_BASE_URL}/api/tags"
 
 # ──────────────────────────────────────────────────────────────
 # ML MODEL GLOBALS
 # ──────────────────────────────────────────────────────────────
-category_model = None
-price_model    = None
-vectorizer     = None
-encoder        = None
-cat_encoder    = None
-metadata       = {}
-model_metrics  = {
-    "category_model": {"accuracy": "N/A", "classification_report": "N/A"},
-    "price_model":    {"mae": None, "rmse": None, "r2_score": None},
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+category_tokenizer = None
+category_classifier = None
+price_model = None
+vectorizer = None
+encoder = None
+metadata = {}
+model_metrics = {
+    "category_model": {"accuracy": "N/A", "classification_report": "N/A", "source": "distilbert"},
+    "price_model": {"mae": None, "rmse": None, "r2_score": None},
 }
 
 
@@ -150,7 +150,7 @@ logger = setup_logger()
 
 
 # ──────────────────────────────────────────────────────────────
-# NORMALIZERS  (unchanged)
+# NORMALIZERS
 # ──────────────────────────────────────────────────────────────
 def normalize_condition(condition: str) -> str:
     normalized = " ".join(str(condition).strip().lower().replace("-", " ").replace("_", " ").split())
@@ -163,9 +163,15 @@ def normalize_category(category: str) -> str:
 
 
 def apply_rule_based_category_correction(item_name: str, category: str) -> str:
+    """
+    Used only by the price pipeline: cleans training labels in
+    preprocess_price_dataset() and corrects the client-supplied category
+    string inside predict_price() before looking up price averages.
+    Not consulted by the DistilBERT category endpoint.
+    """
     lowered_name = str(item_name).strip().lower()
-    for mapped_category, keywords in CATEGORY_RULE_KEYWORDS.items():
-        if any(keyword in lowered_name for keyword in keywords):
+    for mapped_category, patterns in _CATEGORY_RULE_PATTERNS.items():
+        if any(pattern.search(lowered_name) for pattern in patterns):
             return mapped_category
     return category
 
@@ -175,13 +181,13 @@ def clean_item_name(item_name: str) -> str:
 
 
 # ──────────────────────────────────────────────────────────────
-# ML TRAINING / LOADING  (unchanged)
+# ML TRAINING / LOADING — price pipeline only (TF-IDF + OHE + XGBoost)
 # ──────────────────────────────────────────────────────────────
 def preprocess_price_dataset(raw_data: pd.DataFrame) -> pd.DataFrame:
     data = raw_data.copy()
     data["Item_Name_clean"] = data["Item_Name"].astype(str).apply(clean_item_name)
-    data["Category_norm"]   = data["Category"].astype(str).apply(normalize_category)
-    data["Category_norm"]   = data.apply(
+    data["Category_norm"] = data["Category"].astype(str).apply(normalize_category)
+    data["Category_norm"] = data.apply(
         lambda row: apply_rule_based_category_correction(row["Item_Name_clean"], row["Category_norm"]),
         axis=1
     )
@@ -218,19 +224,19 @@ def build_price_signal_maps(train_data: pd.DataFrame) -> dict:
 
 def add_price_signal_features(data: pd.DataFrame, price_signal_maps: dict) -> pd.DataFrame:
     enriched = data.copy()
-    category_avg_map  = price_signal_maps.get("category_avg_price_map", {})
+    category_avg_map = price_signal_maps.get("category_avg_price_map", {})
     condition_avg_map = price_signal_maps.get("condition_avg_price_map", {})
-    global_avg_price  = float(price_signal_maps.get("global_avg_price", enriched["Rent_Price_Per_Day"].mean()))
-    enriched["Category_avg_price"]  = enriched["Category_norm"].map(category_avg_map).fillna(global_avg_price).astype(float)
+    global_avg_price = float(price_signal_maps.get("global_avg_price", enriched["Rent_Price_Per_Day"].mean()))
+    enriched["Category_avg_price"] = enriched["Category_norm"].map(category_avg_map).fillna(global_avg_price).astype(float)
     enriched["Condition_avg_price"] = enriched["Condition_norm"].map(condition_avg_map).fillna(global_avg_price).astype(float)
     return enriched
 
 
 def build_structured_feature_frame(data: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame({
-        "Category":            data["Category_norm"].astype(str),
-        "Condition":           data["Condition_norm"].astype(str),
-        "Category_avg_price":  data["Category_avg_price"].astype(float),
+        "Category": data["Category_norm"].astype(str),
+        "Condition": data["Condition_norm"].astype(str),
+        "Category_avg_price": data["Category_avg_price"].astype(float),
         "Condition_avg_price": data["Condition_avg_price"].astype(float),
     })
 
@@ -263,195 +269,207 @@ def build_condition_multipliers(data: pd.DataFrame) -> dict[str, float]:
         multipliers[cond] = round(value, 4)
         previous = value
     multipliers["LIKE_NEW"] = max(multipliers.get("LIKE_NEW", 1.0), multipliers.get("GOOD", 1.0), multipliers.get("FAIR", 1.0))
-    multipliers["GOOD"]     = min(multipliers.get("LIKE_NEW", 1.0), max(multipliers.get("GOOD", 0.9), multipliers.get("FAIR", 0.8)))
-    multipliers["FAIR"]     = min(multipliers.get("GOOD", 0.9), multipliers.get("FAIR", 0.8))
+    multipliers["GOOD"] = min(multipliers.get("LIKE_NEW", 1.0), max(multipliers.get("GOOD", 0.9), multipliers.get("FAIR", 0.8)))
+    multipliers["FAIR"] = min(multipliers.get("GOOD", 0.9), multipliers.get("FAIR", 0.8))
     return multipliers
 
 
 def train_and_save_models():
+    """
+    Trains and persists the price pipeline only (TF-IDF vectorizer, OneHotEncoder,
+    XGBRegressor). Category prediction is served entirely by the pre-fine-tuned
+    DistilBERT model loaded from DISTILBERT_MODEL_DIR — there is no category model
+    to train here anymore.
+    """
     data = preprocess_price_dataset(pd.read_csv(DATA_PATH))
     train_data, test_data = train_test_split(data, test_size=0.2, random_state=42)
 
     price_signal_maps = build_price_signal_maps(train_data)
     train_data = add_price_signal_features(train_data, price_signal_maps)
-    test_data  = add_price_signal_features(test_data,  price_signal_maps)
-
-    local_cat_encoder = LabelEncoder()
-    local_cat_encoder.fit(train_data["Category_norm"])
-    train_data["Category_encoded"] = local_cat_encoder.transform(train_data["Category_norm"])
-    test_data["Category_encoded"]  = local_cat_encoder.transform(test_data["Category_norm"])
+    test_data = add_price_signal_features(test_data, price_signal_maps)
 
     local_vectorizer = TfidfVectorizer(stop_words="english", ngram_range=(1, 2), max_features=4000)
     Xtext_train = local_vectorizer.fit_transform(train_data["Item_Name_clean"])
-    Xtext_test  = local_vectorizer.transform(test_data["Item_Name_clean"])
+    Xtext_test = local_vectorizer.transform(test_data["Item_Name_clean"])
 
     Xstruct_train = build_structured_feature_frame(train_data)
-    Xstruct_test  = build_structured_feature_frame(test_data)
+    Xstruct_test = build_structured_feature_frame(test_data)
 
-    ycat_train      = train_data["Category_encoded"]
-    ycat_test       = test_data["Category_encoded"]
-    yprice_test     = test_data["Rent_Price_Per_Day"].astype(float)
+    yprice_test = test_data["Rent_Price_Per_Day"].astype(float)
     yprice_log_train = np.log1p(train_data["Rent_Price_Per_Day"].astype(float))
 
     local_encoder = OneHotEncoder(handle_unknown="ignore")
     Xstruct_train_enc = local_encoder.fit_transform(Xstruct_train[["Category", "Condition"]])
-    Xstruct_test_enc  = local_encoder.transform(Xstruct_test[["Category", "Condition"]])
+    Xstruct_test_enc = local_encoder.transform(Xstruct_test[["Category", "Condition"]])
 
     Xstruct_train_num = csr_matrix(Xstruct_train[["Category_avg_price", "Condition_avg_price"]].to_numpy(dtype=float))
-    Xstruct_test_num  = csr_matrix(Xstruct_test[["Category_avg_price",  "Condition_avg_price"]].to_numpy(dtype=float))
+    Xstruct_test_num = csr_matrix(Xstruct_test[["Category_avg_price", "Condition_avg_price"]].to_numpy(dtype=float))
 
     Xprice_train = hstack((Xtext_train, Xstruct_train_enc, Xstruct_train_num))
-    Xprice_test  = hstack((Xtext_test,  Xstruct_test_enc,  Xstruct_test_num))
+    Xprice_test = hstack((Xtext_test, Xstruct_test_enc, Xstruct_test_num))
 
-    local_category_model = RandomForestClassifier(n_estimators=150)
-    local_price_model    = XGBRegressor(
+    local_price_model = XGBRegressor(
         n_estimators=300, learning_rate=0.05, max_depth=6,
         objective="reg:squarederror", subsample=0.9, colsample_bytree=0.9,
         random_state=42, n_jobs=-1
     )
-
-    local_category_model.fit(Xtext_train, ycat_train)
     local_price_model.fit(Xprice_train, yprice_log_train)
 
     condition_multipliers = build_condition_multipliers(train_data)
 
-    cat_pred         = local_category_model.predict(Xtext_test)
-    price_pred_log   = local_price_model.predict(Xprice_test)
-    base_price_pred  = np.expm1(price_pred_log)
+    price_pred_log = local_price_model.predict(Xprice_test)
+    base_price_pred = np.expm1(price_pred_log)
     condition_series = Xstruct_test["Condition"].tolist()
-    price_pred       = [
+    price_pred = [
         apply_condition_multiplier(price, cond, condition_multipliers)
         for price, cond in zip(base_price_pred, condition_series)
     ]
 
-    cat_accuracy = accuracy_score(ycat_test, cat_pred)
-    cat_report   = classification_report(ycat_test, cat_pred,
-                                          target_names=local_cat_encoder.classes_, zero_division=0)
-    price_mae  = mean_absolute_error(yprice_test, price_pred)
+    price_mae = mean_absolute_error(yprice_test, price_pred)
     price_rmse = math.sqrt(mean_squared_error(yprice_test, price_pred))
-    price_r2   = r2_score(yprice_test, price_pred)
+    price_r2 = r2_score(yprice_test, price_pred)
 
     computed_metrics = {
-        "category_model": {
-            "accuracy":               f"{cat_accuracy * 100:.2f}%",
-            "classification_report":  cat_report,
-        },
+        # Category metrics are reported separately from wherever DistilBERT was
+        # fine-tuned/evaluated, not computed by this pipeline. See load_models().
+        "category_model": {"accuracy": "N/A", "classification_report": "N/A", "source": "distilbert"},
         "price_model": {
-            "mae":     round(float(price_mae),  2),
-            "rmse":    round(float(price_rmse), 2),
-            "r2_score": round(float(price_r2),  2),
+            "mae": round(float(price_mae), 2),
+            "rmse": round(float(price_rmse), 2),
+            "r2_score": round(float(price_r2), 2),
         }
     }
 
-    print("\nMODEL TRAINED SUCCESSFULLY")
-    print("--------------------------")
-    print("Category Accuracy:", computed_metrics["category_model"]["accuracy"])
-    print("Price MAE:",         computed_metrics["price_model"]["mae"])
-    print("Price RMSE:",        computed_metrics["price_model"]["rmse"])
-    print("Price R2:",          computed_metrics["price_model"]["r2_score"])
+    print("\nPRICE MODEL TRAINED SUCCESSFULLY")
+    print("--------------------------------")
+    print("Price MAE:", computed_metrics["price_model"]["mae"])
+    print("Price RMSE:", computed_metrics["price_model"]["rmse"])
+    print("Price R2:", computed_metrics["price_model"]["r2_score"])
 
     model_metadata = {
-        "feature_version":    FEATURE_VERSION,
+        "feature_version": FEATURE_VERSION,
         "condition_multipliers": condition_multipliers,
-        "price_signal_maps":  price_signal_maps,
-        "model_metrics":      computed_metrics,
+        "price_signal_maps": price_signal_maps,
+        "model_metrics": computed_metrics,
     }
 
-    joblib.dump(local_category_model, ARTIFACT_PATHS["category_model"])
-    joblib.dump(local_price_model,    ARTIFACT_PATHS["price_model"])
-    joblib.dump(local_vectorizer,     ARTIFACT_PATHS["vectorizer"])
-    joblib.dump(local_cat_encoder,    ARTIFACT_PATHS["cat_encoder"])
-    joblib.dump(local_encoder,        ARTIFACT_PATHS["encoder"])
-    joblib.dump(model_metadata,       ARTIFACT_PATHS["metadata"])
+    joblib.dump(local_price_model, ARTIFACT_PATHS["price_model"])
+    joblib.dump(local_vectorizer, ARTIFACT_PATHS["vectorizer"])
+    joblib.dump(local_encoder, ARTIFACT_PATHS["encoder"])
+    joblib.dump(model_metadata, ARTIFACT_PATHS["metadata"])
 
 
 def load_models():
-    global category_model, price_model, vectorizer, cat_encoder, encoder, metadata, model_metrics
-    category_model = joblib.load(ARTIFACT_PATHS["category_model"])
-    price_model    = joblib.load(ARTIFACT_PATHS["price_model"])
-    vectorizer     = joblib.load(ARTIFACT_PATHS["vectorizer"])
-    cat_encoder    = joblib.load(ARTIFACT_PATHS["cat_encoder"])
-    encoder        = joblib.load(ARTIFACT_PATHS["encoder"])
-    metadata       = joblib.load(ARTIFACT_PATHS["metadata"])
-    model_metrics  = metadata.get("model_metrics", model_metrics)
+    global price_model, vectorizer, encoder, metadata, model_metrics
+    global category_tokenizer, category_classifier
+
+    price_model = joblib.load(ARTIFACT_PATHS["price_model"])
+    vectorizer = joblib.load(ARTIFACT_PATHS["vectorizer"])
+    encoder = joblib.load(ARTIFACT_PATHS["encoder"])
+    metadata = joblib.load(ARTIFACT_PATHS["metadata"])
+    model_metrics = metadata.get("model_metrics", model_metrics)
+
+    category_tokenizer = AutoTokenizer.from_pretrained(DISTILBERT_MODEL_DIR)
+    category_classifier = AutoModelForSequenceClassification.from_pretrained(DISTILBERT_MODEL_DIR)
+    category_classifier.to(DEVICE)
+    category_classifier.eval()
+
+    # Surface DistilBERT's own eval numbers in /model/accuracy if they were
+    # saved alongside the fine-tuned checkpoint (e.g. a metrics.json written
+    # during fine-tuning). Falls back to "N/A" if none is found.
+    distilbert_metrics = _load_distilbert_eval_metrics()
+    if distilbert_metrics:
+        model_metrics["category_model"] = distilbert_metrics
 
 
-def has_valid_model_metrics(metrics: dict) -> bool:
-    cat   = metrics.get("category_model", {})
+def _load_distilbert_eval_metrics() -> dict | None:
+    """
+    Looks for eval metrics saved next to the fine-tuned DistilBERT checkpoint
+    (DISTILBERT_MODEL_DIR / "eval_metrics.json"). Returns None if absent —
+    callers should keep reporting "N/A" rather than fabricating numbers.
+
+    Expected format: {"accuracy": "94.30%", "classification_report": "..."}
+    """
+    metrics_path = DISTILBERT_MODEL_DIR / "eval_metrics.json"
+    if not metrics_path.exists():
+        return None
+    try:
+        import json
+        with open(metrics_path, "r") as f:
+            saved = json.load(f)
+        return {
+            "accuracy": saved.get("accuracy", "N/A"),
+            "classification_report": saved.get("classification_report", "N/A"),
+            "source": "distilbert",
+        }
+    except Exception as exc:
+        logger.warning("Failed to load DistilBERT eval metrics: %s", exc)
+        return None
+
+
+def has_valid_price_metrics(metrics: dict) -> bool:
     price = metrics.get("price_model", {})
     return (
-        cat.get("accuracy") not in (None, "N/A")
-        and cat.get("classification_report") not in (None, "N/A")
-        and price.get("mae") is not None
+        price.get("mae") is not None
         and price.get("rmse") is not None
         and price.get("r2_score") is not None
     )
 
 
-def evaluate_models_with_saved_artifacts() -> dict:
+def evaluate_price_model_with_saved_artifacts() -> dict:
+    """Recomputes price-model metrics from saved artifacts (used as a fallback
+    if metadata didn't already carry valid metrics)."""
     data = preprocess_price_dataset(pd.read_csv(DATA_PATH))
-    _, test_data = train_test_split(data, test_size=0.2, random_state=42)
+    train_data, test_data = train_test_split(data, test_size=0.2, random_state=42)
 
     price_signal_maps = metadata.get("price_signal_maps")
     if not price_signal_maps:
-        train_data, _ = train_test_split(data, test_size=0.2, random_state=42)
         price_signal_maps = build_price_signal_maps(train_data)
 
-    test_data  = add_price_signal_features(test_data, price_signal_maps)
-    X_text     = vectorizer.transform(test_data["Item_Name_clean"])
-    X_struct   = build_structured_feature_frame(test_data)
-    y_category = cat_encoder.transform(test_data["Category_norm"])
-    y_price    = test_data["Rent_Price_Per_Day"].astype(float)
+    test_data = add_price_signal_features(test_data, price_signal_maps)
+    X_text = vectorizer.transform(test_data["Item_Name_clean"])
+    X_struct = build_structured_feature_frame(test_data)
+    y_price = test_data["Rent_Price_Per_Day"].astype(float)
 
     Xstruct_enc = encoder.transform(X_struct[["Category", "Condition"]])
     Xstruct_num = csr_matrix(X_struct[["Category_avg_price", "Condition_avg_price"]].to_numpy(dtype=float))
     Xprice_test = hstack((X_text, Xstruct_enc, Xstruct_num))
 
     condition_multipliers = metadata.get("condition_multipliers", {})
-    cat_pred        = category_model.predict(X_text)
-    price_pred_log  = price_model.predict(Xprice_test)
+    price_pred_log = price_model.predict(Xprice_test)
     base_price_pred = np.expm1(price_pred_log)
-    price_pred      = [
+    price_pred = [
         apply_condition_multiplier(p, c, condition_multipliers)
         for p, c in zip(base_price_pred, X_struct["Condition"].tolist())
     ]
 
-    cat_accuracy = accuracy_score(y_category, cat_pred)
-    cat_report   = classification_report(y_category, cat_pred,
-                                          target_names=cat_encoder.classes_, zero_division=0)
-    price_mae  = mean_absolute_error(y_price, price_pred)
+    price_mae = mean_absolute_error(y_price, price_pred)
     price_rmse = math.sqrt(mean_squared_error(y_price, price_pred))
-    price_r2   = r2_score(y_price, price_pred)
+    price_r2 = r2_score(y_price, price_pred)
 
     return {
-        "category_model": {
-            "accuracy":              f"{cat_accuracy * 100:.2f}%",
-            "classification_report": cat_report,
-        },
-        "price_model": {
-            "mae":      round(float(price_mae),  2),
-            "rmse":     round(float(price_rmse), 2),
-            "r2_score": round(float(price_r2),   2),
-        }
+        "mae": round(float(price_mae), 2),
+        "rmse": round(float(price_rmse), 2),
+        "r2_score": round(float(price_r2), 2),
     }
 
 
 def print_model_metrics_to_console():
-    cat   = model_metrics.get("category_model", {})
-    price = model_metrics.get("price_model",    {})
+    cat = model_metrics.get("category_model", {})
+    price = model_metrics.get("price_model", {})
     print("\nMODEL METRICS")
     print("-------------")
-    print("Category Accuracy:", cat.get("accuracy", "N/A"))
-    print("Price MAE:",         price.get("mae",     "N/A"))
-    print("Price RMSE:",        price.get("rmse",    "N/A"))
-    print("Price R2:",          price.get("r2_score","N/A"))
+    print("Category Accuracy (DistilBERT):", cat.get("accuracy", "N/A"))
+    print("Price MAE:", price.get("mae", "N/A"))
+    print("Price RMSE:", price.get("rmse", "N/A"))
+    print("Price R2:", price.get("r2_score", "N/A"))
 
 
 def initialize_models():
     global model_metrics
     feature_mismatch = False
     if ARTIFACT_PATHS["metadata"].exists():
-        saved_metadata   = joblib.load(ARTIFACT_PATHS["metadata"])
+        saved_metadata = joblib.load(ARTIFACT_PATHS["metadata"])
         feature_mismatch = saved_metadata.get("feature_version") != FEATURE_VERSION
 
     missing_artifacts = [str(p.name) for p in ARTIFACT_PATHS.values() if not p.exists()]
@@ -467,12 +485,11 @@ def initialize_models():
 
     load_models()
 
-    if not has_valid_model_metrics(model_metrics):
-        print("Saved model metrics missing — computing from artifacts...")
-        computed_metrics = evaluate_models_with_saved_artifacts()
-        metadata["model_metrics"] = computed_metrics
+    if not has_valid_price_metrics(model_metrics):
+        print("Saved price model metrics missing — computing from artifacts...")
+        model_metrics["price_model"] = evaluate_price_model_with_saved_artifacts()
+        metadata["model_metrics"] = model_metrics
         joblib.dump(metadata, ARTIFACT_PATHS["metadata"])
-        model_metrics = computed_metrics
 
     print_model_metrics_to_console()
 
@@ -481,43 +498,54 @@ initialize_models()
 
 
 # ──────────────────────────────────────────────────────────────
-# ML PREDICTION FUNCTIONS  (unchanged — RandomForest path)
+# ML PREDICTION FUNCTIONS
 # ──────────────────────────────────────────────────────────────
-def predict_category_randomforest(item_name: str) -> dict:
-    """
-    RandomForest-based category prediction.
-    Currently inactive — USE_OLLAMA_CATEGORY=true routes to Ollama instead.
-    Set USE_OLLAMA_CATEGORY=false in env to re-activate this path.
-    """
-    normalized = clean_item_name(item_name)
-    rule_result = apply_rule_based_category_correction(normalized, "OTHER")
-    if rule_result != "OTHER":
-        return {"category": str(rule_result).upper()}
+def predict_category_distilbert(item_name: str) -> dict:
+    inputs = category_tokenizer(
+        item_name,
+        return_tensors="pt",
+        truncation=True,
+        padding=True,
+        max_length=DISTILBERT_MAX_LENGTH
+    )
+    inputs = {k: v.to(DEVICE) for k, v in inputs.items()}
 
-    item_vec          = vectorizer.transform([normalized])
-    category_encoded  = category_model.predict(item_vec)[0]
-    predicted_category = cat_encoder.inverse_transform([category_encoded])[0]
-    return {"category": str(predicted_category).upper()}
+    with torch.no_grad():
+        outputs = category_classifier(**inputs)
+
+    # argmax on raw logits is equivalent to argmax on softmax(logits) since
+    # softmax is monotonic — skip the softmax just for the class choice.
+    logits = outputs.logits
+    predicted_idx = torch.argmax(logits, dim=1).item()
+
+    # Confidence for the response still needs an actual probability, so
+    # softmax is computed once, only for the predicted class.
+    confidence = round(torch.softmax(logits, dim=1)[0][predicted_idx].item() * 100, 2)
+    category = category_classifier.config.id2label[predicted_idx]
+
+    return {
+        "category": str(category).upper(),
+        "confidence": confidence
+    }
 
 
-# Keep original name as alias so any internal callers still work.
-predict_category = predict_category_randomforest
+predict_category = predict_category_distilbert
 
 
 def predict_price(item_name: str, category: str, condition: str) -> dict:
-    item_vec           = vectorizer.transform([clean_item_name(item_name)])
+    item_vec = vectorizer.transform([clean_item_name(item_name)])
     normalized_category = apply_rule_based_category_correction(item_name, normalize_category(category))
     normalized_condition = normalize_condition(condition)
 
     price_signal_maps = metadata.get("price_signal_maps", {})
-    global_avg_price  = float(price_signal_maps.get("global_avg_price", 0.0))
-    category_avg_price  = float(price_signal_maps.get("category_avg_price_map",  {}).get(normalized_category,  global_avg_price))
+    global_avg_price = float(price_signal_maps.get("global_avg_price", 0.0))
+    category_avg_price = float(price_signal_maps.get("category_avg_price_map", {}).get(normalized_category, global_avg_price))
     condition_avg_price = float(price_signal_maps.get("condition_avg_price_map", {}).get(normalized_condition, global_avg_price))
 
     struct_input = pd.DataFrame([{
-        "Category":            normalized_category,
-        "Condition":           normalized_condition,
-        "Category_avg_price":  category_avg_price,
+        "Category": normalized_category,
+        "Condition": normalized_condition,
+        "Category_avg_price": category_avg_price,
         "Condition_avg_price": condition_avg_price,
     }])
     struct_vec = encoder.transform(struct_input[["Category", "Condition"]])
@@ -525,8 +553,8 @@ def predict_price(item_name: str, category: str, condition: str) -> dict:
     price_input = hstack((item_vec, struct_vec, struct_num))
 
     predicted_log_price = float(price_model.predict(price_input)[0])
-    base_price          = float(np.expm1(predicted_log_price))
-    price               = apply_condition_multiplier(base_price, normalized_condition)
+    base_price = float(np.expm1(predicted_log_price))
+    price = apply_condition_multiplier(base_price, normalized_condition)
     return {"price": round(float(price), 2)}
 
 
@@ -541,11 +569,11 @@ def _build_ollama_payload(prompt: str, max_tokens: int) -> dict:
     that only works in the interactive terminal, not via the API.
     """
     return {
-        "model":      OLLAMA_MODEL,
-        "prompt":     prompt,
-        "stream":     False,
-        "think":      False,        # ← disables Qwen3 reasoning via API
-        "keep_alive": -1,           # ← keep model in VRAM between requests
+        "model": OLLAMA_MODEL,
+        "prompt": prompt,
+        "stream": False,
+        "think": False,        # ← disables Qwen3 reasoning via API
+        "keep_alive": -1,      # ← keep model in VRAM between requests
         "options": {
             "temperature": 0.1,
             "num_predict": max_tokens,
@@ -562,57 +590,6 @@ async def _call_ollama(prompt: str, max_tokens: int) -> str:
         )
         resp.raise_for_status()
     return resp.json().get("response", "").strip()
-
-
-async def _warmup_ollama() -> None:
-    """
-    Called once on FastAPI startup. Sends a tiny request so Ollama
-    loads the model into VRAM before the first real user request arrives.
-    """
-    try:
-        await _call_ollama("Hello", max_tokens=5)
-        logger.info("Ollama warm-up complete — %s loaded in VRAM", OLLAMA_MODEL)
-    except Exception as exc:
-        logger.warning(
-            "Ollama warm-up failed (server may not be running): %s. "
-            "Category endpoint will fall back to RandomForest.", exc
-        )
-
-
-# ──────────────────────────────────────────────────────────────
-# OLLAMA PREDICTION FUNCTIONS
-# ──────────────────────────────────────────────────────────────
-async def predict_category_ollama(item_name: str) -> dict:
-    """
-    Predicts item category using Qwen 1.7B via Ollama.
-
-    Prompt is intentionally short to minimise prompt_eval latency
-    (the main bottleneck on consumer hardware).
-
-    Falls back to RandomForest transparently if Ollama is unreachable.
-    """
-    cats   = ", ".join(_LLM_VALID_CATEGORIES)
-    prompt = (
-        f"Categories: {cats}\n"
-        f"Item: {item_name}\n"
-        f"Reply with only the category name."
-    )
-    try:
-        raw = await _call_ollama(prompt, max_tokens=15)
-        # Match response to a known category (case-insensitive)
-        raw_upper = raw.upper().strip()
-        for cat in _LLM_VALID_CATEGORIES:
-            if cat in raw_upper:
-                return {"category": cat}
-        # If the model returned something unmapped, normalise via existing map
-        fallback = normalize_category(raw)
-        return {"category": fallback if fallback else "OTHER"}
-
-    except Exception as exc:
-        logger.warning(
-            "Ollama category prediction failed — falling back to RandomForest: %s", exc
-        )
-        return predict_category_randomforest(item_name)
 
 
 async def generate_listing_enhancement(title: str, category: str, condition: str) -> dict:
@@ -644,17 +621,12 @@ async def generate_listing_enhancement(title: str, category: str, condition: str
 
 
 # ──────────────────────────────────────────────────────────────
-# FASTAPI APP  (lifespan replaces the old bare FastAPI())
+# FASTAPI APP
 # ──────────────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # ── STARTUP ──────────────────────────────────────────────
-    logger.info(
-        "AI service starting | category_source=%s",
-        "ollama" if USE_OLLAMA_CATEGORY else "randomforest"
-    )
-    if USE_OLLAMA_CATEGORY:
-        await _warmup_ollama()
+    logger.info("AI service starting | category_source=distilbert | device=%s", DEVICE)
     # ── APP RUNS ──────────────────────────────────────────────
     yield
     # ── SHUTDOWN ─────────────────────────────────────────────
@@ -681,13 +653,13 @@ class ItemRequest(BaseModel):
 
 class PriceRequest(BaseModel):
     item_name: str
-    category:  str
+    category: str
     condition: str
 
 
 class ListingEnhancementRequest(BaseModel):
-    title:     str
-    category:  str
+    title: str
+    category: str
     condition: str
 
 
@@ -709,24 +681,21 @@ async def ai_predict_category(
     _: None = Depends(verify_api_key)
 ):
     """
-    Category prediction endpoint.
+    Category prediction endpoint, served by the fine-tuned DistilBERT model.
 
-    Routes to Ollama (Qwen 1.7B) when USE_OLLAMA_CATEGORY=true (default).
-    Routes to RandomForest when USE_OLLAMA_CATEGORY=false.
-
-    To switch back to RandomForest without touching code:
-        set env  USE_OLLAMA_CATEGORY=false  and restart.
+    predict_category_distilbert() is CPU/GPU-bound (tokenization + forward
+    pass) and synchronous. Running it directly inside an `async def` would
+    block the event loop for the full duration of every request, stalling
+    concurrent traffic (including /ai/listing-enhancement's Ollama calls).
+    It's offloaded to a worker thread via run_in_executor so the event loop
+    stays free.
     """
-    if USE_OLLAMA_CATEGORY:
-        result = await predict_category_ollama(request.item_name)
-        source = "ollama"
-    else:
-        result = predict_category_randomforest(request.item_name)
-        source = "randomforest"
+    loop = asyncio.get_running_loop()
+    result = await loop.run_in_executor(None, predict_category_distilbert, request.item_name)
 
     logger.info(
-        "endpoint=/predict/category source=%s input=%s output=%s",
-        source, request.model_dump(), result
+        "endpoint=/predict/category source=distilbert input=%s output=%s",
+        request.model_dump(), result
     )
     return result
 
@@ -736,7 +705,9 @@ def ai_predict_price(
     request: PriceRequest,
     _: None = Depends(verify_api_key)
 ):
-    """XGBoost price prediction — unchanged."""
+    """XGBoost price prediction. Declared as plain `def` so FastAPI
+    auto-threadpools it — consistent with how /predict/category is now
+    handled via explicit executor offload."""
     result = predict_price(request.item_name, request.category, request.condition)
     logger.info(
         "endpoint=/predict/price input=%s output=%s",
@@ -778,33 +749,38 @@ async def ai_listing_enhancement(
 @app.get("/ai/status")
 async def ai_status():
     """
-    Reports whether Ollama is reachable, which model is active,
-    and which category prediction source is currently in use.
-    Useful for health checks from Spring Boot or the frontend.
+    Reports whether Ollama is reachable, which model is active, and
+    confirms the category prediction source. Useful for health checks
+    from Spring Boot or the frontend.
+
+    Category prediction is always served by DistilBERT now — there is no
+    runtime toggle between Ollama/RandomForest/DistilBERT, so this no
+    longer reports a switchable "category_source".
     """
-    ollama_online  = False
-    model_loaded   = False
-    ollama_error   = None
+    ollama_online = False
+    model_loaded = False
+    ollama_error = None
 
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
-            resp   = await client.get(_OLLAMA_TAGS_URL)
+            resp = await client.get(_OLLAMA_TAGS_URL)
             models = resp.json().get("models", [])
             ollama_online = True
-            model_loaded  = any(OLLAMA_MODEL in m.get("name", "") for m in models)
+            model_loaded = any(OLLAMA_MODEL in m.get("name", "") for m in models)
     except Exception as exc:
         ollama_error = str(exc)
 
     return {
-        "category_source":  "ollama" if USE_OLLAMA_CATEGORY else "randomforest",
-        "ollama_model":     OLLAMA_MODEL,
-        "ollama_online":    ollama_online,
-        "model_loaded":     model_loaded,
-        "ollama_error":     ollama_error,
+        "category_source": "distilbert",
+        "category_device": str(DEVICE),
+        "ollama_model": OLLAMA_MODEL,
+        "ollama_online": ollama_online,
+        "model_loaded": model_loaded,
+        "ollama_error": ollama_error,
     }
 
 
 @app.get("/model/accuracy")
 def get_model_accuracy():
-    """RandomForest + XGBoost metrics (unchanged)."""
+    """DistilBERT category metrics (if available) + XGBoost price metrics."""
     return model_metrics

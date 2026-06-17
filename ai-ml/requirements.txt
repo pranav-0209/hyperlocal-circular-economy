@@ -5,5 +5,8 @@ scipy
 fastapi
 pydantic
 joblib
-uvicorn
+uvicorn[standard]
 xgboost
+httpx
+torch
+transformers
