@@ -50,6 +50,9 @@ export default function DashboardPage() {
   const [showCreateModal, setShowCreateModal] = useState(() => searchParams.get('showCreate') === 'true');
   const [showCreateItemModal, setShowCreateItemModal] = useState(false);
 
+  // Verified banner dismiss state
+  const [showVerifiedBanner, setShowVerifiedBanner] = useState(true);
+
   // Fetch real communities from backend (keeps AuthContext in sync).
   // Pause polling while create listing modal is open to avoid periodic UI flicker.
   const { isLoading: communitiesLoading } = useMyCommunities({
@@ -180,90 +183,114 @@ export default function DashboardPage() {
 
   // If user has no communities, show community selection page
   if (!user.communities || user.communities.length === 0) {
+    const firstName = user.profile?.name?.split(' ')[0] || user.profile?.name || 'Neighbor';
+
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex flex-col">
-        <HomeNavbar hideNavLinks={true} />
+      <div className="min-h-screen bg-[#f4f6f4] flex flex-col">
+        <HomeNavbar hideNavLinks={true} hideProfileOption={true} />
 
-        <main className="pt-24 pb-8 px-4 sm:px-6 lg:px-8 flex-1">
+        <main className="pt-28 pb-12 px-4 sm:px-6 lg:px-8 flex-1 max-w-5xl mx-auto w-full">
 
-          {/* Verification Badge */}
-          <div className="mb-6 bg-green-50 border border-green-200 rounded-xl p-4 flex items-start gap-3">
-            <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center shrink-0">
-              <span className="material-symbols-outlined text-white">verified</span>
+          {/* Verified Success Banner — dismissible */}
+          {showVerifiedBanner && (
+            <div className="mb-8 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-5 flex items-center gap-4 shadow-sm">
+              <div className="w-11 h-11 bg-green-500 rounded-full flex items-center justify-center shrink-0 shadow-md">
+                <span className="material-symbols-outlined text-white text-xl">verified</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-green-900 text-base leading-snug">
+                  Welcome, {firstName}! You&apos;re verified &#127881;
+                </h3>
+                <p className="text-sm text-green-700 mt-0.5 leading-snug">
+                  You can now access trusted local groups and start sharing securely with your neighbors.
+                </p>
+              </div>
+              {/* Dismiss button */}
+              <button
+                type="button"
+                onClick={() => setShowVerifiedBanner(false)}
+                aria-label="Dismiss banner"
+                className="shrink-0 w-8 h-8 flex items-center justify-center rounded-full text-green-600 hover:bg-green-100 transition-colors"
+              >
+                <span className="material-symbols-outlined text-lg">close</span>
+              </button>
             </div>
-            <div>
-              <h3 className="font-bold text-green-900 mb-1">You're verified! ðŸŽ‰</h3>
-              <p className="text-sm text-green-700">
-                You can now access trusted local groups and start sharing securely with your neighbors.
-              </p>
-            </div>
-          </div>
+          )}
 
-          {/* Header */}
+          {/* Page Header */}
           <div className="mb-8">
-            <h1 className="text-3xl sm:text-4xl font-bold text-charcoal mb-2">
-              Select your path
+            <h1 className="text-3xl sm:text-4xl font-bold text-charcoal mb-2 leading-tight">
+              Get started with a community
             </h1>
-            <p className="text-muted-green">
-              Join an existing neighborhood or create a new circle.
+            <p className="text-base text-muted-green">
+              Join an existing neighborhood circle or start your own.
             </p>
           </div>
 
           {/* Two Column Layout */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
             {/* Left: Join Community */}
-            <div className="bg-gradient-to-br from-primary to-primary/80 rounded-3xl p-8 text-white shadow-xl">
-              <div className="inline-block px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-xs font-bold mb-4">
-                Recommended
+            <div className="bg-gradient-to-br from-primary to-primary/85 rounded-2xl p-7 text-white shadow-lg flex flex-col justify-between min-h-[340px]">
+              <div>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/20 rounded-full text-xs font-bold mb-5 tracking-wide">
+                  <span className="material-symbols-outlined text-sm">star</span>
+                  Recommended
+                </div>
+
+                <h2 className="text-2xl font-bold mb-2">Join a Community</h2>
+                <p className="text-white/80 text-sm leading-relaxed mb-6">
+                  Have an invite code? Enter it below to instantly join a trusted local sharing group.
+                </p>
+
+                {/* Benefits list */}
+                <ul className="space-y-2.5 mb-7">
+                  {[
+                    { icon: 'groups', text: 'Connect with verified neighbors' },
+                    { icon: 'swap_horiz', text: 'Borrow, lend & share items' },
+                    { icon: 'shield', text: 'Safe, trusted local network' },
+                  ].map(({ icon, text }) => (
+                    <li key={icon} className="flex items-center gap-2.5">
+                      <span className="material-symbols-outlined text-white/70 text-base">{icon}</span>
+                      <span className="text-sm text-white/90">{text}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
 
-              <h2 className="text-2xl font-bold mb-2">Join Community</h2>
-              <p className="text-white/90 mb-6 text-sm">
-                Have an invite code?
-              </p>
-              <div className="space-y-4">
-                <p className="text-white/80 text-sm leading-relaxed">
-                  Enter your unique code below to instantly join a trusted local group.
-                </p>
+              <div className="space-y-3">
                 <button
                   type="button"
                   onClick={() => setShowJoinModal(true)}
-                  className="w-full px-6 py-3 bg-white text-primary font-bold rounded-xl hover:bg-white/90 transition-all shadow-lg"
+                  className="w-full flex items-center justify-center px-6 py-3 bg-white text-primary font-bold rounded-xl shadow-md text-sm hover:opacity-90 transition-opacity"
                 >
                   Enter Community Code
                 </button>
               </div>
-
-              <div className="mt-8 pt-6 border-t border-white/20">
-                <p className="text-xs text-white/60 text-center">
-                  Need help finding your code? <button className="underline hover:text-white">Contact Support</button>
-                </p>
-              </div>
             </div>
 
             {/* Right: Create Community */}
-            <div className="bg-white rounded-3xl p-8 shadow-xl border border-gray-100 flex flex-col justify-between gap-6">
-              {/* Top section */}
+            <div className="bg-white rounded-2xl p-7 shadow-lg border border-gray-100 flex flex-col justify-between min-h-[340px]">
               <div>
-                <div className="flex items-center gap-3 mb-5">
-                  <div className="w-12 h-12 bg-gradient-to-br from-charcoal to-charcoal/80 rounded-2xl flex items-center justify-center shadow-md">
-                    <span className="material-symbols-outlined text-white text-2xl">add_home</span>
+                <div className="flex items-center gap-3.5 mb-5">
+                  <div className="w-11 h-11 bg-charcoal rounded-xl flex items-center justify-center shadow-sm shrink-0">
+                    <span className="material-symbols-outlined text-white text-xl">add_home</span>
                   </div>
                   <div>
-                    <h2 className="text-xl font-bold text-charcoal">Start a new circle</h2>
+                    <h2 className="text-xl font-bold text-charcoal leading-tight">Start a new circle</h2>
                     <p className="text-sm text-muted-green">Be the first in your neighborhood</p>
                   </div>
                 </div>
 
-                <p className="text-sm text-muted-green leading-relaxed mb-6">
-                  Create a private sharing circle for your apartment, street, or group. You'll get a unique invite code to share with trusted neighbors.
+                <p className="text-sm text-muted-green leading-relaxed mb-5">
+                  Create a private sharing circle for your apartment, street, or group. You&apos;ll get a unique invite code to share with trusted neighbors.
                 </p>
 
                 {/* Feature highlights */}
-                <ul className="space-y-3">
+                <ul className="space-y-2.5">
                   {[
                     { icon: 'key', text: 'Get an auto-generated invite code' },
-                    { icon: 'lock', text: 'Private â€” only people you invite can join' },
+                    { icon: 'lock', text: 'Private \u2014 only people you invite can join' },
                     { icon: 'swap_horiz', text: 'Share, borrow & trade within your circle' },
                   ].map(({ icon, text }) => (
                     <li key={icon} className="flex items-center gap-3">
@@ -276,11 +303,10 @@ export default function DashboardPage() {
                 </ul>
               </div>
 
-              {/* CTA */}
               <button
                 type="button"
                 onClick={() => setShowCreateModal(true)}
-                className="w-full py-3 bg-charcoal text-white font-bold rounded-xl hover:bg-charcoal/90 active:scale-[0.98] transition-all shadow-lg flex items-center justify-center gap-2"
+                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-charcoal text-white font-bold rounded-xl shadow-md text-sm mt-6 hover:bg-[#2a2a2a] transition-colors"
               >
                 Create New Community
                 <span className="material-symbols-outlined text-lg">arrow_forward</span>
