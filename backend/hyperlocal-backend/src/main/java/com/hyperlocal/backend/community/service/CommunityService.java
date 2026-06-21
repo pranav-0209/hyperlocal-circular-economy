@@ -55,7 +55,7 @@ public class CommunityService {
                 .description(request.getDescription())
                 .category(request.getCategory())
                 .joinPolicy(joinPolicy)
-                .createdByUserId(currentUser.getId())
+                .createdBy(currentUser)
                 .build();
 
         community = communityRepository.save(community);
@@ -63,7 +63,7 @@ public class CommunityService {
         // Creator is always an APPROVED ADMIN
         CommunityMember adminMember = CommunityMember.builder()
                 .community(community)
-                .userId(currentUser.getId())
+                .user(currentUser)
                 .role(CommunityRole.ADMIN)
                 .status(MemberStatus.APPROVED)
                 .build();
@@ -89,7 +89,7 @@ public class CommunityService {
                 .orElseThrow(CustomExceptions.CommunityNotFoundException::new);
 
         Optional<CommunityMember> membershipOpt =
-                communityMemberRepository.findByCommunityIdAndUserId(communityId, currentUser.getId());
+                communityMemberRepository.findByCommunity_IdAndUser_Id(communityId, currentUser.getId());
 
         if (membershipOpt.isEmpty()) {
             throw new CustomExceptions.NotCommunityMemberException();
@@ -107,7 +107,7 @@ public class CommunityService {
                 .orElseThrow(CustomExceptions.InvalidCommunityCodeException::new);
 
         Optional<CommunityMember> existing =
-                communityMemberRepository.findByCommunityIdAndUserId(community.getId(), currentUser.getId());
+                communityMemberRepository.findByCommunity_IdAndUser_Id(community.getId(), currentUser.getId());
 
         if (existing.isPresent()) {
             CommunityMember existingMember = existing.get();
@@ -123,7 +123,7 @@ public class CommunityService {
 
         CommunityMember member = CommunityMember.builder()
                 .community(community)
-                .userId(currentUser.getId())
+                .user(currentUser)
                 .role(CommunityRole.MEMBER)
                 .status(initialStatus)
                 .build();
@@ -154,7 +154,7 @@ public class CommunityService {
         assertIsAdmin(communityId, currentUser.getId());
 
         List<CommunityMember> pending =
-                communityMemberRepository.findByCommunityIdAndStatus(communityId, MemberStatus.PENDING);
+                communityMemberRepository.findByCommunity_IdAndStatus(communityId, MemberStatus.PENDING);
 
         List<Long> userIds = pending.stream().map(CommunityMember::getUserId).collect(Collectors.toList());
         Map<Long, User> usersById = userRepository.findAllById(userIds).stream()
@@ -235,7 +235,7 @@ public class CommunityService {
         User currentUser = getAuthenticatedUser();
         Long userId = currentUser.getId();
 
-        List<CommunityMember> memberships = communityMemberRepository.findByUserId(userId);
+        List<CommunityMember> memberships = communityMemberRepository.findByUser_Id(userId);
         if (memberships.isEmpty()) {
             return Collections.emptyList();
         }
@@ -265,7 +265,7 @@ public class CommunityService {
 
         List<CommunityMember> allAdminMembers = communityIds.stream()
                 .flatMap(cid -> communityMemberRepository
-                        .findByCommunityIdAndRole(cid, CommunityRole.ADMIN).stream())
+                        .findByCommunity_IdAndRole(cid, CommunityRole.ADMIN).stream())
                 .collect(Collectors.toList());
 
         List<Long> allAdminUserIds = allAdminMembers.stream()
@@ -319,7 +319,7 @@ public class CommunityService {
         }
 
         Optional<CommunityMember> membership =
-                communityMemberRepository.findByCommunityIdAndUserId(communityId, currentUser.getId());
+                communityMemberRepository.findByCommunity_IdAndUser_Id(communityId, currentUser.getId());
 
         if (membership.isEmpty() || membership.get().getStatus() == MemberStatus.PENDING) {
             throw new CustomExceptions.NotCommunityMemberException();
@@ -327,7 +327,7 @@ public class CommunityService {
 
         // Only show approved members
         Page<CommunityMember> membersPage =
-                communityMemberRepository.findByCommunityIdAndStatus(communityId, MemberStatus.APPROVED, pageable);
+                communityMemberRepository.findByCommunity_IdAndStatus(communityId, MemberStatus.APPROVED, pageable);
 
         List<Long> userIds = membersPage.getContent().stream()
                 .map(CommunityMember::getUserId)
@@ -455,7 +455,7 @@ public class CommunityService {
 
     private CommunityResponse buildCommunityResponse(Community community, Long requestingUserId) {
         List<CommunityMember> adminMembers = communityMemberRepository
-                .findByCommunityIdAndRole(community.getId(), CommunityRole.ADMIN);
+                .findByCommunity_IdAndRole(community.getId(), CommunityRole.ADMIN);
 
         List<Long> adminUserIds = adminMembers.stream()
                 .map(CommunityMember::getUserId)
@@ -471,16 +471,16 @@ public class CommunityService {
                 })
                 .collect(Collectors.toList());
 
-        long memberCount = communityMemberRepository.countByCommunityIdAndStatus(community.getId(), MemberStatus.APPROVED);
+        long memberCount = communityMemberRepository.countByCommunity_IdAndStatus(community.getId(), MemberStatus.APPROVED);
 
         boolean isAdmin = adminUserIds.contains(requestingUserId);
 
         long pendingCount = isAdmin
-                ? communityMemberRepository.countByCommunityIdAndStatus(community.getId(), MemberStatus.PENDING)
+                ? communityMemberRepository.countByCommunity_IdAndStatus(community.getId(), MemberStatus.PENDING)
                 : 0L;
 
         Optional<CommunityMember> myMembership =
-                communityMemberRepository.findByCommunityIdAndUserId(community.getId(), requestingUserId);
+                communityMemberRepository.findByCommunity_IdAndUser_Id(community.getId(), requestingUserId);
 
         String membershipStatus = myMembership.map(cm -> cm.getStatus().name()).orElse(null);
 
@@ -505,7 +505,7 @@ public class CommunityService {
     /** Throws {@link CustomExceptions.NotCommunityAdminException} if the user is not an ADMIN. */
     private void assertIsAdmin(Long communityId, Long userId) {
         boolean isAdmin = communityMemberRepository
-                .findByCommunityIdAndUserId(communityId, userId)
+                .findByCommunity_IdAndUser_Id(communityId, userId)
                 .map(cm -> cm.getRole() == CommunityRole.ADMIN)
                 .orElse(false);
         if (!isAdmin) {

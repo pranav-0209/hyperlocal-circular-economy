@@ -2,6 +2,7 @@ package com.hyperlocal.backend.community.entity;
 
 import com.hyperlocal.backend.community.enums.CommunityRole;
 import com.hyperlocal.backend.community.enums.MemberStatus;
+import com.hyperlocal.backend.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.ColumnDefault;
@@ -29,9 +30,13 @@ public class CommunityMember {
     @JoinColumn(name = "community_id", nullable = false)
     private Community community;
 
-    /** References User.id */
-    @Column(nullable = false)
-    private Long userId;
+    /**
+     * The user who is a member of this community.
+     * Generates FK: community_members.user_id -> users.id
+     */
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     @Enumerated(EnumType.STRING)
     @ColumnDefault("'MEMBER'")
@@ -53,5 +58,9 @@ public class CommunityMember {
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime joinedAt;
-}
 
+    /** Convenience accessor — avoids eager-loading the full User just for the ID. */
+    public Long getUserId() {
+        return user != null ? user.getId() : null;
+    }
+}

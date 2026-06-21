@@ -3,6 +3,7 @@ package com.hyperlocal.backend.community.entity;
 import com.hyperlocal.backend.community.enums.CommunityCategory;
 import com.hyperlocal.backend.community.enums.CommunityStatus;
 import com.hyperlocal.backend.community.enums.JoinPolicy;
+import com.hyperlocal.backend.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.ColumnDefault;
@@ -53,9 +54,13 @@ public class Community {
     @Builder.Default
     private JoinPolicy joinPolicy = JoinPolicy.OPEN;
 
-    /** The user who created the community (always an ADMIN member). */
-    @Column(nullable = false)
-    private Long createdByUserId;
+    /**
+     * The user who created the community (always an ADMIN member).
+     * Generates FK: communities.created_by_user_id -> users.id
+     */
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "created_by_user_id", nullable = false)
+    private User createdBy;
 
     @Enumerated(EnumType.STRING)
     @ColumnDefault("'ACTIVE'")
@@ -73,5 +78,9 @@ public class Community {
 
     @UpdateTimestamp
     private LocalDateTime updatedAt;
-}
 
+    /** Convenience accessor — avoids eager-loading the full User just for the ID. */
+    public Long getCreatedByUserId() {
+        return createdBy != null ? createdBy.getId() : null;
+    }
+}

@@ -48,7 +48,7 @@ public class UserService {
             throw new CustomExceptions.UserNotFoundException();
         }
 
-        long listingsPosted = listingRepository.findByOwnerIdOrderByCreatedAtDesc(user.getId()).size();
+        long listingsPosted = listingRepository.findByOwner_IdOrderByCreatedAtDesc(user.getId()).size();
 
         return PublicProfileResponseDto.builder()
                 .userId(user.getId())
@@ -63,7 +63,7 @@ public class UserService {
     }
 
     private ProfileResponseDto buildMyProfileResponse(User user) {
-        long listingsPosted = listingRepository.findByOwnerIdOrderByCreatedAtDesc(user.getId()).size();
+        long listingsPosted = listingRepository.findByOwner_IdOrderByCreatedAtDesc(user.getId()).size();
 
         return ProfileResponseDto.builder()
                 .userId(user.getId())

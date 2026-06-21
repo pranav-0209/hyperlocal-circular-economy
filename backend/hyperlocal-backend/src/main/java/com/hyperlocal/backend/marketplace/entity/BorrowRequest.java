@@ -1,6 +1,7 @@
 package com.hyperlocal.backend.marketplace.entity;
 
 import com.hyperlocal.backend.marketplace.enums.BorrowRequestStatus;
+import com.hyperlocal.backend.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -24,11 +25,21 @@ public class BorrowRequest {
     @Column(nullable = false)
     private Long listingId;
 
-    @Column(nullable = false)
-    private Long requesterId;
+    /**
+     * The user who made the borrow request.
+     * Generates FK: borrow_requests.requester_id -> users.id
+     */
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "requester_id", nullable = false)
+    private User requester;
 
-    @Column(nullable = false)
-    private Long ownerId;
+    /**
+     * The listing owner at the time the request was made.
+     * Generates FK: borrow_requests.owner_id -> users.id
+     */
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "owner_id", nullable = false)
+    private User owner;
 
     @Column(nullable = false)
     private LocalDate startDate;
@@ -58,5 +69,14 @@ public class BorrowRequest {
 
     @Column(length = 500)
     private String rejectionReason;
-}
 
+    /** Convenience accessor — avoids eager-loading the full User just for the ID. */
+    public Long getRequesterId() {
+        return requester != null ? requester.getId() : null;
+    }
+
+    /** Convenience accessor — avoids eager-loading the full User just for the ID. */
+    public Long getOwnerId() {
+        return owner != null ? owner.getId() : null;
+    }
+}

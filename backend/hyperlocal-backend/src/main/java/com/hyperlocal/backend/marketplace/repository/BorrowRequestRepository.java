@@ -16,19 +16,19 @@ import java.util.List;
 @Repository
 public interface BorrowRequestRepository extends JpaRepository<BorrowRequest, Long> {
 
-    Page<BorrowRequest> findByRequesterIdOrderByRequestedAtDesc(Long requesterId, Pageable pageable);
+    Page<BorrowRequest> findByRequester_IdOrderByRequestedAtDesc(Long requesterId, Pageable pageable);
 
-    Page<BorrowRequest> findByRequesterIdAndStatusOrderByRequestedAtDesc(
+    Page<BorrowRequest> findByRequester_IdAndStatusOrderByRequestedAtDesc(
             Long requesterId, BorrowRequestStatus status, Pageable pageable);
 
-    Page<BorrowRequest> findByOwnerIdOrderByRequestedAtDesc(Long ownerId, Pageable pageable);
+    Page<BorrowRequest> findByOwner_IdOrderByRequestedAtDesc(Long ownerId, Pageable pageable);
 
-    Page<BorrowRequest> findByOwnerIdAndStatusOrderByRequestedAtDesc(
+    Page<BorrowRequest> findByOwner_IdAndStatusOrderByRequestedAtDesc(
             Long ownerId, BorrowRequestStatus status, Pageable pageable);
 
-    Page<BorrowRequest> findByOwnerIdAndListingIdOrderByRequestedAtDesc(Long ownerId, Long listingId, Pageable pageable);
+    Page<BorrowRequest> findByOwner_IdAndListingIdOrderByRequestedAtDesc(Long ownerId, Long listingId, Pageable pageable);
 
-    Page<BorrowRequest> findByOwnerIdAndListingIdAndStatusOrderByRequestedAtDesc(
+    Page<BorrowRequest> findByOwner_IdAndListingIdAndStatusOrderByRequestedAtDesc(
             Long ownerId, Long listingId, BorrowRequestStatus status, Pageable pageable);
 
     boolean existsByListingIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
@@ -47,13 +47,13 @@ public interface BorrowRequestRepository extends JpaRepository<BorrowRequest, Lo
     List<BorrowRequest> findByListingIdInAndStatusInOrderByListingIdAscStartDateAsc(
             List<Long> listingIds, List<BorrowRequestStatus> statuses);
 
-    long countByRequesterId(Long requesterId);
+    long countByRequester_Id(Long requesterId);
 
-    long countByRequesterIdAndStatus(Long requesterId, BorrowRequestStatus status);
+    long countByRequester_IdAndStatus(Long requesterId, BorrowRequestStatus status);
 
-    long countByRequesterIdAndStatusAndApprovedAtIsNotNull(Long requesterId, BorrowRequestStatus status);
+    long countByRequester_IdAndStatusAndApprovedAtIsNotNull(Long requesterId, BorrowRequestStatus status);
 
-    List<BorrowRequest> findByRequesterIdAndStatus(Long requesterId, BorrowRequestStatus status);
+    List<BorrowRequest> findByRequester_IdAndStatus(Long requesterId, BorrowRequestStatus status);
 
     @Query("""
             select new com.hyperlocal.backend.marketplace.dto.PendingReviewResponse(
@@ -65,8 +65,8 @@ public interface BorrowRequestRepository extends JpaRepository<BorrowRequest, Lo
             )
             from BorrowRequest br
             join com.hyperlocal.backend.marketplace.entity.Listing l on l.id = br.listingId
-            join com.hyperlocal.backend.user.entity.User owner on owner.id = br.ownerId
-            where br.requesterId = :requesterId
+            join br.owner owner
+            where br.requester.id = :requesterId
               and br.status = :status
               and not exists (
                     select 1

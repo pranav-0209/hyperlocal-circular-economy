@@ -56,7 +56,7 @@ public class BorrowRequestService {
         }
 
         communityMemberRepository
-                .findByCommunityIdAndUserId(listing.getCommunityId(), currentUser.getId())
+                .findByCommunity_IdAndUser_Id(listing.getCommunityId(), currentUser.getId())
                 .filter(cm -> cm.getStatus() == MemberStatus.APPROVED)
                 .orElseThrow(CustomExceptions.NotCommunityMemberException::new);
 
@@ -70,10 +70,14 @@ public class BorrowRequestService {
                     "Requested dates overlap with an approved borrow period.");
         }
 
+        // Resolve the listing owner entity for the FK relationship
+        User listingOwner = userRepository.findById(listing.getOwnerId())
+                .orElseThrow(CustomExceptions.UserNotFoundException::new);
+
         BorrowRequest borrowRequest = BorrowRequest.builder()
                 .listingId(listing.getId())
-                .requesterId(currentUser.getId())
-                .ownerId(listing.getOwnerId())
+                .requester(currentUser)
+                .owner(listingOwner)
                 .startDate(request.getStartDate())
                 .endDate(request.getEndDate())
                 .message(request.getMessage())
@@ -89,8 +93,8 @@ public class BorrowRequestService {
         Pageable pageable = PageRequest.of(page, size, Sort.by("requestedAt").descending());
 
         Page<BorrowRequest> requests = status == null
-                ? borrowRequestRepository.findByRequesterIdOrderByRequestedAtDesc(currentUser.getId(), pageable)
-                : borrowRequestRepository.findByRequesterIdAndStatusOrderByRequestedAtDesc(currentUser.getId(), status, pageable);
+                ? borrowRequestRepository.findByRequester_IdOrderByRequestedAtDesc(currentUser.getId(), pageable)
+                : borrowRequestRepository.findByRequester_IdAndStatusOrderByRequestedAtDesc(currentUser.getId(), status, pageable);
 
         return toPagedResponse(requests, true);
     }
@@ -103,16 +107,16 @@ public class BorrowRequestService {
 
         Page<BorrowRequest> requests;
         if (listingId != null && status != null) {
-            requests = borrowRequestRepository.findByOwnerIdAndListingIdAndStatusOrderByRequestedAtDesc(
+            requests = borrowRequestRepository.findByOwner_IdAndListingIdAndStatusOrderByRequestedAtDesc(
                     currentUser.getId(), listingId, status, pageable);
         } else if (listingId != null) {
-            requests = borrowRequestRepository.findByOwnerIdAndListingIdOrderByRequestedAtDesc(
+            requests = borrowRequestRepository.findByOwner_IdAndListingIdOrderByRequestedAtDesc(
                     currentUser.getId(), listingId, pageable);
         } else if (status != null) {
-            requests = borrowRequestRepository.findByOwnerIdAndStatusOrderByRequestedAtDesc(
+            requests = borrowRequestRepository.findByOwner_IdAndStatusOrderByRequestedAtDesc(
                     currentUser.getId(), status, pageable);
         } else {
-            requests = borrowRequestRepository.findByOwnerIdOrderByRequestedAtDesc(currentUser.getId(), pageable);
+            requests = borrowRequestRepository.findByOwner_IdOrderByRequestedAtDesc(currentUser.getId(), pageable);
         }
 
         return toPagedResponse(requests, false);
@@ -447,4 +451,3 @@ public class BorrowRequestService {
                 .orElseThrow(CustomExceptions.UserNotFoundException::new);
     }
 }
-

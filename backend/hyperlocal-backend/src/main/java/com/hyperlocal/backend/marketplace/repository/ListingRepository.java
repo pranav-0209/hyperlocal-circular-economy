@@ -12,7 +12,7 @@ import java.util.List;
 public interface ListingRepository extends JpaRepository<Listing, Long>, JpaSpecificationExecutor<Listing> {
 
     /** All listings by a specific owner, optionally filtered by status */
-    List<Listing> findByOwnerIdOrderByCreatedAtDesc(Long ownerId);
+    List<Listing> findByOwner_IdOrderByCreatedAtDesc(Long ownerId);
 
-    List<Listing> findByOwnerIdAndStatusOrderByCreatedAtDesc(Long ownerId, ListingStatus status);
+    List<Listing> findByOwner_IdAndStatusOrderByCreatedAtDesc(Long ownerId, ListingStatus status);
 }

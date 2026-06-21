@@ -1,5 +1,6 @@
 package com.hyperlocal.backend.marketplace.entity;
 
+import com.hyperlocal.backend.user.entity.User;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -37,11 +38,21 @@ public class Review {
     @Column(name = "listing_id", nullable = false, updatable = false)
     private Long listingId;
 
-    @Column(name = "reviewer_user_id", nullable = false, updatable = false)
-    private Long reviewerUserId;
+    /**
+     * The user who wrote the review (the borrower).
+     * Generates FK: reviews.reviewer_user_id -> users.id
+     */
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "reviewer_user_id", nullable = false, updatable = false)
+    private User reviewer;
 
-    @Column(name = "reviewee_user_id", nullable = false, updatable = false)
-    private Long revieweeUserId;
+    /**
+     * The user being reviewed (the listing owner).
+     * Generates FK: reviews.reviewee_user_id -> users.id
+     */
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "reviewee_user_id", nullable = false, updatable = false)
+    private User reviewee;
 
     @Column(nullable = false, updatable = false)
     private Integer rating;
@@ -55,5 +66,14 @@ public class Review {
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
-}
 
+    /** Convenience accessor — avoids eager-loading the full User just for the ID. */
+    public Long getReviewerUserId() {
+        return reviewer != null ? reviewer.getId() : null;
+    }
+
+    /** Convenience accessor — avoids eager-loading the full User just for the ID. */
+    public Long getRevieweeUserId() {
+        return reviewee != null ? reviewee.getId() : null;
+    }
+}

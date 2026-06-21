@@ -28,13 +28,13 @@ public class TrustScoreService {
         User user = userRepository.findById(userId)
                 .orElseThrow(CustomExceptions.UserNotFoundException::new);
 
-        long completedRequests = borrowRequestRepository.countByRequesterIdAndStatus(userId, BorrowRequestStatus.COMPLETED);
-        long cancelledRequests = borrowRequestRepository.countByRequesterIdAndStatus(userId, BorrowRequestStatus.CANCELLED);
+        long completedRequests = borrowRequestRepository.countByRequester_IdAndStatus(userId, BorrowRequestStatus.COMPLETED);
+        long cancelledRequests = borrowRequestRepository.countByRequester_IdAndStatus(userId, BorrowRequestStatus.CANCELLED);
         long totalRequests = completedRequests + cancelledRequests;
         long approvedPreStartCancellations = borrowRequestRepository
-                .countByRequesterIdAndStatusAndApprovedAtIsNotNull(userId, BorrowRequestStatus.CANCELLED);
+                .countByRequester_IdAndStatusAndApprovedAtIsNotNull(userId, BorrowRequestStatus.CANCELLED);
 
-        List<BorrowRequest> completed = borrowRequestRepository.findByRequesterIdAndStatus(userId, BorrowRequestStatus.COMPLETED);
+        List<BorrowRequest> completed = borrowRequestRepository.findByRequester_IdAndStatus(userId, BorrowRequestStatus.COMPLETED);
         long onTimeReturns = completed.stream()
                 .filter(this::isOnTimeReturn)
                 .count();
@@ -47,8 +47,8 @@ public class TrustScoreService {
         double penalty = (0.3 * approvedPreStartCancellations) + (0.2 * lateReturns);
         int trustIndex = clampTo0To100((int) Math.round(50 + (25 * completionRate) + (15 * onTimeRate) + (5 * verifiedBoost) - penalty));
 
-        long positiveInteractions = reviewRepository.countByRevieweeUserIdAndRatingGreaterThanEqual(userId, 4);
-        long lowRatingsReceived = reviewRepository.countByRevieweeUserIdAndRatingLessThanEqual(userId, 2);
+        long positiveInteractions = reviewRepository.countByReviewee_IdAndRatingGreaterThanEqual(userId, 4);
+        long lowRatingsReceived = reviewRepository.countByReviewee_IdAndRatingLessThanEqual(userId, 2);
         int trustXp = (int) Math.max(0,
                 (120 * completedRequests)
                         + (40 * positiveInteractions)

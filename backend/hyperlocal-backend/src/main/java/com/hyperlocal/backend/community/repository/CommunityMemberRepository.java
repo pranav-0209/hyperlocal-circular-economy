@@ -15,38 +15,38 @@ import java.util.Optional;
 
 public interface CommunityMemberRepository extends JpaRepository<CommunityMember, Long> {
 
-    boolean existsByCommunityIdAndUserId(Long communityId, Long userId);
+    boolean existsByCommunity_IdAndUser_Id(Long communityId, Long userId);
 
-    Optional<CommunityMember> findByCommunityIdAndUserId(Long communityId, Long userId);
+    Optional<CommunityMember> findByCommunity_IdAndUser_Id(Long communityId, Long userId);
 
     /** All communities a user belongs to (for "Get My Communities"), with community eagerly loaded. */
-    @Query("SELECT cm FROM CommunityMember cm JOIN FETCH cm.community WHERE cm.userId = :userId")
-    List<CommunityMember> findByUserId(@Param("userId") Long userId);
+    @Query("SELECT cm FROM CommunityMember cm JOIN FETCH cm.community WHERE cm.user.id = :userId")
+    List<CommunityMember> findByUser_Id(@Param("userId") Long userId);
 
-    Page<CommunityMember> findByCommunityId(Long communityId, Pageable pageable);
+    Page<CommunityMember> findByCommunity_Id(Long communityId, Pageable pageable);
 
-    long countByCommunityId(Long communityId);
+    long countByCommunity_Id(Long communityId);
 
-    long countByUserId(Long userId);
+    long countByUser_Id(Long userId);
 
     /** All members of a community with a given status (e.g., PENDING). */
-    List<CommunityMember> findByCommunityIdAndStatus(Long communityId, MemberStatus status);
+    List<CommunityMember> findByCommunity_IdAndStatus(Long communityId, MemberStatus status);
 
     /** Paged members of a community with a given status (e.g., APPROVED). */
-    Page<CommunityMember> findByCommunityIdAndStatus(Long communityId, MemberStatus status, Pageable pageable);
+    Page<CommunityMember> findByCommunity_IdAndStatus(Long communityId, MemberStatus status, Pageable pageable);
 
     /** Count members of a community with a given status. */
-    long countByCommunityIdAndStatus(Long communityId, MemberStatus status);
+    long countByCommunity_IdAndStatus(Long communityId, MemberStatus status);
 
     /** Admins of a specific community. */
-    List<CommunityMember> findByCommunityIdAndRole(Long communityId, CommunityRole role);
+    List<CommunityMember> findByCommunity_IdAndRole(Long communityId, CommunityRole role);
 
     /** IDs of communities where the user is an ADMIN. */
-    @Query("SELECT cm.community.id FROM CommunityMember cm WHERE cm.userId = :userId AND cm.role = 'ADMIN'")
-    List<Long>findAdminCommunityIdsByUserId(@Param("userId") Long userId);
+    @Query("SELECT cm.community.id FROM CommunityMember cm WHERE cm.user.id = :userId AND cm.role = 'ADMIN'")
+    List<Long> findAdminCommunityIdsByUserId(@Param("userId") Long userId);
 
     /** IDs of all communities where the user is an APPROVED member (any role). This is the source of truth. */
-    @Query("SELECT cm.community.id FROM CommunityMember cm WHERE cm.userId = :userId AND cm.status = 'APPROVED'")
+    @Query("SELECT cm.community.id FROM CommunityMember cm WHERE cm.user.id = :userId AND cm.status = 'APPROVED'")
     List<Long> findApprovedCommunityIdsByUserId(@Param("userId") Long userId);
 
     /**
@@ -67,5 +67,3 @@ public interface CommunityMemberRepository extends JpaRepository<CommunityMember
            "WHERE cm.community.id IN :communityIds AND cm.status = 'PENDING' GROUP BY cm.community.id")
     List<Object[]> countPendingByCommunityIdIn(@Param("communityIds") Collection<Long> communityIds);
 }
-
-

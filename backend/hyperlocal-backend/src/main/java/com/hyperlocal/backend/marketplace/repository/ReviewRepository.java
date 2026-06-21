@@ -18,20 +18,19 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
 
     boolean existsByTransactionId(Long transactionId);
 
-    long countByRevieweeUserIdAndRatingGreaterThanEqual(Long revieweeUserId, Integer rating);
+    long countByReviewee_IdAndRatingGreaterThanEqual(Long revieweeUserId, Integer rating);
 
-    long countByRevieweeUserIdAndRatingLessThanEqual(Long revieweeUserId, Integer rating);
+    long countByReviewee_IdAndRatingLessThanEqual(Long revieweeUserId, Integer rating);
 
     @Query("""
             select new com.hyperlocal.backend.marketplace.dto.ListingReviewItemResponse(
-                reviewer.name,
+                r.reviewer.name,
                 r.rating,
                 r.comment,
                 r.recommend,
                 r.createdAt
             )
             from Review r
-            join com.hyperlocal.backend.user.entity.User reviewer on reviewer.id = r.reviewerUserId
             where r.listingId = :listingId
             """)
     Page<ListingReviewItemResponse> findListingReviewItems(@Param("listingId") Long listingId, Pageable pageable);

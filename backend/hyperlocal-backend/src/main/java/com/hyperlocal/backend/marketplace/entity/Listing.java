@@ -3,6 +3,7 @@ package com.hyperlocal.backend.marketplace.entity;
 import com.hyperlocal.backend.marketplace.enums.ListingCategory;
 import com.hyperlocal.backend.marketplace.enums.ListingCondition;
 import com.hyperlocal.backend.marketplace.enums.ListingStatus;
+import com.hyperlocal.backend.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -27,9 +28,13 @@ public class Listing {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** Owner (creator) of the listing */
-    @Column(nullable = false)
-    private Long ownerId;
+    /**
+     * Owner (creator) of the listing.
+     * Generates FK: listings.owner_id -> users.id
+     */
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "owner_id", nullable = false)
+    private User owner;
 
     /** Community this listing is posted in */
     @Column(nullable = false)
@@ -80,4 +85,9 @@ public class Listing {
 
     @UpdateTimestamp
     private LocalDateTime updatedAt;
+
+    /** Convenience accessor — avoids eager-loading the full User just for the ID. */
+    public Long getOwnerId() {
+        return owner != null ? owner.getId() : null;
+    }
 }

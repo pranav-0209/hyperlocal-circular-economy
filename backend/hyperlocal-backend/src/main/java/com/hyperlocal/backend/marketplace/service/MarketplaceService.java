@@ -61,7 +61,7 @@ public class MarketplaceService {
 
         // Verify the user is an approved member of the target community
         communityMemberRepository
-                .findByCommunityIdAndUserId(request.getCommunityId(), currentUser.getId())
+                .findByCommunity_IdAndUser_Id(request.getCommunityId(), currentUser.getId())
                 .filter(cm -> cm.getStatus() == MemberStatus.APPROVED)
                 .orElseThrow(CustomExceptions.NotCommunityMemberForListingException::new);
 
@@ -71,7 +71,7 @@ public class MarketplaceService {
         List<String> imageUrls = uploadImages(request.getImages(), currentUser.getId());
 
         Listing listing = Listing.builder()
-                .ownerId(currentUser.getId())
+                .owner(currentUser)
                 .communityId(request.getCommunityId())
                 .title(request.getTitle())
                 .description(request.getDescription())
@@ -102,7 +102,7 @@ public class MarketplaceService {
         if (communityId != null) {
             // Specific community filter — user must be a member
             communityMemberRepository
-                    .findByCommunityIdAndUserId(communityId, currentUser.getId())
+                    .findByCommunity_IdAndUser_Id(communityId, currentUser.getId())
                     .filter(cm -> cm.getStatus() == MemberStatus.APPROVED)
                     .orElseThrow(CustomExceptions.NotCommunityMemberException::new);
 
@@ -183,7 +183,7 @@ public class MarketplaceService {
 
         // User must be a member of the community the listing belongs to
         communityMemberRepository
-                .findByCommunityIdAndUserId(listing.getCommunityId(), currentUser.getId())
+                .findByCommunity_IdAndUser_Id(listing.getCommunityId(), currentUser.getId())
                 .filter(cm -> cm.getStatus() == MemberStatus.APPROVED)
                 .orElseThrow(CustomExceptions.NotCommunityMemberException::new);
 
@@ -202,8 +202,8 @@ public class MarketplaceService {
         User currentUser = getAuthenticatedUser();
 
         List<Listing> listings = status != null
-                ? listingRepository.findByOwnerIdAndStatusOrderByCreatedAtDesc(currentUser.getId(), status)
-                : listingRepository.findByOwnerIdOrderByCreatedAtDesc(currentUser.getId());
+                ? listingRepository.findByOwner_IdAndStatusOrderByCreatedAtDesc(currentUser.getId(), status)
+                : listingRepository.findByOwner_IdOrderByCreatedAtDesc(currentUser.getId());
 
         // Force-initialize lazy images while Hibernate session is still open
         listings.forEach(l -> l.getImages().size());
@@ -357,7 +357,7 @@ public class MarketplaceService {
                     .userId(owner.getId())
                     .name(owner.getName())
                     .profilePhotoUrl(owner.getProfilePhotoUrl())
-                    .verified(owner.getVerificationStatus() == VerificationStatus.VERIFIED)
+                        .verified(owner.getVerificationStatus() == VerificationStatus.VERIFIED)
                     .build();
         }
 

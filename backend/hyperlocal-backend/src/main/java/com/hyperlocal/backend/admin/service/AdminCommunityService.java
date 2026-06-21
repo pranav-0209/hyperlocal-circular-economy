@@ -98,7 +98,7 @@ public class AdminCommunityService {
                 .orElseThrow(CustomExceptions.CommunityNotFoundException::new);
 
         List<CommunityMember> adminMembers = communityMemberRepository
-                .findByCommunityIdAndRole(communityId, CommunityRole.ADMIN);
+                .findByCommunity_IdAndRole(communityId, CommunityRole.ADMIN);
 
         List<Long> adminUserIds = adminMembers.stream()
                 .map(CommunityMember::getUserId)
@@ -114,7 +114,7 @@ public class AdminCommunityService {
                 })
                 .collect(Collectors.toList());
 
-        long memberCount = communityMemberRepository.countByCommunityId(communityId);
+        long memberCount = communityMemberRepository.countByCommunity_Id(communityId);
 
         List<CommunityMemberResponse> members = buildMemberResponses(communityId);
 
@@ -153,7 +153,7 @@ public class AdminCommunityService {
         community.setStatus(request.getStatus());
         community = communityRepository.save(community);
 
-        long memberCount = communityMemberRepository.countByCommunityId(communityId);
+        long memberCount = communityMemberRepository.countByCommunity_Id(communityId);
 
         return AdminCommunityListDto.builder()
                 .id(community.getId())
@@ -205,7 +205,7 @@ public class AdminCommunityService {
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("joinedAt").ascending());
         Page<CommunityMember> membersPage = communityMemberRepository
-                .findByCommunityId(communityId, pageable);
+                .findByCommunity_Id(communityId, pageable);
 
         List<Long> userIds = membersPage.getContent().stream()
                 .map(CommunityMember::getUserId)
@@ -231,7 +231,7 @@ public class AdminCommunityService {
 
     private List<CommunityMemberResponse> buildMemberResponses(Long communityId) {
         List<CommunityMember> members = communityMemberRepository
-                .findByCommunityId(communityId, Pageable.unpaged())
+                .findByCommunity_Id(communityId, Pageable.unpaged())
                 .getContent();
 
         List<Long> userIds = members.stream()
