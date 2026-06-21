@@ -87,7 +87,7 @@ export default function SuperAdminVerifications() {
   ) || 0;
 
   // Process data
-  const verifications = data?.content
+  const verifications = (data?.content || [])
     .map((user) => ({
       id: user.id,
       name: user.name,
@@ -108,23 +108,32 @@ export default function SuperAdminVerifications() {
           minute: '2-digit',
         }),
       profileCompletion: user.profileCompletionPercentage || 0,
-    })) || [];
+    }));
+
+  console.log('[Verifications] Filtered/Processed records:', verifications);
 
   // Fetch stats separately with React Query
   const { data: statsData, refetch: refetchStats } = useQuery({
     queryKey: ['verification-stats'],
     queryFn: async () => {
       const [profileRes, documentsRes, reviewRes] = await Promise.all([
-        getAllUsers({ currentStep: 'PROFILE', size: 1 }),
-        getAllUsers({ currentStep: 'DOCUMENT_VERIFICATION', size: 1 }),
-        getAllUsers({ currentStep: 'REVIEW', size: 1 }),
+        getAllUsers({ currentStep: 'PROFILE', size: 1, verificationStatus: 'NOT_VERIFIED' }),
+        getAllUsers({ currentStep: 'DOCUMENT_VERIFICATION', size: 1, verificationStatus: 'NOT_VERIFIED' }),
+        getAllUsers({ currentStep: 'REVIEW', size: 1, verificationStatus: 'NOT_VERIFIED' }),
       ]);
 
+      const counts = {
+        profile: profileRes.totalElements ?? 0,
+        documents: documentsRes.totalElements ?? 0,
+        review: reviewRes.totalElements ?? 0,
+      };
+      console.log('[Verifications] Raw API response counts for stats:', counts);
+
       return {
-        profile: profileRes.totalElements,
-        documents: documentsRes.totalElements,
-        review: reviewRes.totalElements,
-        total: profileRes.totalElements + documentsRes.totalElements + reviewRes.totalElements,
+        profile: counts.profile,
+        documents: counts.documents,
+        review: counts.review,
+        total: counts.profile + counts.documents + counts.review,
       };
     },
     staleTime: 1000 * 60 * 2, // 2 minutes

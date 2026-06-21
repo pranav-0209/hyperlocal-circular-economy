@@ -92,15 +92,19 @@ export default function SuperAdminDashboard() {
     queryKey: ['dashboard-pending-count'],
     queryFn: async () => {
       const [profileRes, docsRes, reviewRes] = await Promise.all([
-        getAllUsers({ currentStep: 'PROFILE', size: 1 }),
-        getAllUsers({ currentStep: 'DOCUMENT_VERIFICATION', size: 1 }),
-        getAllUsers({ currentStep: 'REVIEW', size: 1 }),
+        getAllUsers({ currentStep: 'PROFILE', size: 1, verificationStatus: 'NOT_VERIFIED' }),
+        getAllUsers({ currentStep: 'DOCUMENT_VERIFICATION', size: 1, verificationStatus: 'NOT_VERIFIED' }),
+        getAllUsers({ currentStep: 'REVIEW', size: 1, verificationStatus: 'NOT_VERIFIED' }),
       ]);
+      const counts = {
+        profile: profileRes.totalElements ?? 0,
+        docs: docsRes.totalElements ?? 0,
+        review: reviewRes.totalElements ?? 0,
+        total: (profileRes.totalElements ?? 0) + (docsRes.totalElements ?? 0) + (reviewRes.totalElements ?? 0)
+      };
+      console.log('[Dashboard] Raw API response counts for pending verifications:', counts);
       return {
-        totalElements:
-          (profileRes.totalElements ?? 0) +
-          (docsRes.totalElements ?? 0) +
-          (reviewRes.totalElements ?? 0),
+        totalElements: counts.total,
       };
     },
     staleTime: 1000 * 60 * 2,
@@ -123,7 +127,11 @@ export default function SuperAdminDashboard() {
   // Recent verifications list — all pending steps, most recent first
   const { data: pendingListData } = useQuery({
     queryKey: ['dashboard-pending-list'],
-    queryFn: () => getAllUsers({ size: 8, sortBy: 'updatedAt', sortDir: 'desc' }),
+    queryFn: async () => {
+      const response = await getAllUsers({ size: 8, sortBy: 'updatedAt', sortDir: 'desc', verificationStatus: 'NOT_VERIFIED' });
+      console.log('[Dashboard] Raw API response for pending list:', response);
+      return response;
+    },
     staleTime: 1000 * 60 * 2,
   });
 
@@ -141,8 +149,11 @@ export default function SuperAdminDashboard() {
     REVIEW: { label: 'Under Review', colors: 'bg-purple-100 text-purple-800' },
   };
 
-  const pendingVerifications = (pendingListData?.content ?? [])
-    .filter((u) => u.currentStep !== 'COMPLETE')
+  const rawListContent = pendingListData?.content ?? [];
+  const filteredUsers = rawListContent.filter((u) => u.currentStep !== 'COMPLETE');
+  console.log('[Dashboard] Filtered records (excluding COMPLETE):', filteredUsers);
+
+  const pendingVerifications = filteredUsers
     .slice(0, 5)
     .map((u) => ({
       id: u.id,
@@ -153,6 +164,7 @@ export default function SuperAdminDashboard() {
         ? new Date(u.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
         : '—',
     }));
+  console.log('[Dashboard] Final rendered records:', pendingVerifications);
 
   return (
     <SuperAdminLayout title="Dashboard">

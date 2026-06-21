@@ -18,6 +18,8 @@ import {
   rejectBorrowRequest,
 } from '../services/marketplaceService';
 import { useJoinCommunity, useMyCommunities } from '../hooks/useCommunityMutations';
+import { getMyProfile } from '../services/profileService';
+import { getTrustTierLabel, normalizeTrustValues } from '../utils/trust';
 import { joinCommunitySchema } from '../schemas/communitySchemas';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -83,6 +85,23 @@ export default function DashboardPage() {
     queryFn: () => getMySentRequests({ page: 0, size: 8 }),
     enabled: !!user,
   });
+
+  const { data: profile, isLoading: profileLoading } = useQuery({
+    queryKey: ['myProfile'],
+    queryFn: getMyProfile,
+    enabled: !!user,
+  });
+
+  const verified = profile?.verified ?? false;
+  const { trustIndex, trustXp } = normalizeTrustValues(profile?.trustIndex, profile?.trustXp);
+  const trustTier = getTrustTierLabel(trustIndex);
+  
+  const trustAchievements = [
+    { label: 'Profile verified', done: verified },
+    { label: 'Community member', done: (profile?.joinedCommunityIds?.length ?? 0) > 0 || (user?.communities?.length ?? 0) > 0 },
+    { label: 'On-time returns', done: trustIndex >= 70 },
+    { label: 'Trust XP gained', done: trustXp > 0 },
+  ];
 
   const invalidateRequestQueries = () => {
     queryClient.invalidateQueries({ queryKey: ['incomingRequests'] });
@@ -678,31 +697,120 @@ export default function DashboardPage() {
           {/* Right Column - Sidebar */}
           <div className="space-y-6">
             {/* Trust Score Card */}
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-              <h3 className="text-sm font-semibold text-charcoal mb-4">Trust Score</h3>
+<div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+  <h3 className="text-[11px] font-medium text-muted-green uppercase tracking-wide mb-4">
+    Trust Score
+  </h3>
 
-              <div className="text-center mb-4">
-                <div className="w-32 h-32 mx-auto mb-3 rounded-full bg-primary/10 flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="text-4xl font-bold text-primary">850</div>
-                    <div className="text-xs text-muted-green">/1000</div>
-                  </div>
-                </div>
+  {profileLoading ? (
+    <div className="flex flex-col items-center justify-center py-6 gap-3">
+      <span className="material-symbols-outlined animate-spin text-primary text-3xl">progress_activity</span>
+      <p className="text-sm text-muted-green">Loading trust data...</p>
+    </div>
+  ) : !profile ? (
+    <div className="flex flex-col items-center justify-center py-6 gap-2 text-center">
+      <span className="material-symbols-outlined text-gray-300 text-3xl">error_outline</span>
+      <p className="text-sm text-muted-green">Trust data unavailable</p>
+    </div>
+  ) : (
+    <>
+      {/* Score Ring + Tier Info */}
+      <div className="flex items-start gap-3.5 mb-4">
 
-                <div className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold mb-2">
-                  <span className="material-symbols-outlined text-sm">trending_up</span>
-                  GOOD
-                </div>
+        {/* SVG Ring */}
+        <div className="relative w-[88px] h-[88px] flex-shrink-0">
+          <svg width="88" height="88" viewBox="0 0 88 88" className="-rotate-90">
+            <circle cx="44" cy="44" r="35" fill="none" stroke="#e0f4f0" strokeWidth="8.5" />
+            <circle
+              cx="44" cy="44" r="35"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="8.5"
+              strokeLinecap="round"
+              strokeDasharray="219.91"
+              strokeDashoffset={`${219.91 - (219.91 * trustIndex) / 100}`}
+              className="text-primary transition-all duration-700"
+            />
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <span className="text-[22px] font-semibold text-primary leading-none">{trustIndex}</span>
+            <span className="text-[11px] text-muted-green mt-0.5">/ 100</span>
+          </div>
+        </div>
 
-                <p className="text-sm text-muted-green">
-                  You are a trusted member! Keep up the good work.
-                </p>
-              </div>
-
-              <button className="w-full py-2 text-sm text-primary hover:bg-gray-50 rounded-lg transition-colors">
-                View detailed breakdown â†’
-              </button>
+        {/* Right: 2-col micro-stats + badge + progress bar */}
+        <div className="flex-1 min-w-0">
+          {/* Micro stats grid */}
+          <div className="grid grid-cols-2 gap-x-2 gap-y-1 mb-2.5">
+            <div>
+              <p className="text-[10px] text-muted-green mb-0.5">Trust tier</p>
+              <p className="text-sm font-semibold text-charcoal">{trustTier}</p>
             </div>
+            <div>
+              <p className="text-[10px] text-muted-green mb-0.5">XP earned</p>
+              <p className="text-sm font-semibold text-primary">{trustXp} XP</p>
+            </div>
+          </div>
+
+          {/* Tier badge */}
+          <div
+            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold mb-2.5
+              ${trustTier.toLowerCase() === 'needs improvement'
+                ? 'bg-red-100 text-red-700'
+                : trustTier.toLowerCase() === 'fair'
+                ? 'bg-amber-100 text-amber-700'
+                : 'bg-green-100 text-green-700'
+              }`}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: "11px" }}>
+              {trustTier.toLowerCase() === 'needs improvement' || trustTier.toLowerCase() === 'fair'
+                ? 'shield'
+                : 'trending_up'}
+            </span>
+            {trustTier.toUpperCase()}
+          </div>
+
+          {/* Score progress bar */}
+          <p className="text-[10px] text-muted-green mb-1">Score progress</p>
+          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-primary rounded-full transition-all duration-700"
+              style={{ width: `${trustIndex}%` }}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Divider */}
+      <hr className="border-gray-100 mb-3.5" />
+
+      {/* Achievements — 2×2 grid */}
+      <div className="grid grid-cols-2 gap-1.5">
+        {trustAchievements.map((t) => (
+          <div
+            key={t.label}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] leading-snug
+              ${t.done
+                ? 'bg-green-50 text-green-800'
+                : 'bg-gray-50 text-gray-400'
+              }`}
+          >
+            <span
+              className={`material-symbols-outlined flex-shrink-0 ${t.done ? 'text-green-500' : 'text-gray-300'}`}
+              style={{
+                fontSize: "14px",
+                ...(t.done && { fontVariationSettings: "'FILL' 1" }),
+              }}
+            >
+              {t.done ? 'check_circle' : 'radio_button_unchecked'}
+            </span>
+            {t.label}
+          </div>
+        ))}
+      </div>
+    </>
+  )}
+</div>
 
             {/* Quick Actions Card */}
             <div className="bg-gradient-to-br from-primary to-primary/80 rounded-2xl p-6 text-white">

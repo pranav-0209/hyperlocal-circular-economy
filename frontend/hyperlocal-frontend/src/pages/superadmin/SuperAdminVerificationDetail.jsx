@@ -134,7 +134,9 @@ export default function SuperAdminVerificationDetail() {
       // Invalidate queries to refresh verification list
       queryClient.invalidateQueries({ queryKey: ['verifications'] });
       queryClient.invalidateQueries({ queryKey: ['verification-stats'] });
-      queryClient.invalidateQueries({ queryKey: ['verified-users'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-pending-count'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-pending-list'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-verified-users'] });
       // Auto-navigate after 2.5 seconds
       setTimeout(() => navigate('/superadmin/verifications'), 2500);
     } catch (error) {
@@ -172,7 +174,9 @@ export default function SuperAdminVerificationDetail() {
       // Invalidate queries to refresh verification list
       queryClient.invalidateQueries({ queryKey: ['verifications'] });
       queryClient.invalidateQueries({ queryKey: ['verification-stats'] });
-      queryClient.invalidateQueries({ queryKey: ['verified-users'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-pending-count'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-pending-list'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-verified-users'] });
       // Auto-navigate after 2.5 seconds
       setTimeout(() => navigate('/superadmin/verifications'), 2500);
     } catch (error) {
