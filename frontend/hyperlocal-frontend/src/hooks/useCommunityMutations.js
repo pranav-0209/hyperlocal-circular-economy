@@ -35,7 +35,7 @@ export function useMyCommunities(options = {}) {
     const prevPendingRef = useRef(null);
 
     return useQuery({
-        queryKey: ['communities', 'me'],
+        queryKey: ['communities', 'me', user?.id],
         queryFn: async () => {
             const communities = await getMyCommunities();
 

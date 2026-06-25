@@ -6,6 +6,7 @@ import AppFooter from '../components/ui/AppFooter';
 import MarketplaceSectionNav from '../components/ui/MarketplaceSectionNav';
 import { ROUTES } from '../constants';
 import { getIncomingRequests, getMySentRequests } from '../services/marketplaceService';
+import { useAuth } from '../context/AuthContext';
 
 const formatRequestDate = (dateValue) => {
   if (!dateValue) return '';
@@ -27,16 +28,20 @@ const statusStyle = (status) => {
 
 export default function MarketplaceExchangesPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [tab, setTab] = useState('borrowed');
 
+  // Keys scoped to user.id to prevent cross-user cache contamination.
   const { data: incomingRequests = [], isLoading: incomingLoading } = useQuery({
-    queryKey: ['incomingRequests'],
+    queryKey: ['incomingRequests', user?.id],
     queryFn: () => getIncomingRequests({ page: 0, size: 40 }),
+    enabled: !!user,
   });
 
   const { data: sentRequests = [], isLoading: sentLoading } = useQuery({
-    queryKey: ['sentRequests'],
+    queryKey: ['sentRequests', user?.id],
     queryFn: () => getMySentRequests({ page: 0, size: 40 }),
+    enabled: !!user,
   });
 
   const borrowedItems = useMemo(

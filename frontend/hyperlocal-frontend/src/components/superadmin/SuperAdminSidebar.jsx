@@ -11,7 +11,10 @@ export default function SuperAdminSidebar() {
   const { dark, toggle: toggleDark } = useDarkMode();
 
   const handleLogout = () => {
+    // Clear both the admin token AND admin user data to prevent
+    // stale super-admin data from persisting across account switches.
     localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminUser');
     navigate('/superadmin/login');
   };
 

@@ -1,6 +1,7 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useCallback } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
+import { useQueryClient } from '@tanstack/react-query';
 import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute, VerificationRequiredRoute, AdminRoute } from './components/ProtectedRoute';
 import SuperAdminProtectedRoute from './components/SuperAdminProtectedRoute';
@@ -44,11 +45,15 @@ const SuperAdminVerificationDetail = lazy(() => import('./pages/superadmin/Super
 const SuperAdminUsers = lazy(() => import('./pages/superadmin/SuperAdminUsers'));
 const SuperAdminCommunities = lazy(() => import('./pages/superadmin/SuperAdminCommunities'));
 
-function App() {
+/**
+ * AppRoutes — contains all routing logic.
+ * Must be rendered inside AuthProvider so protected routes can read auth state.
+ */
+function AppRoutes() {
   const location = useLocation();
 
   return (
-    <AuthProvider>
+    <>
       <Toaster position="top-center" richColors />
       <Suspense fallback={<PageLoader />}>
         <AnimatePresence mode="wait">
@@ -246,6 +251,29 @@ function App() {
           </PageTransition>
         </AnimatePresence>
       </Suspense>
+    </>
+  );
+}
+
+/**
+ * App — top-level component.
+ * Wraps AppRoutes in AuthProvider and wires the React Query cache-clearing
+ * callback so that queryClient.clear() is called on every login / logout.
+ * This prevents any cached data from User A leaking to User B.
+ */
+function App() {
+  const queryClient = useQueryClient();
+
+  // Stable callback: clears ALL React Query cached data.
+  // Called by AuthProvider on both login (clear stale previous-user data)
+  // and logout (clear current-user data).
+  const handleClearCache = useCallback(() => {
+    queryClient.clear();
+  }, [queryClient]);
+
+  return (
+    <AuthProvider onClearCache={handleClearCache}>
+      <AppRoutes />
     </AuthProvider>
   );
 }

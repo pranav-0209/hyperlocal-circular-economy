@@ -5,23 +5,29 @@ import AppFooter from '../components/ui/AppFooter';
 import MarketplaceSectionNav from '../components/ui/MarketplaceSectionNav';
 import { ROUTES } from '../constants';
 import { getIncomingRequests, getMyListings, getMySentRequests, getPendingReviews } from '../services/marketplaceService';
+import { useAuth } from '../context/AuthContext';
 
 export default function MarketplaceActivityPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
+  // Keys scoped to user.id to prevent cross-user cache contamination.
   const { data: myListings = [], isLoading: listingsLoading } = useQuery({
-    queryKey: ['myListings'],
+    queryKey: ['myListings', user?.id],
     queryFn: getMyListings,
+    enabled: !!user,
   });
 
   const { data: incomingRequests = [], isLoading: incomingLoading } = useQuery({
-    queryKey: ['incomingRequests'],
+    queryKey: ['incomingRequests', user?.id],
     queryFn: () => getIncomingRequests({ page: 0, size: 20 }),
+    enabled: !!user,
   });
 
   const { data: sentRequests = [], isLoading: sentLoading } = useQuery({
-    queryKey: ['sentRequests'],
+    queryKey: ['sentRequests', user?.id],
     queryFn: () => getMySentRequests({ page: 0, size: 20 }),
+    enabled: !!user,
   });
 
   const normalizeStatus = (status) => String(status || '').toUpperCase();
@@ -36,13 +42,17 @@ export default function MarketplaceActivityPage() {
   const isLoadingCards = listingsLoading || incomingLoading || sentLoading;
 
   const { data: pendingReviews = [], isLoading: pendingReviewsLoading, isError: pendingReviewsError } = useQuery({
-    queryKey: ['pendingReviews'],
+    queryKey: ['pendingReviews', user?.id],
     queryFn: getPendingReviews,
+    enabled: !!user,
   });
 
+  // Scope the sessionStorage key to the current user so that submitted-review
+  // state cannot leak from one user account to another in the same browser tab.
   const submittedReviewTransactions = (() => {
     try {
-      const parsed = JSON.parse(sessionStorage.getItem('submittedReviewTransactions') || '[]');
+      const cacheKey = `submittedReviewTransactions_${user?.id ?? 'unknown'}`;
+      const parsed = JSON.parse(sessionStorage.getItem(cacheKey) || '[]');
       return Array.isArray(parsed) ? parsed : [];
     } catch {
       return [];

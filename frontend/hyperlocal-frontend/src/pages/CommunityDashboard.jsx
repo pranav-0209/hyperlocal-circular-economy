@@ -486,23 +486,6 @@ export default function CommunityDashboard({ community }) {
                     {/* Left column (2/3) */}
                     <div className="lg:col-span-2 space-y-6">
 
-                        {/* Recent Activity */}
-                        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-                            <div className="flex items-center justify-between mb-5">
-                                <h2 className="text-base font-bold text-charcoal">Recent Activity</h2>
-                                <span className="text-xs text-muted-green bg-gray-100 px-2.5 py-1 rounded-full">Live</span>
-                            </div>
-                            <div className="flex flex-col items-center justify-center py-14 gap-3 text-center">
-                                <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center">
-                                    <span className="material-symbols-outlined text-gray-400 text-3xl">feed</span>
-                                </div>
-                                <p className="font-medium text-charcoal text-sm">No activity yet</p>
-                                <p className="text-xs text-muted-green max-w-xs">
-                                    When members share, borrow or comment, it will appear here.
-                                </p>
-                            </div>
-                        </div>
-
                         {/* Available Items */}
                         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
                             <div className="flex items-center justify-between mb-5">
@@ -515,12 +498,12 @@ export default function CommunityDashboard({ community }) {
                                 </button>
                             </div>
                             {availableItemsLoading ? (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    {Array.from({ length: 4 }).map((_, i) => (
-                                        <div key={i} className="border border-gray-100 rounded-xl p-3 animate-pulse">
-                                            <div className="h-24 bg-gray-100 rounded-lg mb-3" />
+                                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-4 justify-items-center sm:justify-items-start">
+                                    {Array.from({ length: 3 }).map((_, i) => (
+                                        <div key={i} className="border border-gray-100 rounded-2xl p-3 animate-pulse w-full max-w-[280px] bg-white shadow-sm flex flex-col h-full">
+                                            <div className="aspect-[4/3] bg-gray-100 rounded-xl mb-3 w-full" />
                                             <div className="h-4 bg-gray-100 rounded w-3/4 mb-2" />
-                                            <div className="h-3 bg-gray-100 rounded w-1/2" />
+                                            <div className="h-3 bg-gray-100 rounded w-1/2 mt-auto" />
                                         </div>
                                     ))}
                                 </div>
@@ -542,27 +525,29 @@ export default function CommunityDashboard({ community }) {
                                     </button>
                                 </div>
                             ) : (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-4 justify-items-center sm:justify-items-start">
                                     {availableItems.map((item) => (
                                         <button
                                             key={item.id}
                                             onClick={() => navigate(`/discover/item/${item.id}`, { state: { item } })}
-                                            className="text-left border border-gray-100 rounded-xl overflow-hidden hover:shadow-sm hover:border-primary/20 transition-all"
+                                            className="group flex flex-col text-left border border-gray-100 rounded-2xl overflow-hidden hover:shadow-md hover:border-primary/20 transition-all duration-300 bg-white h-full w-full max-w-[280px] mx-auto sm:mx-0 cursor-pointer"
                                         >
-                                            <div className="h-24 bg-gray-100 overflow-hidden">
+                                            <div className="relative aspect-[4/3] w-full bg-gray-100 overflow-hidden shrink-0 border-b border-gray-50">
                                                 {item.images?.[0] ? (
-                                                    <SecureImage source={item.images[0]} alt={item.title} className="w-full h-full object-cover" />
+                                                    <SecureImage source={item.images[0]} alt={item.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                                                 ) : (
                                                     <div className="w-full h-full flex items-center justify-center text-gray-300">
                                                         <span className="material-symbols-outlined text-3xl">image</span>
                                                     </div>
                                                 )}
                                             </div>
-                                            <div className="p-3">
-                                                <p className="text-sm font-semibold text-charcoal line-clamp-1">{item.title}</p>
-                                                <div className="flex items-center justify-between mt-1.5">
-                                                    <p className="text-xs text-muted-green line-clamp-1">{item.condition}</p>
-                                                    <p className="text-xs font-bold text-primary">₹{item.price}/day</p>
+                                            <div className="p-3.5 flex flex-col flex-1 w-full">
+                                                <p className="text-sm font-semibold text-charcoal line-clamp-1 group-hover:text-primary transition-colors duration-200">{item.title}</p>
+                                                <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-50 w-full">
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-50 border border-gray-100 text-[10px] text-muted-green font-medium max-w-[60%] truncate">
+                                                        {item.condition}
+                                                    </span>
+                                                    <p className="text-xs font-bold text-primary shrink-0">₹{item.price}/day</p>
                                                 </div>
                                             </div>
                                         </button>

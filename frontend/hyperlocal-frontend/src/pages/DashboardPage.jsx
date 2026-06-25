@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
@@ -16,6 +16,8 @@ import {
   getMyListings,
   getMySentRequests,
   rejectBorrowRequest,
+  getMySentRequestsCount,
+  getIncomingRequestsCount,
 } from '../services/marketplaceService';
 import { useJoinCommunity, useMyCommunities } from '../hooks/useCommunityMutations';
 import { getMyProfile } from '../services/profileService';
@@ -57,7 +59,17 @@ export default function DashboardPage() {
 
   // Fetch real communities from backend (keeps AuthContext in sync).
   // Pause polling while create listing modal is open to avoid periodic UI flicker.
-  const { isLoading: communitiesLoading } = useMyCommunities({
+  // We also read `data`, `isFetched`, and `isError` directly so the onboarding-vs-dashboard
+  // decision is made from the same query result atomically — this eliminates the
+  // race condition where React Query marks the query as settled (isLoading=false)
+  // while the updateUser() callback that syncs user.communities is still pending
+  // in a separate React state update batch.
+  const {
+    isLoading: communitiesLoading,
+    isFetched: communitiesIsFetched,
+    isError: communitiesIsError,
+    data: communitiesData,
+  } = useMyCommunities({
     refetchInterval: showCreateItemModal ? false : 30_000,
   });
 
@@ -67,28 +79,47 @@ export default function DashboardPage() {
     defaultValues: { code: '' },
   });
 
-  // Marketplace Queries
+  // Marketplace Queries — keys are scoped to user.id so User A's cache is
+  // never served to User B even during the brief window after login.
   const { data: myListings = [] } = useQuery({
-    queryKey: ['myListings'],
+    queryKey: ['myListings', user?.id],
     queryFn: getMyListings,
     enabled: !!user,
   });
 
   const { data: incomingRequests = [] } = useQuery({
-    queryKey: ['incomingRequests'],
+    queryKey: ['incomingRequests', user?.id],
     queryFn: () => getIncomingRequests({ page: 0, size: 8 }),
     enabled: !!user,
   });
 
   const { data: sentRequests = [] } = useQuery({
-    queryKey: ['sentRequests'],
+    queryKey: ['sentRequests', user?.id],
     queryFn: () => getMySentRequests({ page: 0, size: 8 }),
     enabled: !!user,
   });
 
   const { data: profile, isLoading: profileLoading } = useQuery({
-    queryKey: ['myProfile'],
+    queryKey: ['myProfile', user?.id],
     queryFn: getMyProfile,
+    enabled: !!user,
+  });
+
+  const { data: itemsBorrowed = 0 } = useQuery({
+    queryKey: ['itemsBorrowedCount', user?.id],
+    queryFn: () => getMySentRequestsCount('COMPLETED'),
+    enabled: !!user,
+  });
+
+  const { data: itemsShared = 0 } = useQuery({
+    queryKey: ['itemsSharedCount', user?.id],
+    queryFn: () => getIncomingRequestsCount('COMPLETED'),
+    enabled: !!user,
+  });
+
+  const { data: pendingRequestsCount = 0 } = useQuery({
+    queryKey: ['pendingRequestsCount', user?.id],
+    queryFn: () => getIncomingRequestsCount('PENDING'),
     enabled: !!user,
   });
 
@@ -104,9 +135,12 @@ export default function DashboardPage() {
   ];
 
   const invalidateRequestQueries = () => {
-    queryClient.invalidateQueries({ queryKey: ['incomingRequests'] });
-    queryClient.invalidateQueries({ queryKey: ['sentRequests'] });
-    queryClient.invalidateQueries({ queryKey: ['recentRequests'] });
+    queryClient.invalidateQueries({ queryKey: ['incomingRequests', user?.id] });
+    queryClient.invalidateQueries({ queryKey: ['sentRequests', user?.id] });
+    queryClient.invalidateQueries({ queryKey: ['recentRequests', user?.id] });
+    queryClient.invalidateQueries({ queryKey: ['itemsBorrowedCount', user?.id] });
+    queryClient.invalidateQueries({ queryKey: ['itemsSharedCount', user?.id] });
+    queryClient.invalidateQueries({ queryKey: ['pendingRequestsCount', user?.id] });
   };
 
   const approveMutation = useMutation({
@@ -194,14 +228,28 @@ export default function DashboardPage() {
     });
   };
 
-  // Block render only for initial load. Avoid blocking on background refetches,
-  // which can remount the page and cause form/modal flicker.
-  if (!user || communitiesLoading) {
+  // Block render while the initial communities fetch is in-flight.
+  // We gate on BOTH isLoading (pending + fetching) AND !isFetched to be safe:
+  // - isLoading covers the first render before any data arrives
+  // - !isFetched covers edge cases in React 19 concurrent mode where isLoading
+  //   may transiently flicker to false before the first successful response
+  //   has been committed to both React Query state and AuthContext state.
+  // - communitiesIsError: if the fetch fails, release the gate so users aren't
+  //   stuck on a spinner forever; resolvedCommunities will fall back to [] or
+  //   user.communities (which may still have data from a prior session).
+  if (!user || communitiesLoading || (!communitiesIsFetched && !communitiesIsError)) {
     return <div>Loading...</div>;
   }
 
+  // Determine community membership directly from the query result — NOT from
+  // user.communities — to avoid any race between React Query's status change
+  // and the updateUser() call that syncs communities into AuthContext.
+  // `communitiesData` is guaranteed to be populated at this point because we
+  // waited for isFetched above.
+  const resolvedCommunities = communitiesData ?? user.communities ?? [];
+
   // If user has no communities, show community selection page
-  if (!user.communities || user.communities.length === 0) {
+  if (resolvedCommunities.length === 0) {
     const firstName = user.profile?.name?.split(' ')[0] || user.profile?.name || 'Neighbor';
 
     return (
@@ -408,7 +456,7 @@ export default function DashboardPage() {
 
   // If specific community is selected, show community dashboard
   if (communityId) {
-    const selectedCommunity = user.communities.find(c => c.id === communityId);
+    const selectedCommunity = resolvedCommunities.find(c => c.id === communityId);
 
     if (!selectedCommunity) {
       // Invalid community ID, redirect to main dashboard
@@ -449,10 +497,10 @@ export default function DashboardPage() {
                 </button>
               </div>
 
-              {user.communities && user.communities.length > 0 ? (
+              {resolvedCommunities.length > 0 ? (
                 <div className="space-y-3">
                   {/* Pending memberships — amber strip at top */}
-                  {user.communities.filter(c => c.membershipStatus === 'PENDING').map((community) => (
+                  {resolvedCommunities.filter(c => c.membershipStatus === 'PENDING').map((community) => (
                     <div key={community.id} className="w-full flex items-center justify-between p-3 bg-amber-50 rounded-xl border border-amber-100">
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 bg-amber-100 rounded-lg flex items-center justify-center">
@@ -467,7 +515,7 @@ export default function DashboardPage() {
                     </div>
                   ))}
                   {/* Active communities — most recent first */}
-                  {user.communities
+                  {resolvedCommunities
                     .filter(c => c.membershipStatus !== 'PENDING')
                     .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
                     .slice(0, 3)
@@ -861,19 +909,21 @@ export default function DashboardPage() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-green">Items Borrowed</span>
-                  <span className="font-bold text-charcoal">12</span>
+                  <span className="font-bold text-charcoal">{itemsBorrowed}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-green">Items Shared</span>
-                  <span className="font-bold text-charcoal">8</span>
+                  <span className="font-bold text-charcoal">{itemsShared}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-green">Active Listings</span>
-                  <span className="font-bold text-charcoal">{myListings.length}</span>
+                  <span className="font-bold text-charcoal">
+                    {myListings.filter((item) => item.status === 'AVAILABLE').length}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-green">Pending Requests</span>
-                  <span className="font-bold text-charcoal">{pendingRequestCount}</span>
+                  <span className="font-bold text-charcoal">{pendingRequestsCount}</span>
                 </div>
               </div>
             </div>
@@ -951,6 +1001,9 @@ export default function DashboardPage() {
       <CreateItemModal
         open={showCreateItemModal}
         onOpenChange={setShowCreateItemModal}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['myListings', user?.id] });
+        }}
       />
 
       <AppFooter />

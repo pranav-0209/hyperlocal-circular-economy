@@ -4,6 +4,7 @@ import { Star } from 'lucide-react';
 import { toast } from 'sonner';
 import { getListingReviews, submitReview } from '../../services/marketplaceService';
 import RatingStars from '../ui/RatingStars';
+import { useAuth } from '../../context/AuthContext';
 
 const formatReviewDate = (value) => {
     const parsed = new Date(value);
@@ -17,6 +18,10 @@ const formatReviewDate = (value) => {
 
 export default function ListingReviewsSection({ itemId, itemTitle, reviewContext, reviewsData, isLoading, isError, onRefresh }) {
     const queryClient = useQueryClient();
+    const { user } = useAuth();
+    // Scope the sessionStorage cache key to the current user so that
+    // submitted-review state cannot leak between accounts in the same browser tab.
+    const sessionCacheKey = `submittedReviewTransactions_${user?.id ?? 'unknown'}`;
     const shouldFetch = !reviewsData;
     const { data: fetchedData, isLoading: isFetching, isError: fetchError, refetch } = useQuery({
         queryKey: ['listingReviews', itemId],
@@ -94,7 +99,7 @@ export default function ListingReviewsSection({ itemId, itemTitle, reviewContext
             setPendingRecommend(true);
 
             if (reviewContext?.transactionId) {
-                const cacheKey = 'submittedReviewTransactions';
+                const cacheKey = sessionCacheKey;
                 let existing = [];
                 try {
                     const parsed = JSON.parse(sessionStorage.getItem(cacheKey) || '[]');

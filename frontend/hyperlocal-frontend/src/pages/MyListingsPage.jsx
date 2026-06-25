@@ -14,6 +14,7 @@ import {
     toggleListingAvailability,
 } from '../services/marketplaceService';
 import { ROUTES } from '../constants';
+import { useAuth } from '../context/AuthContext';
 
 const CONDITION_STYLE = {
     'New':      'bg-green-100 text-green-800',
@@ -135,20 +136,23 @@ function ListingCard({ item, onEdit, onToggle, onDelete }) {
 export default function MyListingsPage() {
     const navigate = useNavigate();
     const queryClient = useQueryClient();
+    const { user } = useAuth();
     const [filter, setFilter] = useState('All');
     const [editingItem, setEditingItem] = useState(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [listingToDelete, setListingToDelete] = useState(null);
 
+    // Key scoped to user.id to prevent cross-user cache contamination.
     const { data: items = [], isLoading } = useQuery({
-        queryKey: ['myListings'],
+        queryKey: ['myListings', user?.id],
         queryFn: getMyListings,
+        enabled: !!user,
     });
 
     const toggleMutation = useMutation({
         mutationFn: (item) => toggleListingAvailability(item.id),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['myListings'] });
+            queryClient.invalidateQueries({ queryKey: ['myListings', user?.id] });
             queryClient.invalidateQueries({ queryKey: ['marketplaceItems'] });
             toast.success('Listing availability updated.');
         },
@@ -160,7 +164,7 @@ export default function MyListingsPage() {
     const deleteMutation = useMutation({
         mutationFn: (item) => deleteItem(item.id),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['myListings'] });
+            queryClient.invalidateQueries({ queryKey: ['myListings', user?.id] });
             queryClient.invalidateQueries({ queryKey: ['marketplaceItems'] });
             toast.success('Listing deleted successfully.');
         },
@@ -323,7 +327,7 @@ export default function MyListingsPage() {
                 listingId={editingItem?.id}
                 initialValues={editingItem}
                 onSuccess={() => {
-                    queryClient.invalidateQueries({ queryKey: ['myListings'] });
+                    queryClient.invalidateQueries({ queryKey: ['myListings', user?.id] });
                     queryClient.invalidateQueries({ queryKey: ['marketplaceItems'] });
                 }}
             />

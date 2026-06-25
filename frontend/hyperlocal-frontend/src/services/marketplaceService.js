@@ -523,3 +523,23 @@ export const getTrustScoreSummary = async (userId) => {
     const response = await api.get(`/api/trust-score/users/${userId}`);
     return response.data;
 };
+
+/**
+ * GET count of sent borrow requests with a specific status for user stats.
+ */
+export const getMySentRequestsCount = async (status) => {
+    const response = await api.get('/api/marketplace/requests/me', {
+        params: { status, page: 0, size: 1 },
+    });
+    return response.data?.totalElements ?? (Array.isArray(response.data) ? response.data.length : 0);
+};
+
+/**
+ * GET count of incoming borrow requests with a specific status for user stats.
+ */
+export const getIncomingRequestsCount = async (status) => {
+    const response = await api.get('/api/marketplace/requests/incoming', {
+        params: { status, page: 0, size: 1 },
+    });
+    return response.data?.totalElements ?? (Array.isArray(response.data) ? response.data.length : 0);
+};

@@ -14,6 +14,7 @@ import {
   getMySentRequests,
   rejectBorrowRequest,
 } from '../services/marketplaceService';
+import { useAuth } from '../context/AuthContext';
 
 const requestBadgeStyle = (status) => {
   const normalized = String(status || '').toUpperCase();
@@ -63,22 +64,26 @@ const canShowSentCancelButton = (request, status) => {
 export default function MarketplaceRequestsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [tab, setTab] = useState('incoming');
   const [completedRequestIds, setCompletedRequestIds] = useState([]);
 
+  // Keys scoped to user.id to prevent cross-user cache contamination.
   const { data: incomingRequests = [], isLoading: incomingLoading } = useQuery({
-    queryKey: ['incomingRequests'],
+    queryKey: ['incomingRequests', user?.id],
     queryFn: () => getIncomingRequests({ page: 0, size: 30 }),
+    enabled: !!user,
   });
 
   const { data: sentRequests = [], isLoading: sentLoading } = useQuery({
-    queryKey: ['sentRequests'],
+    queryKey: ['sentRequests', user?.id],
     queryFn: () => getMySentRequests({ page: 0, size: 30 }),
+    enabled: !!user,
   });
 
   const refresh = () => {
-    queryClient.invalidateQueries({ queryKey: ['incomingRequests'] });
-    queryClient.invalidateQueries({ queryKey: ['sentRequests'] });
+    queryClient.invalidateQueries({ queryKey: ['incomingRequests', user?.id] });
+    queryClient.invalidateQueries({ queryKey: ['sentRequests', user?.id] });
   };
 
   const approveMutation = useMutation({
